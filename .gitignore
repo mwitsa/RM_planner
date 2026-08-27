@@ -1,0 +1,25 @@
+# Python cache and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local configuration and secrets
+.env
+.env.*
+
+# Production workbooks and Excel lock files
+*.xlsx
+*.xlsm
+*.xlsb
+~$*
+
+# Generated structured exports
+output/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

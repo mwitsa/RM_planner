@@ -1,0 +1,304 @@
+"""Core extraction logic for CPF production-plan workbooks.
+
+The workbook is treated as an input only.  This module deliberately has no UI
+dependencies so that future planning rules can reuse the same structured data.
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+import re
+from dataclasses import asdict, dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Iterable
+
+from openpyxl import load_workbook
+
+
+PRODUCTION_DATE_COLUMN = 2  # B
+CUSTOMER_COLUMN = 10  # J
+ORDER_VOLUME_COLUMN = 22  # V
+SUPPORTED_EXTENSIONS = {".xlsx", ".xlsm"}
+
+
+@dataclass(frozen=True, slots=True)
+class OrderRecord:
+    """One normalized order extracted from the production plan."""
+
+    production_date: str
+    production_month: str
+    customer_name: str
+    order_volume: int | float
+    source_sheet: str
+    source_row: int
+
+
+@dataclass(frozen=True, slots=True)
+class ExtractionIssue:
+    """A non-empty source row that could not become a complete order."""
+
+    source_row: int
+    reason: str
+    production_date: str
+    customer_name: str
+    order_volume: str
+
+
+@dataclass(frozen=True, slots=True)
+class ExtractionResult:
+    records: list[OrderRecord]
+    issues: list[ExtractionIssue]
+    sheet_name: str
+    header_row: int
+
+
+def list_sheets(workbook_path: str | Path) -> list[str]:
+    """Return workbook sheet names without modifying the workbook."""
+
+    path = _validated_path(workbook_path)
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        return list(workbook.sheetnames)
+    finally:
+        workbook.close()
+
+
+def choose_default_sheet(workbook_path: str | Path) -> str:
+    """Select the sheet whose B/J/V headers most closely match an order table."""
+
+    path = _validated_path(workbook_path)
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        scored: list[tuple[int, int, str]] = []
+        for position, worksheet in enumerate(workbook.worksheets):
+            header_row, score = _find_header_row(worksheet)
+            visible_bonus = 1 if worksheet.sheet_state == "visible" else 0
+            scored.append((score * 10 + visible_bonus, -position, worksheet.title))
+        if not scored:
+            raise ValueError("The workbook does not contain any worksheets.")
+        return max(scored)[2]
+    finally:
+        workbook.close()
+
+
+def extract_orders(
+    workbook_path: str | Path,
+    sheet_name: str | None = None,
+) -> ExtractionResult:
+    """Extract complete B/J/V order rows into a stable, normalized schema.
+
+    Column B becomes both an ISO production date and a derived YYYY-MM month.
+    Column J becomes the customer name. Column V becomes a numeric volume.
+    Rows with no selected values are ignored; other incomplete rows are reported
+    as issues rather than silently converted to orders.
+    """
+
+    path = _validated_path(workbook_path)
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        selected_sheet = sheet_name or _choose_default_sheet_from_workbook(workbook)
+        if selected_sheet not in workbook.sheetnames:
+            raise ValueError(f"Worksheet not found: {selected_sheet}")
+
+        worksheet = workbook[selected_sheet]
+        header_row, _ = _find_header_row(worksheet)
+        records: list[OrderRecord] = []
+        issues: list[ExtractionIssue] = []
+
+        for source_row, row in enumerate(
+            worksheet.iter_rows(
+                min_row=header_row + 1,
+                max_col=ORDER_VOLUME_COLUMN,
+                values_only=True,
+            ),
+            start=header_row + 1,
+        ):
+            raw_date = _cell_value(row, PRODUCTION_DATE_COLUMN)
+            raw_customer = _cell_value(row, CUSTOMER_COLUMN)
+            raw_volume = _cell_value(row, ORDER_VOLUME_COLUMN)
+
+            if all(_is_blank(value) for value in (raw_date, raw_customer, raw_volume)):
+                continue
+
+            production_date = _parse_date(raw_date)
+            customer = _clean_customer(raw_customer)
+            volume = _parse_volume(raw_volume)
+
+            missing: list[str] = []
+            if production_date is None:
+                missing.append("invalid or missing production date (column B)")
+            if not customer:
+                missing.append("missing customer (column J)")
+            if volume is None:
+                missing.append("invalid or missing order volume (column V)")
+
+            if missing:
+                issues.append(
+                    ExtractionIssue(
+                        source_row=source_row,
+                        reason="; ".join(missing),
+                        production_date=_display_value(raw_date),
+                        customer_name=_display_value(raw_customer),
+                        order_volume=_display_value(raw_volume),
+                    )
+                )
+                continue
+
+            records.append(
+                OrderRecord(
+                    production_date=production_date.isoformat(),
+                    production_month=production_date.strftime("%Y-%m"),
+                    customer_name=customer,
+                    order_volume=volume,
+                    source_sheet=selected_sheet,
+                    source_row=source_row,
+                )
+            )
+
+        return ExtractionResult(
+            records=records,
+            issues=issues,
+            sheet_name=selected_sheet,
+            header_row=header_row,
+        )
+    finally:
+        workbook.close()
+
+
+def export_csv(records: Iterable[OrderRecord], output_path: str | Path) -> Path:
+    """Export records as Excel-friendly UTF-8 CSV."""
+
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "production_date",
+        "production_month",
+        "customer_name",
+        "order_volume",
+        "source_sheet",
+        "source_row",
+    ]
+    with destination.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(asdict(record) for record in records)
+    return destination
+
+
+def export_json(records: Iterable[OrderRecord], output_path: str | Path) -> Path:
+    """Export records as a UTF-8 JSON array with Thai text preserved."""
+
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    payload = [asdict(record) for record in records]
+    with destination.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+    return destination
+
+
+def _validated_path(workbook_path: str | Path) -> Path:
+    path = Path(workbook_path).expanduser().resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"Workbook not found: {path}")
+    if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        raise ValueError("Please select an .xlsx or .xlsm workbook.")
+    return path
+
+
+def _choose_default_sheet_from_workbook(workbook: Any) -> str:
+    scored: list[tuple[int, int, str]] = []
+    for position, worksheet in enumerate(workbook.worksheets):
+        _, score = _find_header_row(worksheet)
+        visible_bonus = 1 if worksheet.sheet_state == "visible" else 0
+        scored.append((score * 10 + visible_bonus, -position, worksheet.title))
+    if not scored:
+        raise ValueError("The workbook does not contain any worksheets.")
+    return max(scored)[2]
+
+
+def _find_header_row(worksheet: Any, scan_rows: int = 20) -> tuple[int, int]:
+    best_row = 4
+    best_score = 0
+    for row_number in range(1, min(worksheet.max_row, scan_rows) + 1):
+        date_header = _normalized_header(worksheet.cell(row_number, PRODUCTION_DATE_COLUMN).value)
+        customer_header = _normalized_header(worksheet.cell(row_number, CUSTOMER_COLUMN).value)
+        volume_header = _normalized_header(worksheet.cell(row_number, ORDER_VOLUME_COLUMN).value)
+        score = 0
+        if any(token in date_header for token in ("date", "เดือน", "แผนผลิต")):
+            score += 1
+        if any(token in customer_header for token in ("customer", "ลูกค้า")):
+            score += 1
+        if any(token in volume_header for token in ("qty", "volume", "จำนวน")):
+            score += 1
+        if score > best_score:
+            best_row, best_score = row_number, score
+    return best_row, best_score
+
+
+def _cell_value(row: tuple[Any, ...], one_based_column: int) -> Any:
+    index = one_based_column - 1
+    return row[index] if index < len(row) else None
+
+
+def _normalized_header(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+
+
+def _is_blank(value: Any) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+def _parse_date(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        cleaned = value.strip()
+        for date_format in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y"):
+            try:
+                parsed = datetime.strptime(cleaned, date_format).date()
+                if parsed.year > 2400:  # Thai Buddhist Era year
+                    return parsed.replace(year=parsed.year - 543)
+                return parsed
+            except ValueError:
+                continue
+    return None
+
+
+def _clean_customer(value: Any) -> str:
+    if value is None:
+        return ""
+    return re.sub(r"\s+", " ", str(value)).strip()
+
+
+def _parse_volume(value: Any) -> int | float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+    elif isinstance(value, str):
+        cleaned = value.strip().replace(",", "")
+        if not cleaned:
+            return None
+        try:
+            numeric = float(cleaned)
+        except ValueError:
+            return None
+    else:
+        return None
+    if numeric != numeric or numeric in (float("inf"), float("-inf")):
+        return None
+    return int(numeric) if numeric.is_integer() else numeric
+
+
+def _display_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)
