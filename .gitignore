@@ -8,6 +8,10 @@ venv/
 # Local configuration and secrets
 .env
 .env.*
+plan_rules.json
+Data/RM/assortment_actual.json
+Data/Order/saved_orders.json
+Data/Class/class_definitions.json
 
 # Production workbooks and Excel lock files
 *.xlsx

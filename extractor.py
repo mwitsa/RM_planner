@@ -9,7 +9,7 @@ from __future__ import annotations
 import csv
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -17,22 +17,52 @@ from typing import Any, Iterable
 from openpyxl import load_workbook
 
 
-PRODUCTION_DATE_COLUMN = 2  # B
+PRODUCTION_DATE_COLUMN = 3  # C
+COUNTRY_COLUMN = 8  # H
 CUSTOMER_COLUMN = 10  # J
+GROUP_1_COLUMN = 11  # K
+GROUP_2_COLUMN = 12  # L
+PACKAGING_COLUMN = 15  # O
+SOUP_COLUMN = 21  # U
 ORDER_VOLUME_COLUMN = 22  # V
 SUPPORTED_EXTENSIONS = {".xlsx", ".xlsm"}
+ORDER_EXPORT_FIELDS = (
+    "date",
+    "month",
+    "year",
+    "country",
+    "customer_name",
+    "group_1",
+    "group_2",
+    "packaging",
+    "soup",
+    "order_volume",
+    "production",
+)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class OrderRecord:
     """One normalized order extracted from the production plan."""
 
-    production_date: str
-    production_month: str
+    date: str
+    month: str
+    year: str
+    country: str
     customer_name: str
+    group_1: str
+    group_2: str
+    packaging: str
+    soup: str
     order_volume: int | float
-    source_sheet: str
-    source_row: int
+    production: int | float | None = None
+    record_id: str = ""
+
+    @property
+    def month_key(self) -> str:
+        """Return YYYY-MM for filtering while exports keep separate columns."""
+
+        return f"{self.year}-{self.month}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,8 +119,8 @@ def extract_orders(
 ) -> ExtractionResult:
     """Extract complete B/J/V order rows into a stable, normalized schema.
 
-    Column B becomes both an ISO production date and a derived YYYY-MM month.
-    Column J becomes the customer name. Column V becomes a numeric volume.
+    Column C becomes separate zero-padded date, month, and year fields. Column J
+    becomes the customer name. Column V becomes a numeric volume.
     Rows with no selected values are ignored; other incomplete rows are reported
     as issues rather than silently converted to orders.
     """
@@ -116,19 +146,24 @@ def extract_orders(
             start=header_row + 1,
         ):
             raw_date = _cell_value(row, PRODUCTION_DATE_COLUMN)
+            raw_country = _cell_value(row, COUNTRY_COLUMN)
             raw_customer = _cell_value(row, CUSTOMER_COLUMN)
+            raw_group_1 = _cell_value(row, GROUP_1_COLUMN)
+            raw_group_2 = _cell_value(row, GROUP_2_COLUMN)
+            raw_packaging = _cell_value(row, PACKAGING_COLUMN)
+            raw_soup = _cell_value(row, SOUP_COLUMN)
             raw_volume = _cell_value(row, ORDER_VOLUME_COLUMN)
 
             if all(_is_blank(value) for value in (raw_date, raw_customer, raw_volume)):
                 continue
 
-            production_date = _parse_date(raw_date)
-            customer = _clean_customer(raw_customer)
+            production_period = _parse_production_period(raw_date)
+            customer = _clean_text(raw_customer)
             volume = _parse_volume(raw_volume)
 
             missing: list[str] = []
-            if production_date is None:
-                missing.append("invalid or missing production date (column B)")
+            if production_period is None:
+                missing.append("invalid or missing production date/month (column C)")
             if not customer:
                 missing.append("missing customer (column J)")
             if volume is None:
@@ -148,12 +183,17 @@ def extract_orders(
 
             records.append(
                 OrderRecord(
-                    production_date=production_date.isoformat(),
-                    production_month=production_date.strftime("%Y-%m"),
+                    date=production_period[0],
+                    month=production_period[1],
+                    year=production_period[2],
+                    country=_clean_text(raw_country),
                     customer_name=customer,
+                    group_1=_clean_text(raw_group_1),
+                    group_2=_clean_text(raw_group_2),
+                    packaging=_clean_text(raw_packaging),
+                    soup=_clean_text(raw_soup),
                     order_volume=volume,
-                    source_sheet=selected_sheet,
-                    source_row=source_row,
+                    record_id=f"{selected_sheet}:{source_row}",
                 )
             )
 
@@ -172,18 +212,10 @@ def export_csv(records: Iterable[OrderRecord], output_path: str | Path) -> Path:
 
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = [
-        "production_date",
-        "production_month",
-        "customer_name",
-        "order_volume",
-        "source_sheet",
-        "source_row",
-    ]
     with destination.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=ORDER_EXPORT_FIELDS)
         writer.writeheader()
-        writer.writerows(asdict(record) for record in records)
+        writer.writerows(_record_payload(record) for record in records)
     return destination
 
 
@@ -192,10 +224,14 @@ def export_json(records: Iterable[OrderRecord], output_path: str | Path) -> Path
 
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    payload = [asdict(record) for record in records]
+    payload = [_record_payload(record) for record in records]
     with destination.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
     return destination
+
+
+def _record_payload(record: OrderRecord) -> dict[str, Any]:
+    return {field: getattr(record, field) for field in ORDER_EXPORT_FIELDS}
 
 
 def _validated_path(workbook_path: str | Path) -> Path:
@@ -250,25 +286,35 @@ def _is_blank(value: Any) -> bool:
     return value is None or (isinstance(value, str) and not value.strip())
 
 
-def _parse_date(value: Any) -> date | None:
+def _parse_production_period(value: Any) -> tuple[str, str, str] | None:
+    """Return (day, month, year); day is blank for month-only orders."""
+
     if isinstance(value, datetime):
-        return value.date()
+        parsed = value.date()
+        return f"{parsed.day:02d}", f"{parsed.month:02d}", f"{parsed.year:04d}"
     if isinstance(value, date):
-        return value
+        return f"{value.day:02d}", f"{value.month:02d}", f"{value.year:04d}"
     if isinstance(value, str):
-        cleaned = value.strip()
+        cleaned = value.strip().lstrip("'").strip()
+        month_only = re.fullmatch(r"(0?[1-9]|1[0-2])[-/](\d{4})", cleaned)
+        if month_only:
+            month = int(month_only.group(1))
+            year = int(month_only.group(2))
+            if year > 2400:
+                year -= 543
+            return "", f"{month:02d}", f"{year:04d}"
         for date_format in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y"):
             try:
                 parsed = datetime.strptime(cleaned, date_format).date()
                 if parsed.year > 2400:  # Thai Buddhist Era year
-                    return parsed.replace(year=parsed.year - 543)
-                return parsed
+                    parsed = parsed.replace(year=parsed.year - 543)
+                return f"{parsed.day:02d}", f"{parsed.month:02d}", f"{parsed.year:04d}"
             except ValueError:
                 continue
     return None
 
 
-def _clean_customer(value: Any) -> str:
+def _clean_text(value: Any) -> str:
     if value is None:
         return ""
     return re.sub(r"\s+", " ", str(value)).strip()

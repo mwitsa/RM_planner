@@ -24,16 +24,24 @@ class ExtractorTests(unittest.TestCase):
         irrelevant["A1"] = "Not an order table"
 
         plan = workbook.create_sheet("แผนผลิต ")
-        plan["B4"] = "แผนผลิต\nDate"
+        plan["C4"] = "แผน LOAD\nDate"
         plan["J4"] = "Customer"
         plan["V4"] = "QTY"
-        plan["B5"] = datetime(2026, 8, 27)
+        plan["C5"] = datetime(2026, 8, 27)
+        plan["H5"] = "  Thailand  "
         plan["J5"] = "  ลูกค้า   ทดสอบ  "
+        plan["K5"] = " Group A "
+        plan["L5"] = "Cooked\nWonton"
+        plan["O5"] = "130g*24"
+        plan["U5"] = " Regular "
         plan["V5"] = "1,250"
-        plan["B6"] = datetime(2026, 8, 28)  # separator/incomplete row
-        plan["B7"] = "28/08/2569"
+        plan["C6"] = datetime(2026, 8, 28)  # separator/incomplete row
+        plan["C7"] = "28/08/2569"
         plan["J7"] = "Customer B"
         plan["V7"] = 10.5
+        plan["C8"] = "'10-2026"
+        plan["J8"] = "Month-only customer"
+        plan["V8"] = 500
         workbook.save(self.workbook_path)
 
     def test_extracts_normalized_records_and_reports_incomplete_rows(self) -> None:
@@ -41,14 +49,29 @@ class ExtractorTests(unittest.TestCase):
 
         self.assertEqual(result.sheet_name, "แผนผลิต ")
         self.assertEqual(result.header_row, 4)
-        self.assertEqual(len(result.records), 2)
+        self.assertEqual(len(result.records), 3)
         self.assertEqual(len(result.issues), 1)
-        self.assertEqual(result.records[0].production_date, "2026-08-27")
-        self.assertEqual(result.records[0].production_month, "2026-08")
+        self.assertEqual(result.records[0].date, "27")
+        self.assertEqual(result.records[0].month, "08")
+        self.assertEqual(result.records[0].year, "2026")
+        self.assertEqual(result.records[0].month_key, "2026-08")
+        self.assertEqual(result.records[0].country, "Thailand")
         self.assertEqual(result.records[0].customer_name, "ลูกค้า ทดสอบ")
+        self.assertEqual(result.records[0].group_1, "Group A")
+        self.assertEqual(result.records[0].group_2, "Cooked Wonton")
+        self.assertEqual(result.records[0].packaging, "130g*24")
+        self.assertEqual(result.records[0].soup, "Regular")
         self.assertEqual(result.records[0].order_volume, 1250)
-        self.assertEqual(result.records[1].production_date, "2026-08-28")
+        self.assertIsNone(result.records[0].production)
+        self.assertTrue(result.records[0].record_id.endswith(":5"))
+        self.assertEqual(result.records[1].date, "28")
+        self.assertEqual(result.records[1].month, "08")
+        self.assertEqual(result.records[1].year, "2026")
         self.assertEqual(result.records[1].order_volume, 10.5)
+        self.assertEqual(result.records[2].date, "")
+        self.assertEqual(result.records[2].month, "10")
+        self.assertEqual(result.records[2].year, "2026")
+        self.assertEqual(result.records[2].month_key, "2026-10")
 
     def test_default_sheet_uses_headers(self) -> None:
         self.assertEqual(choose_default_sheet(self.workbook_path), "แผนผลิต ")
@@ -64,7 +87,25 @@ class ExtractorTests(unittest.TestCase):
             json_rows = json.load(handle)
 
         self.assertEqual(csv_rows[0]["customer_name"], "ลูกค้า ทดสอบ")
+        self.assertEqual(list(csv_rows[0]), [
+            "date",
+            "month",
+            "year",
+            "country",
+            "customer_name",
+            "group_1",
+            "group_2",
+            "packaging",
+            "soup",
+            "order_volume",
+            "production",
+        ])
+        self.assertEqual(json_rows[0]["date"], "27")
+        self.assertEqual(json_rows[0]["month"], "08")
+        self.assertEqual(json_rows[0]["year"], "2026")
         self.assertEqual(json_rows[0]["order_volume"], 1250)
+        self.assertIsNone(json_rows[0]["production"])
+        self.assertNotIn("record_id", json_rows[0])
 
 
 if __name__ == "__main__":
