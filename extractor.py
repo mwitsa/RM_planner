@@ -23,8 +23,11 @@ CUSTOMER_COLUMN = 10  # J
 GROUP_1_COLUMN = 11  # K
 GROUP_2_COLUMN = 12  # L
 PACKAGING_COLUMN = 15  # O
+WONTONS_PER_CUP_COLUMN = 17  # Q
+RM_SIZE_COLUMN = 19  # S
 SOUP_COLUMN = 21  # U
-ORDER_VOLUME_COLUMN = 22  # V
+ORDER_UNIT_COLUMN = 22  # V
+ORDER_CUPS_COLUMN = 35  # AI
 SUPPORTED_EXTENSIONS = {".xlsx", ".xlsm"}
 ORDER_EXPORT_FIELDS = (
     "date",
@@ -35,8 +38,13 @@ ORDER_EXPORT_FIELDS = (
     "group_1",
     "group_2",
     "packaging",
+    "rm_size",
     "soup",
-    "order_volume",
+    "wontons_per_cup",
+    "order_unit",
+    "order_cups",
+    "cups_per_unit",
+    "total_wontons",
     "production",
 )
 
@@ -54,15 +62,26 @@ class OrderRecord:
     group_2: str
     packaging: str
     soup: str
-    order_volume: int | float
+    order_unit: int | float
+    order_cups: int | float | None
+    cups_per_unit: float | None
+    rm_size: str = ""
+    wontons_per_cup: int | float | None = None
     production: int | float | None = None
     record_id: str = ""
+    order_no: str = ""
 
     @property
     def month_key(self) -> str:
         """Return YYYY-MM for filtering while exports keep separate columns."""
 
         return f"{self.year}-{self.month}"
+
+    @property
+    def total_wontons(self) -> int | float | None:
+        """Return Order (ถ้วย) multiplied by ลูกเกี๊ยว/ถ้วย when both exist."""
+
+        return _multiply_optional(self.order_cups, self.wontons_per_cup)
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +92,7 @@ class ExtractionIssue:
     reason: str
     production_date: str
     customer_name: str
-    order_volume: str
+    order_unit: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +115,7 @@ def list_sheets(workbook_path: str | Path) -> list[str]:
 
 
 def choose_default_sheet(workbook_path: str | Path) -> str:
-    """Select the sheet whose B/J/V headers most closely match an order table."""
+    """Select the sheet whose C/J/V headers most closely match an order table."""
 
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)
@@ -117,10 +136,13 @@ def extract_orders(
     workbook_path: str | Path,
     sheet_name: str | None = None,
 ) -> ExtractionResult:
-    """Extract complete B/J/V order rows into a stable, normalized schema.
+    """Extract complete C/J/V order rows into a stable, normalized schema.
 
     Column C becomes separate zero-padded date, month, and year fields. Column J
-    becomes the customer name. Column V becomes a numeric volume.
+    becomes the customer name. Column V becomes the order quantity in units,
+    column Q becomes ลูกเกี๊ยว/ถ้วย, and column AI becomes the order quantity
+    in cups. Cups per unit is derived by dividing column AI by column V, while
+    จำนวนเกี๊ยว is derived by multiplying column AI by column Q.
     Rows with no selected values are ignored; other incomplete rows are reported
     as issues rather than silently converted to orders.
     """
@@ -140,7 +162,7 @@ def extract_orders(
         for source_row, row in enumerate(
             worksheet.iter_rows(
                 min_row=header_row + 1,
-                max_col=ORDER_VOLUME_COLUMN,
+                max_col=ORDER_CUPS_COLUMN,
                 values_only=True,
             ),
             start=header_row + 1,
@@ -151,23 +173,32 @@ def extract_orders(
             raw_group_1 = _cell_value(row, GROUP_1_COLUMN)
             raw_group_2 = _cell_value(row, GROUP_2_COLUMN)
             raw_packaging = _cell_value(row, PACKAGING_COLUMN)
+            raw_wontons_per_cup = _cell_value(row, WONTONS_PER_CUP_COLUMN)
+            raw_rm_size = _cell_value(row, RM_SIZE_COLUMN)
             raw_soup = _cell_value(row, SOUP_COLUMN)
-            raw_volume = _cell_value(row, ORDER_VOLUME_COLUMN)
+            raw_unit = _cell_value(row, ORDER_UNIT_COLUMN)
+            raw_cups = _cell_value(row, ORDER_CUPS_COLUMN)
 
-            if all(_is_blank(value) for value in (raw_date, raw_customer, raw_volume)):
+            if all(_is_blank(value) for value in (raw_date, raw_customer, raw_unit)):
                 continue
 
             production_period = _parse_production_period(raw_date)
             customer = _clean_text(raw_customer)
-            volume = _parse_volume(raw_volume)
+            order_unit = _parse_number(raw_unit)
+            order_cups = _parse_number(raw_cups)
+            wontons_per_cup = _parse_number(raw_wontons_per_cup)
 
             missing: list[str] = []
             if production_period is None:
                 missing.append("invalid or missing production date/month (column C)")
             if not customer:
                 missing.append("missing customer (column J)")
-            if volume is None:
-                missing.append("invalid or missing order volume (column V)")
+            if order_unit is None:
+                missing.append("invalid or missing order quantity in units (column V)")
+            if not _is_blank(raw_cups) and order_cups is None:
+                missing.append("invalid order quantity in cups (column AI)")
+            if not _is_blank(raw_wontons_per_cup) and wontons_per_cup is None:
+                missing.append("invalid ลูกเกี๊ยว/ถ้วย (column Q)")
 
             if missing:
                 issues.append(
@@ -176,7 +207,7 @@ def extract_orders(
                         reason="; ".join(missing),
                         production_date=_display_value(raw_date),
                         customer_name=_display_value(raw_customer),
-                        order_volume=_display_value(raw_volume),
+                        order_unit=_display_value(raw_unit),
                     )
                 )
                 continue
@@ -191,8 +222,12 @@ def extract_orders(
                     group_1=_clean_text(raw_group_1),
                     group_2=_clean_text(raw_group_2),
                     packaging=_clean_text(raw_packaging),
+                    rm_size=_clean_text(raw_rm_size),
                     soup=_clean_text(raw_soup),
-                    order_volume=volume,
+                    wontons_per_cup=wontons_per_cup,
+                    order_unit=order_unit,
+                    order_cups=order_cups,
+                    cups_per_unit=_divide_optional(order_cups, order_unit),
                     record_id=f"{selected_sheet}:{source_row}",
                 )
             )
@@ -260,13 +295,13 @@ def _find_header_row(worksheet: Any, scan_rows: int = 20) -> tuple[int, int]:
     for row_number in range(1, min(worksheet.max_row, scan_rows) + 1):
         date_header = _normalized_header(worksheet.cell(row_number, PRODUCTION_DATE_COLUMN).value)
         customer_header = _normalized_header(worksheet.cell(row_number, CUSTOMER_COLUMN).value)
-        volume_header = _normalized_header(worksheet.cell(row_number, ORDER_VOLUME_COLUMN).value)
+        unit_header = _normalized_header(worksheet.cell(row_number, ORDER_UNIT_COLUMN).value)
         score = 0
         if any(token in date_header for token in ("date", "เดือน", "แผนผลิต")):
             score += 1
         if any(token in customer_header for token in ("customer", "ลูกค้า")):
             score += 1
-        if any(token in volume_header for token in ("qty", "volume", "จำนวน")):
+        if any(token in unit_header for token in ("qty", "volume", "จำนวน")):
             score += 1
         if score > best_score:
             best_row, best_score = row_number, score
@@ -320,7 +355,7 @@ def _clean_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value)).strip()
 
 
-def _parse_volume(value: Any) -> int | float | None:
+def _parse_number(value: Any) -> int | float | None:
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, (int, float)):
@@ -338,6 +373,25 @@ def _parse_volume(value: Any) -> int | float | None:
     if numeric != numeric or numeric in (float("inf"), float("-inf")):
         return None
     return int(numeric) if numeric.is_integer() else numeric
+
+
+def _divide_optional(
+    numerator: int | float | None,
+    denominator: int | float,
+) -> float | None:
+    if numerator is None or denominator == 0:
+        return None
+    return numerator / denominator
+
+
+def _multiply_optional(
+    first: int | float | None,
+    second: int | float | None,
+) -> int | float | None:
+    if first is None or second is None:
+        return None
+    result = first * second
+    return int(result) if float(result).is_integer() else result
 
 
 def _display_value(value: Any) -> str:

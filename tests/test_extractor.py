@@ -27,18 +27,25 @@ class ExtractorTests(unittest.TestCase):
         plan["C4"] = "แผน LOAD\nDate"
         plan["J4"] = "Customer"
         plan["V4"] = "QTY"
+        plan["AI4"] = "Order ถ้วย"
         plan["C5"] = datetime(2026, 8, 27)
         plan["H5"] = "  Thailand  "
         plan["J5"] = "  ลูกค้า   ทดสอบ  "
         plan["K5"] = " Group A "
         plan["L5"] = "Cooked\nWonton"
         plan["O5"] = "130g*24"
+        plan["Q5"] = 8
+        plan["S5"] = "M"
         plan["U5"] = " Regular "
         plan["V5"] = "1,250"
+        plan["AI5"] = 20000
         plan["C6"] = datetime(2026, 8, 28)  # separator/incomplete row
         plan["C7"] = "28/08/2569"
         plan["J7"] = "Customer B"
         plan["V7"] = 10.5
+        plan["Q7"] = 12
+        plan["S7"] = "S"
+        plan["AI7"] = 84
         plan["C8"] = "'10-2026"
         plan["J8"] = "Month-only customer"
         plan["V8"] = 500
@@ -60,18 +67,30 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0].group_1, "Group A")
         self.assertEqual(result.records[0].group_2, "Cooked Wonton")
         self.assertEqual(result.records[0].packaging, "130g*24")
+        self.assertEqual(result.records[0].rm_size, "M")
         self.assertEqual(result.records[0].soup, "Regular")
-        self.assertEqual(result.records[0].order_volume, 1250)
+        self.assertEqual(result.records[0].wontons_per_cup, 8)
+        self.assertEqual(result.records[0].order_unit, 1250)
+        self.assertEqual(result.records[0].order_cups, 20000)
+        self.assertEqual(result.records[0].cups_per_unit, 16)
+        self.assertEqual(result.records[0].total_wontons, 160000)
         self.assertIsNone(result.records[0].production)
         self.assertTrue(result.records[0].record_id.endswith(":5"))
         self.assertEqual(result.records[1].date, "28")
         self.assertEqual(result.records[1].month, "08")
         self.assertEqual(result.records[1].year, "2026")
-        self.assertEqual(result.records[1].order_volume, 10.5)
+        self.assertEqual(result.records[1].order_unit, 10.5)
+        self.assertEqual(result.records[1].rm_size, "S")
+        self.assertEqual(result.records[1].order_cups, 84)
+        self.assertEqual(result.records[1].cups_per_unit, 8)
+        self.assertEqual(result.records[1].wontons_per_cup, 12)
+        self.assertEqual(result.records[1].total_wontons, 1008)
         self.assertEqual(result.records[2].date, "")
         self.assertEqual(result.records[2].month, "10")
         self.assertEqual(result.records[2].year, "2026")
         self.assertEqual(result.records[2].month_key, "2026-10")
+        self.assertIsNone(result.records[2].order_cups)
+        self.assertIsNone(result.records[2].cups_per_unit)
 
     def test_default_sheet_uses_headers(self) -> None:
         self.assertEqual(choose_default_sheet(self.workbook_path), "แผนผลิต ")
@@ -96,14 +115,24 @@ class ExtractorTests(unittest.TestCase):
             "group_1",
             "group_2",
             "packaging",
+            "rm_size",
             "soup",
-            "order_volume",
+            "wontons_per_cup",
+            "order_unit",
+            "order_cups",
+            "cups_per_unit",
+            "total_wontons",
             "production",
         ])
         self.assertEqual(json_rows[0]["date"], "27")
         self.assertEqual(json_rows[0]["month"], "08")
         self.assertEqual(json_rows[0]["year"], "2026")
-        self.assertEqual(json_rows[0]["order_volume"], 1250)
+        self.assertEqual(json_rows[0]["rm_size"], "M")
+        self.assertEqual(json_rows[0]["order_unit"], 1250)
+        self.assertEqual(json_rows[0]["order_cups"], 20000)
+        self.assertEqual(json_rows[0]["cups_per_unit"], 16)
+        self.assertEqual(json_rows[0]["wontons_per_cup"], 8)
+        self.assertEqual(json_rows[0]["total_wontons"], 160000)
         self.assertIsNone(json_rows[0]["production"])
         self.assertNotIn("record_id", json_rows[0])
 

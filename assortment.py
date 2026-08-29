@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,98 @@ class AssortmentTable:
             for base_size, total in zip(self.base_sizes, self.column_totals)
             if abs(total - 1.0) > 0.0001
         )
+
+
+@dataclass(frozen=True, slots=True)
+class AssortmentPredictionEntry:
+    """Predicted output weight for one actual shrimp-size range."""
+
+    output_size: str
+    percentage: float
+    weight: int
+
+
+def predict_assortment(
+    table: AssortmentTable,
+    harvest_size: str,
+    total_weight: float,
+) -> tuple[AssortmentPredictionEntry, ...]:
+    """Split a harvest weight using one base-size distribution from the master."""
+
+    requested_size = str(harvest_size).strip()
+    if not requested_size:
+        raise ValueError("Enter a harvest size.")
+
+    lookup = {base_size.casefold(): index for index, base_size in enumerate(table.base_sizes)}
+    candidates = [requested_size]
+    if not requested_size.casefold().startswith("s."):
+        candidates.append(f"S.{requested_size}")
+    base_index = next(
+        (lookup[candidate.casefold()] for candidate in candidates if candidate.casefold() in lookup),
+        None,
+    )
+    if base_index is None:
+        available = ", ".join(table.base_sizes)
+        raise ValueError(
+            f"Harvest size {requested_size} was not found in the assortment master. "
+            f"Available sizes: {available}"
+        )
+
+    try:
+        weight = float(total_weight)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Weight (kg) must be a number.") from exc
+    if not math.isfinite(weight) or weight <= 0:
+        raise ValueError("Weight (kg) must be greater than zero.")
+
+    distribution_total = table.column_totals[base_index]
+    if abs(distribution_total - 1.0) > 0.0001:
+        raise ValueError(
+            f"The {table.base_sizes[base_index]} distribution totals "
+            f"{distribution_total:.2%}, not 100%. Correct the master data before predicting."
+        )
+
+    target_weight = math.floor(weight + 0.5)
+    if target_weight < 1:
+        raise ValueError("Weight (kg) must round to at least 1 kg.")
+
+    distribution = [
+        (
+            output_size,
+            table.percentages[row_index][base_index],
+        )
+        for row_index, output_size in enumerate(table.output_sizes)
+        if table.percentages[row_index][base_index] > 0
+    ]
+    if not distribution:
+        raise ValueError(f"The {table.base_sizes[base_index]} distribution has no output percentages.")
+
+    # Allocate whole kilograms with the largest-remainder method. This keeps
+    # every generated row integer-valued while preserving the rounded harvest
+    # total exactly.
+    raw_weights = [
+        target_weight * percentage / distribution_total
+        for _output_size, percentage in distribution
+    ]
+    whole_weights = [math.floor(raw_weight) for raw_weight in raw_weights]
+    kilograms_left = target_weight - sum(whole_weights)
+    remainder_order = sorted(
+        range(len(raw_weights)),
+        key=lambda index: (raw_weights[index] - whole_weights[index], -index),
+        reverse=True,
+    )
+    for index in remainder_order[:kilograms_left]:
+        whole_weights[index] += 1
+
+    return tuple(
+        AssortmentPredictionEntry(
+            output_size=output_size,
+            percentage=percentage,
+            weight=whole_weight,
+        )
+        for (output_size, percentage), whole_weight in zip(distribution, whole_weights)
+        if whole_weight > 0
+    )
 
 
 def load_assortment(workbook_path: str | Path) -> AssortmentTable:

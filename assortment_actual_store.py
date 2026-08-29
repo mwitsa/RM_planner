@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import math
+import re
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
 
-STORE_VERSION = 1
+STORE_VERSION = 4
+RECORD_TYPES = {"actual", "prediction"}
+MARKET_TYPES = {"domestic", "export", "unassigned"}
+RM_ID_PREFIX = "RM-"
+RM_ID_WIDTH = 6
+RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,12 +31,59 @@ class ActualAssortmentRecord:
     record_id: str
     record_date: str
     entries: tuple[ActualAssortmentEntry, ...]
+    record_type: str
     created_at: str
     updated_at: str
+    market_type: str = "unassigned"
+    rm_id: str = ""
 
     @property
     def total_weight(self) -> float:
         return sum(entry.weight for entry in self.entries)
+
+
+def split_size_range(size: str) -> tuple[str, str]:
+    """Split a stored size such as 51-55 into start and end UI values."""
+
+    normalized = str(size).strip()
+    parts = re.split(r"\s*[-–—]\s*", normalized, maxsplit=1)
+    if len(parts) == 2:
+        return parts[0].strip(), parts[1].strip()
+    return normalized, ""
+
+
+def combine_size_range(size_start: str, size_end: str) -> str:
+    """Combine the two size inputs into the existing stored range format."""
+
+    start = str(size_start).strip()
+    end = str(size_end).strip()
+    if not start or not end:
+        raise ValueError("Both Size (start) and Size (end) are required.")
+    return f"{start}-{end}"
+
+
+def estimate_wonton_pieces(entries: Iterable[ActualAssortmentEntry]) -> int | float:
+    """Estimate one-shrimp wontons from physical RM size ranges and kg weights."""
+
+    total = 0.0
+    for entry in entries:
+        size_start, size_end = split_size_range(entry.size)
+        try:
+            start = float(size_start)
+            end = float(size_end)
+            weight = float(entry.weight)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Cannot estimate wontons for RM size {entry.size}.") from exc
+        if (
+            not all(math.isfinite(value) for value in (start, end, weight))
+            or start <= 0
+            or end <= 0
+            or start > end
+            or weight < 0
+        ):
+            raise ValueError(f"Cannot estimate wontons for RM size {entry.size}.")
+        total += weight * ((start + end) / 2)
+    return int(total) if total.is_integer() else total
 
 
 def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
@@ -53,9 +107,15 @@ def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
         record_id = raw_record.get("id")
         record_date = raw_record.get("date")
         raw_entries = raw_record.get("entries")
+        record_type = _normalize_record_type(raw_record.get("record_type", "actual"))
+        market_type = _normalize_market_type(raw_record.get("market_type", "unassigned"))
+        rm_id = raw_record.get("rm_id", "")
         created_at = raw_record.get("created_at")
         updated_at = raw_record.get("updated_at")
-        if not all(isinstance(value, str) for value in (record_id, record_date, created_at, updated_at)):
+        if not all(
+            isinstance(value, str)
+            for value in (record_id, record_date, created_at, updated_at, rm_id)
+        ):
             raise ValueError("Actual assortment history contains invalid record metadata.")
         if record_id in seen_ids:
             raise ValueError("Actual assortment history contains duplicate record IDs.")
@@ -69,11 +129,14 @@ def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
                 record_id=record_id,
                 record_date=record_date,
                 entries=entries,
+                record_type=record_type,
                 created_at=created_at,
                 updated_at=updated_at,
+                market_type=market_type,
+                rm_id=rm_id.strip().upper(),
             )
         )
-    return records
+    return _assign_missing_rm_ids(records)
 
 
 def upsert_actual_record(
@@ -81,6 +144,8 @@ def upsert_actual_record(
     record_date: str,
     entries: Iterable[ActualAssortmentEntry],
     record_id: str | None = None,
+    record_type: str | None = None,
+    market_type: str | None = None,
 ) -> ActualAssortmentRecord:
     """Create a new history record or update an existing record by ID."""
 
@@ -93,24 +158,42 @@ def upsert_actual_record(
     records = load_actual_records(path)
     now = datetime.now(timezone.utc).isoformat()
     if record_id is None:
+        saved_record_type = _normalize_record_type(record_type or "actual")
+        saved_market_type = _normalize_market_type(market_type or "unassigned")
         saved_record = ActualAssortmentRecord(
             record_id=str(uuid4()),
             record_date=record_date,
             entries=normalized_entries,
+            record_type=saved_record_type,
             created_at=now,
             updated_at=now,
+            market_type=saved_market_type,
+            rm_id=_next_rm_id(records),
         )
         records.append(saved_record)
     else:
         saved_record = None
         for index, existing in enumerate(records):
             if existing.record_id == record_id:
+                saved_record_type = (
+                    existing.record_type
+                    if record_type is None
+                    else _normalize_record_type(record_type)
+                )
+                saved_market_type = (
+                    existing.market_type
+                    if market_type is None
+                    else _normalize_market_type(market_type)
+                )
                 saved_record = ActualAssortmentRecord(
                     record_id=record_id,
                     record_date=record_date,
                     entries=normalized_entries,
+                    record_type=saved_record_type,
                     created_at=existing.created_at,
                     updated_at=now,
+                    market_type=saved_market_type,
+                    rm_id=existing.rm_id,
                 )
                 records[index] = saved_record
                 break
@@ -121,11 +204,41 @@ def upsert_actual_record(
     return saved_record
 
 
+def delete_actual_record(
+    store_path: str | Path,
+    record_id: str,
+) -> ActualAssortmentRecord:
+    """Permanently remove one saved assortment-history record by ID."""
+
+    path = Path(store_path)
+    records = load_actual_records(path)
+    for index, record in enumerate(records):
+        if record.record_id == record_id:
+            deleted = records.pop(index)
+            _write_records(path, records)
+            return deleted
+    raise ValueError("The selected actual assortment history record no longer exists.")
+
+
 def _validate_date(value: str) -> None:
     try:
         date.fromisoformat(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"Invalid actual assortment date: {value}") from exc
+
+
+def _normalize_record_type(value: object) -> str:
+    record_type = str(value).strip().casefold()
+    if record_type not in RECORD_TYPES:
+        raise ValueError("Actual assortment record type must be actual or prediction.")
+    return record_type
+
+
+def _normalize_market_type(value: object) -> str:
+    market_type = str(value).strip().casefold()
+    if market_type not in MARKET_TYPES:
+        raise ValueError("Assortment use must be Domestic or Export.")
+    return market_type
 
 
 def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
@@ -154,12 +267,16 @@ def _entry_from_json(raw_entry: object) -> ActualAssortmentEntry:
 
 def _write_records(path: Path, records: list[ActualAssortmentRecord]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    records = _assign_missing_rm_ids(records)
     payload = {
         "version": STORE_VERSION,
         "records": [
             {
                 "id": record.record_id,
+                "rm_id": record.rm_id,
                 "date": record.record_date,
+                "record_type": record.record_type,
+                "market_type": record.market_type,
                 "entries": [
                     {"size": entry.size, "weight": entry.weight}
                     for entry in record.entries
@@ -178,3 +295,49 @@ def _write_records(path: Path, records: list[ActualAssortmentRecord]) -> None:
         temporary_path.replace(path)
     except OSError as exc:
         raise ValueError(f"Could not save actual assortment history: {exc}") from exc
+
+
+def _assign_missing_rm_ids(
+    records: list[ActualAssortmentRecord],
+) -> list[ActualAssortmentRecord]:
+    seen: set[str] = set()
+    highest = 0
+    for record in records:
+        rm_id = record.rm_id.strip().upper()
+        if not rm_id:
+            continue
+        if rm_id in seen:
+            raise ValueError(f"Actual assortment history contains duplicate RM ID: {rm_id}")
+        seen.add(rm_id)
+        match = RM_ID_PATTERN.fullmatch(rm_id)
+        if match:
+            highest = max(highest, int(match.group(1)))
+
+    assigned_records: list[ActualAssortmentRecord] = []
+    next_number = highest + 1
+    for record in records:
+        rm_id = record.rm_id.strip().upper()
+        if not rm_id:
+            while True:
+                rm_id = f"{RM_ID_PREFIX}{next_number:0{RM_ID_WIDTH}d}"
+                next_number += 1
+                if rm_id not in seen:
+                    break
+        seen.add(rm_id)
+        assigned_records.append(replace(record, rm_id=rm_id))
+    return assigned_records
+
+
+def _next_rm_id(records: list[ActualAssortmentRecord]) -> str:
+    highest = 0
+    existing = {record.rm_id.strip().upper() for record in records if record.rm_id.strip()}
+    for rm_id in existing:
+        match = RM_ID_PATTERN.fullmatch(rm_id)
+        if match:
+            highest = max(highest, int(match.group(1)))
+    next_number = highest + 1
+    while True:
+        candidate = f"{RM_ID_PREFIX}{next_number:0{RM_ID_WIDTH}d}"
+        if candidate not in existing:
+            return candidate
+        next_number += 1
