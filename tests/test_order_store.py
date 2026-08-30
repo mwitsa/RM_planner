@@ -55,7 +55,7 @@ class OrderStoreTests(unittest.TestCase):
         self.assertEqual(loaded[0].record_id, "แผนผลิต:10")
         self.assertEqual(loaded[0].order_no, "ORD-000001")
 
-    def test_legacy_s_and_ss_order_sizes_save_as_s_plus(self) -> None:
+    def test_s_and_ss_order_sizes_round_trip_unchanged(self) -> None:
         first = sample_order()
         first.rm_size = "S"
         second = sample_order()
@@ -65,7 +65,7 @@ class OrderStoreTests(unittest.TestCase):
 
         loaded = load_order_records(self.store_path)
 
-        self.assertEqual([record.rm_size for record in loaded], ["S+", "S+"])
+        self.assertEqual([record.rm_size for record in loaded], ["S", "SS"])
 
     def test_rejects_negative_production(self) -> None:
         with self.assertRaises(ValueError):
@@ -141,6 +141,21 @@ class OrderStoreTests(unittest.TestCase):
         self.assertEqual(added, 0)
         self.assertEqual(len(merged), 1)
         self.assertEqual(reloaded[0].rm_size, "M")
+        self.assertEqual(reloaded[0].production, 420)
+
+    def test_incremental_merge_restores_original_small_size_without_duplicating(self) -> None:
+        existing = sample_order(420)
+        existing.rm_size = "S+"
+        save_order_records(self.store_path, [existing])
+        incoming = sample_order(None)
+        incoming.rm_size = "SS"
+
+        merged, added = merge_order_records(self.store_path, [incoming])
+        reloaded = load_order_records(self.store_path)
+
+        self.assertEqual(added, 0)
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(reloaded[0].rm_size, "SS")
         self.assertEqual(reloaded[0].production, 420)
 
     def test_incremental_merge_backfills_wontons_per_cup_without_duplicating(self) -> None:

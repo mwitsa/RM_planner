@@ -53,7 +53,7 @@ class OrderFilterTests(unittest.TestCase):
         self.records = [
             order("1", "2025", "10", "USA", "Regular", None, 16, "M"),
             order("2", "2025", "10", "UK", "", 80, 4.714285714285714, "S"),
-            order("3", "2026", "01", "USA", "Regular", 100, None, "S"),
+            order("3", "2026", "01", "USA", "Regular", 100, None, "SS"),
         ]
 
     def test_combines_multiple_filters(self) -> None:
@@ -120,13 +120,18 @@ class OrderFilterTests(unittest.TestCase):
         )
 
     def test_filters_rm_size(self) -> None:
-        filtered = filter_orders(self.records, {"rm_size": "S+"})
-        self.assertEqual([record.record_id for record in filtered], ["2", "3"])
+        filtered_s = filter_orders(self.records, {"rm_size": "S"})
+        filtered_ss = filter_orders(self.records, {"rm_size": "SS"})
+        self.assertEqual([record.record_id for record in filtered_s], ["2"])
+        self.assertEqual([record.record_id for record in filtered_ss], ["3"])
 
     def test_filters_multiple_values_in_one_column(self) -> None:
         filtered = filter_orders(
             self.records,
-            {"country": frozenset({"UK", "USA"}), "rm_size": "S+"},
+            {
+                "country": frozenset({"UK", "USA"}),
+                "rm_size": frozenset({"S", "SS"}),
+            },
         )
         self.assertEqual([record.record_id for record in filtered], ["2", "3"])
 
@@ -135,7 +140,7 @@ class OrderFilterTests(unittest.TestCase):
             self.records,
             {
                 "country": frozenset({"UK", "USA"}),
-                "rm_size": "S+",
+                "rm_size": frozenset({"S", "SS"}),
                 "year": ALL_FILTER,
             },
             ("country", "rm_size", "year"),
@@ -143,32 +148,32 @@ class OrderFilterTests(unittest.TestCase):
         )
 
         self.assertEqual(selections["country"], ALL_FILTER)
-        self.assertEqual(selections["rm_size"], "S+")
+        self.assertEqual(selections["rm_size"], frozenset({"S", "SS"}))
         self.assertEqual(options["year"], ["2025", "2026"])
 
-    def test_cascading_filters_preserve_a_partial_multi_value_selection(self) -> None:
+    def test_cascading_filters_collapse_to_all_when_one_value_remains(self) -> None:
         selections, _options = cascading_filter_state(
             self.records,
-            {"country": frozenset({"UK"}), "rm_size": "S+"},
+            {"country": frozenset({"UK"}), "rm_size": frozenset({"S", "SS"})},
             ("country", "rm_size"),
             preferred_key="country",
         )
 
         self.assertEqual(selections["country"], frozenset({"UK"}))
-        self.assertEqual(selections["rm_size"], "S+")
+        self.assertEqual(selections["rm_size"], ALL_FILTER)
 
     def test_cascading_options_follow_other_selections(self) -> None:
         selections, options = cascading_filter_state(
             self.records,
-            {"country": ALL_FILTER, "rm_size": "S+", "year": ALL_FILTER},
+            {"country": ALL_FILTER, "rm_size": "S", "year": ALL_FILTER},
             ("country", "rm_size", "year"),
             preferred_key="rm_size",
         )
 
-        self.assertEqual(selections["rm_size"], "S+")
-        self.assertEqual(options["country"], ["UK", "USA"])
-        self.assertEqual(options["year"], ["2025", "2026"])
-        self.assertEqual(options["rm_size"], ["M", "S+"])
+        self.assertEqual(selections["rm_size"], "S")
+        self.assertEqual(options["country"], ["UK"])
+        self.assertEqual(options["year"], ["2025"])
+        self.assertEqual(options["rm_size"], ["M", "S", "SS"])
 
     def test_cascading_filters_reset_conflict_but_keep_latest_selection(self) -> None:
         selections, options = cascading_filter_state(

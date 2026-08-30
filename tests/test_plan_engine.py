@@ -185,12 +185,13 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual(len(result.unplanned), 1)
         self.assertIn("Insufficient", result.unplanned[0].reason)
 
-    def test_legacy_s_and_ss_orders_share_s_plus_stock(self) -> None:
+    def test_s_and_ss_orders_share_s_plus_stock_without_changing_order_values(self) -> None:
+        orders = [
+            order("a-ss", rm_size="SS", order_cups=730, wontons_per_cup=1, order_unit=730),
+            order("z-s", rm_size="S", order_cups=630, wontons_per_cup=1, order_unit=630),
+        ]
         result = generate_plan(
-            [
-                order("a-ss", rm_size="SS", order_cups=730, wontons_per_cup=1, order_unit=730),
-                order("z-s", rm_size="S", order_cups=630, wontons_per_cup=1, order_unit=630),
-            ],
+            orders,
             [stock((("71-75", 10), ("61-65", 10)))],
             RANGES,
             balanced_capacity(5000, 5000),
@@ -201,6 +202,8 @@ class PlanEngineTests(unittest.TestCase):
 
         self.assertAlmostEqual(result.planned_wontons, 1360)
         self.assertEqual(len(result.unplanned), 0)
+        self.assertEqual([record.rm_size for record in orders], ["SS", "S"])
+        self.assertEqual({row.rm_size for row in result.allocations}, {"S+"})
         self.assertEqual(result.allocations[0].rm_sources, "RM-000001: 10.00 kg")
         self.assertEqual(result.allocations[1].rm_sources, "RM-000001: 10.00 kg")
 

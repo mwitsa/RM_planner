@@ -80,7 +80,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[1].month, "08")
         self.assertEqual(result.records[1].year, "2026")
         self.assertEqual(result.records[1].order_unit, 10.5)
-        self.assertEqual(result.records[1].rm_size, "S+")
+        self.assertEqual(result.records[1].rm_size, "S")
         self.assertEqual(result.records[1].order_cups, 84)
         self.assertEqual(result.records[1].cups_per_unit, 8)
         self.assertEqual(result.records[1].wontons_per_cup, 12)

@@ -11,7 +11,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Iterable
 
-from assortment_range_store import normalize_size_class
 from extractor import ORDER_EXPORT_FIELDS, OrderRecord
 
 
@@ -27,7 +26,6 @@ def save_order_records(store_path: str | Path, records: Iterable[OrderRecord]) -
     record_list = list(records)
     _assign_missing_order_numbers(record_list)
     for record in record_list:
-        record.rm_size = normalize_size_class(record.rm_size)
         _validate_production(record.production)
         if not record.record_id:
             raise ValueError("Every saved order must have an internal record ID.")
@@ -193,6 +191,12 @@ def _backfill_new_source_fields(
             continue
         changed = False
         if not existing.rm_size and incoming.rm_size:
+            existing.rm_size = incoming.rm_size
+            changed = True
+        elif (
+            existing.rm_size.strip().upper() == "S+"
+            and incoming.rm_size.strip().upper() in {"S", "SS"}
+        ):
             existing.rm_size = incoming.rm_size
             changed = True
         if existing.wontons_per_cup is None and incoming.wontons_per_cup is not None:
