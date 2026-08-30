@@ -12,11 +12,11 @@ from typing import Iterable
 from uuid import uuid4
 
 from assortment_range_store import SIZE_CLASSES, normalize_size_class
+from market_labels import market_internal_value
 
 
 STORE_VERSION = 5
 RECORD_TYPES = {"actual", "prediction", "existing"}
-MARKET_TYPES = {"domestic", "export", "unassigned"}
 RM_ID_PREFIX = "RM-"
 RM_ID_WIDTH = 6
 RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
@@ -255,10 +255,7 @@ def _normalize_record_type(value: object) -> str:
 
 
 def _normalize_market_type(value: object) -> str:
-    market_type = str(value).strip().casefold()
-    if market_type not in MARKET_TYPES:
-        raise ValueError("Assortment use must be Domestic or Export.")
-    return market_type
+    return market_internal_value(value, allow_unassigned=True)
 
 
 def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:

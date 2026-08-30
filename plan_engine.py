@@ -23,6 +23,7 @@ from assortment_range_store import (
 from capacity_store import CapacitySettings, capacities_at_percentage
 from class_store import ClassDefinition
 from extractor import OrderRecord
+from market_labels import market_display_label
 
 
 SUPPORTED_RM_SIZES = {"M", "S+"}
@@ -219,7 +220,7 @@ def generate_plan(
                     record.record_id,
                 ),
                 priority_label=(
-                    f"Load {due_date.isoformat()} > {market_type.upper()} > "
+                    f"Load {due_date.isoformat()} > {market_display_label(market_type)} > "
                     f"Group 1 > {priority_label}"
                 ),
                 remaining_wontons=outstanding[2],
@@ -307,7 +308,7 @@ def generate_plan(
         ]
         if not future_compatible:
             reason = (
-                f"Insufficient {item.market_type.upper()} "
+                f"Insufficient {market_display_label(item.market_type)} "
                 f"{item.record.rm_size or '(blank)'} RM stock."
             )
         else:
@@ -358,7 +359,7 @@ def market_type_for_order(
 ) -> str:
     """Map the Country master-data group to the order's RM market.
 
-    Country group 1 is Export and group 2 is Domestic.  Any missing or other
+    Country group 1 is ต่างประเทศ and group 2 is ในประเทศ. Any missing or other
     value remains unassigned and can only consume unassigned RM.
     """
 

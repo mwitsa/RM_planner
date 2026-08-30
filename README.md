@@ -99,12 +99,12 @@ the app starts. Existing complementary-split settings are migrated while
 preserving their previous raw and cooked available capacities.
 
 The **Plan** tab treats the Country class Group as the order market: Group `1`
-is **Export**, Group `2` is **Domestic**, and any other/blank value is
-**Unassigned**. Load-date urgency is protected first. Orders competing at the
-same priority are sequenced Export before Domestic, then by the lower Group 1
+is **ต่างประเทศ**, Group `2` is **ในประเทศ**, and any other/blank value is
+**UNASSIGNED**. Load-date urgency is protected first. Orders competing at the
+same priority are sequenced ต่างประเทศ before ในประเทศ, then by the lower Group 1
 value (the allergen sequence). RM is strictly separated by its **Use for** value:
-Export RM can only supply Export orders and Domestic RM can only supply Domestic
-orders. Unassigned orders and RM only match each other. The generated and
+ต่างประเทศ RM can only supply ต่างประเทศ orders and ในประเทศ RM can only supply
+ในประเทศ orders. UNASSIGNED orders and RM only match each other. The generated and
 unplanned tables show **Use for** so this decision is visible.
 Order keeps the original RM Size from Excel, including separate `S` and `SS`
 values. Plan normalizes both only while matching material, so either order size
@@ -113,7 +113,7 @@ can consume the shared `S+` stock pool without changing the Order or Plan displa
 **Stock** shows the latest availability date, total weight, estimated wontons,
 and a responsive horizontal bar for the M, S+, and Unused stock percentages and
 weights. M and S+ have separate stock sections,
-each with DOMESTIC and EXPORT weight and estimated-wonton details. Stock always
+each with ในประเทศ and ต่างประเทศ weight and estimated-wonton details. Stock always
 shows the combined inventory; its market breakdown remains visible in these cards.
 The dated RM-arrival table is always visible so the individual RM IDs behind the
 balances can be inspected directly. Legacy

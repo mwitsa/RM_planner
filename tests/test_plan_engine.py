@@ -350,7 +350,7 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual([(row.order_id, row.market_type) for row in result.allocations], [("domestic", "domestic")])
         self.assertEqual(len(result.unplanned), 1)
         self.assertEqual(result.unplanned[0].order_id, "export")
-        self.assertIn("EXPORT M RM", result.unplanned[0].reason)
+        self.assertIn("ต่างประเทศ M RM", result.unplanned[0].reason)
 
     def test_legacy_existing_small_stock_is_shared_as_s_plus(self) -> None:
         definitions = [class_definition("Country", "DOMESTIC", "2")]

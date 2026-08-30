@@ -56,6 +56,7 @@ from extractor import (
     list_sheets,
 )
 from order_store import load_order_records, merge_order_records, save_order_records
+from market_labels import MARKET_DISPLAY_OPTIONS, market_display_label
 from order_filters import (
     ALL_FILTER,
     FILTER_SPECS,
@@ -599,7 +600,7 @@ class ProductionPlanApp(tk.Tk):
 
             market_breakdown = tk.Frame(section, background=background)
             market_breakdown.pack(fill=tk.X)
-            for market_column, market_name in enumerate(("DOMESTIC", "EXPORT")):
+            for market_column, market in enumerate(("domestic", "export")):
                 market_breakdown.columnconfigure(market_column, weight=1)
                 market_panel = tk.Frame(
                     market_breakdown,
@@ -618,7 +619,7 @@ class ProductionPlanApp(tk.Tk):
                 )
                 tk.Label(
                     market_panel,
-                    text=market_name,
+                    text=market_display_label(market),
                     background="#ffffff",
                     foreground=foreground,
                     font=("Segoe UI", 10, "bold"),
@@ -641,7 +642,7 @@ class ProductionPlanApp(tk.Tk):
                 ).grid(row=0, column=1, sticky=tk.E)
                 tk.Label(
                     market_details,
-                    textvariable=self.rm_stock_size_vars[size_class][market_name.casefold()],
+                    textvariable=self.rm_stock_size_vars[size_class][market],
                     background="#ffffff",
                     foreground=foreground,
                     font=("Segoe UI", 12, "bold"),
@@ -649,7 +650,7 @@ class ProductionPlanApp(tk.Tk):
                 tk.Label(
                     market_details,
                     textvariable=self.rm_stock_size_vars[size_class][
-                        f"{market_name.casefold()}_wontons"
+                        f"{market}_wontons"
                     ],
                     background="#ffffff",
                     foreground=foreground,
@@ -931,7 +932,7 @@ class ProductionPlanApp(tk.Tk):
         self.existing_day_var = tk.StringVar()
         self.existing_month_var = tk.StringVar()
         self.existing_year_var = tk.StringVar()
-        self.existing_market_var = tk.StringVar(value="DOMESTIC")
+        self.existing_market_var = tk.StringVar(value=market_display_label("domestic"))
         self.existing_stock_entry_vars: dict[str, dict[str, tk.StringVar]] = {
             size_class: {
                 "weight": tk.StringVar(),
@@ -975,7 +976,7 @@ class ProductionPlanApp(tk.Tk):
         ttk.Combobox(
             form,
             textvariable=self.existing_market_var,
-            values=("DOMESTIC", "EXPORT"),
+            values=MARKET_DISPLAY_OPTIONS,
             state="readonly",
             width=12,
         ).grid(row=0, column=7, sticky=tk.W, padx=(6, 0))
@@ -1092,7 +1093,7 @@ class ProductionPlanApp(tk.Tk):
         self.existing_day_var.set(f"{today.day:02d}")
         self.existing_month_var.set(f"{today.month:02d}")
         self.existing_year_var.set(str(today.year))
-        self.existing_market_var.set("DOMESTIC")
+        self.existing_market_var.set(market_display_label("domestic"))
         self._editing_existing_stock_id = None
         for size_class, variables in self.existing_stock_entry_vars.items():
             variables["weight"].set("")
@@ -1158,7 +1159,7 @@ class ProductionPlanApp(tk.Tk):
         self._load_assortment_actual_history()
         self._new_existing_stock_form(set_status=False)
         self.existing_stock_status_var.set(
-            f"{action} {record.rm_id} for {record.market_type.upper()} with "
+            f"{action} {record.rm_id} for {market_display_label(record.market_type)} with "
             f"{self._format_optional_number(record.total_weight)} kg."
         )
 
@@ -1178,7 +1179,11 @@ class ProductionPlanApp(tk.Tk):
             reverse=True,
         ):
             entries = {entry.size_class: entry for entry in record.entries}
-            values: list[str] = [record.rm_id, record.record_date, record.market_type.upper()]
+            values: list[str] = [
+                record.rm_id,
+                record.record_date,
+                market_display_label(record.market_type),
+            ]
             for size_class in SIZE_CLASSES:
                 entry = entries.get(size_class)
                 values.extend(
@@ -1215,7 +1220,7 @@ class ProductionPlanApp(tk.Tk):
         self.existing_day_var.set(day)
         self.existing_month_var.set(month)
         self.existing_year_var.set(year)
-        self.existing_market_var.set(record.market_type.upper())
+        self.existing_market_var.set(market_display_label(record.market_type))
         entries = {entry.size_class: entry for entry in record.entries}
         for size_class, variables in self.existing_stock_entry_vars.items():
             entry = entries.get(size_class)
@@ -1472,7 +1477,7 @@ class ProductionPlanApp(tk.Tk):
                     row.plan_date,
                     row.due_date,
                     row.production_type,
-                    row.market_type.upper(),
+                    market_display_label(row.market_type),
                     row.rm_size,
                     row.customer,
                     row.group_1,
@@ -1501,7 +1506,7 @@ class ProductionPlanApp(tk.Tk):
                     row.order_no,
                     row.due_date,
                     row.production_type,
-                    row.market_type.upper(),
+                    market_display_label(row.market_type),
                     row.rm_size,
                     row.customer,
                     row.group_1,
@@ -2205,7 +2210,7 @@ class ProductionPlanApp(tk.Tk):
         self.actual_day_var = tk.StringVar(value=f"{today.day:02d}")
         self.actual_month_var = tk.StringVar(value=f"{today.month:02d}")
         self.actual_year_var = tk.StringVar(value=f"{today.year:04d}")
-        self.actual_market_type_var = tk.StringVar(value="DOMESTIC")
+        self.actual_market_type_var = tk.StringVar(value=market_display_label("domestic"))
         self.stock_harvest_size_var = tk.StringVar()
         self.stock_harvest_weight_var = tk.StringVar()
 
@@ -2263,7 +2268,7 @@ class ProductionPlanApp(tk.Tk):
         ttk.Combobox(
             details_frame,
             textvariable=self.actual_market_type_var,
-            values=("DOMESTIC", "EXPORT"),
+            values=MARKET_DISPLAY_OPTIONS,
             state="readonly",
             width=10,
         ).grid(row=1, column=1, sticky="ew", pady=(4, 0))
@@ -2644,7 +2649,7 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var.set(f"{today.month:02d}")
         self.actual_year_var.set(f"{today.year:04d}")
         self._editing_actual_record_id = None
-        self.actual_market_type_var.set("DOMESTIC")
+        self.actual_market_type_var.set(market_display_label("domestic"))
         self.stock_harvest_size_var.set("")
         self.stock_harvest_weight_var.set("")
         self.assortment_actual_save_button.configure(text="Save stock")
@@ -2733,7 +2738,7 @@ class ProductionPlanApp(tk.Tk):
         self._load_assortment_actual_history()
         self._new_assortment_actual_form(set_status=False)
         self.assortment_actual_status_var.set(
-            f"{action} stock for {record.market_type.title()} "
+            f"{action} stock for {market_display_label(record.market_type)} "
             f"with {len(record.entries)} entries "
             f"for {record.record_date}."
         )
@@ -2778,7 +2783,7 @@ class ProductionPlanApp(tk.Tk):
                 iid=record.record_id,
                 values=(
                     record.rm_id,
-                    record.market_type.upper(),
+                    market_display_label(record.market_type),
                     record.record_date,
                     self._format_weight(record.total_weight),
                     self._format_size_class_summary(class_summaries["M"]),
@@ -2857,7 +2862,7 @@ class ProductionPlanApp(tk.Tk):
         self.actual_day_var.set(day)
         self.actual_month_var.set(month)
         self.actual_year_var.set(year)
-        self.actual_market_type_var.set(record.market_type.upper())
+        self.actual_market_type_var.set(market_display_label(record.market_type))
         self.stock_harvest_size_var.set("")
         self.stock_harvest_weight_var.set("")
         self._set_assortment_actual_boxes(list(record.entries))

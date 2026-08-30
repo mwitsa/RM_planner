@@ -67,12 +67,12 @@ class ActualAssortmentStoreTests(unittest.TestCase):
         self.assertEqual(saved.record_type, "prediction")
         self.assertEqual(load_actual_records(self.store_path)[0].record_type, "prediction")
 
-    def test_saves_domestic_or_export_usage(self) -> None:
+    def test_saves_thai_market_label_as_internal_value(self) -> None:
         saved = upsert_actual_record(
             self.store_path,
             "2026-08-27",
             [ActualAssortmentEntry("41-45", 100)],
-            market_type="export",
+            market_type="ต่างประเทศ",
         )
 
         self.assertEqual(saved.market_type, "export")
