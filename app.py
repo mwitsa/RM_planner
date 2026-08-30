@@ -72,6 +72,18 @@ from rm_timeline import build_rm_timeline
 from rule_store import load_rules, save_rules
 
 
+RM_NAVIGATION_ITEMS = (
+    ("timeline", "Stock"),
+    ("predict", "Assortment STD"),
+)
+
+
+def rm_navigation_section(section: str) -> str:
+    """Map the nested stock editor to its parent Stock navigation item."""
+
+    return "timeline" if section == "actual" else section
+
+
 ASSORTMENT_CLASS_WIDTH = 72
 ASSORTMENT_OUTPUT_WIDTH = 150
 ASSORTMENT_BASE_WIDTH = 76
@@ -383,11 +395,7 @@ class ProductionPlanApp(tk.Tk):
         ).pack(fill=tk.X)
 
         self.rm_navigation_buttons: dict[str, tk.Button] = {}
-        for key, label in (
-            ("timeline", "Stock"),
-            ("actual", "Update Stock"),
-            ("predict", "Assortment STD"),
-        ):
+        for key, label in RM_NAVIGATION_ITEMS:
             button = tk.Button(
                 sidebar,
                 text=label,
@@ -429,8 +437,9 @@ class ProductionPlanApp(tk.Tk):
         if section not in frames:
             raise ValueError(f"Unknown RM section: {section}")
         frames[section].tkraise()
+        navigation_section = rm_navigation_section(section)
         for key, button in self.rm_navigation_buttons.items():
-            selected = key == section
+            selected = key == navigation_section
             button.configure(
                 background="#cfe3f5" if selected else "#eef2f6",
                 foreground="#0b4f7a" if selected else "#243447",
@@ -454,18 +463,27 @@ class ProductionPlanApp(tk.Tk):
             value="Cumulative stock before generated Plan consumption."
         )
 
+        header = ttk.Frame(self.rm_timeline_tab)
+        header.pack(fill=tk.X, pady=(0, 10))
+        header_text = ttk.Frame(header)
+        header_text.pack(side=tk.LEFT, fill=tk.X, expand=True)
         ttk.Label(
-            self.rm_timeline_tab,
+            header_text,
             text="RM Stock",
             style="Summary.TLabel",
         ).pack(anchor=tk.W)
         ttk.Label(
-            self.rm_timeline_tab,
+            header_text,
             text=(
                 "Current incoming RM stock before generated Plan usage. "
                 "Use Show details to audit stock by availability date."
             ),
-        ).pack(anchor=tk.W, pady=(2, 10))
+        ).pack(anchor=tk.W, pady=(2, 0))
+        ttk.Button(
+            header,
+            text="+ Add stock",
+            command=self._open_stock_editor,
+        ).pack(side=tk.RIGHT, anchor=tk.N)
 
         controls = ttk.LabelFrame(self.rm_timeline_tab, text="Stock filters", padding=8)
         controls.pack(fill=tk.X, pady=(0, 8))
@@ -628,6 +646,10 @@ class ProductionPlanApp(tk.Tk):
         )
         self.rm_timeline_status_label.pack(fill=tk.X, pady=(8, 0))
         self._refresh_rm_timeline()
+
+    def _open_stock_editor(self) -> None:
+        self._new_assortment_actual_form()
+        self._show_rm_section("actual")
 
     def _toggle_rm_timeline_details(self) -> None:
         self.rm_timeline_detail_visible = not self.rm_timeline_detail_visible
@@ -1706,7 +1728,7 @@ class ProductionPlanApp(tk.Tk):
         ).pack(side=tk.LEFT, padx=(6, 12))
         ttk.Button(
             prediction_frame,
-            text="Predict → Update Stock",
+            text="Predict → Add stock",
             command=self._transfer_assortment_prediction,
         ).pack(side=tk.RIGHT)
 
@@ -2077,6 +2099,25 @@ class ProductionPlanApp(tk.Tk):
         self.actual_year_var = tk.StringVar(value=f"{today.year:04d}")
         self.actual_market_type_var = tk.StringVar(value="DOMESTIC")
 
+        editor_header = ttk.Frame(self.assortment_actual_tab)
+        editor_header.pack(fill=tk.X, pady=(0, 12))
+        editor_header_text = ttk.Frame(editor_header)
+        editor_header_text.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Label(
+            editor_header_text,
+            text="Add and manage stock",
+            style="Summary.TLabel",
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            editor_header_text,
+            text="Create a stock arrival or manage records already included in Stock.",
+        ).pack(anchor=tk.W, pady=(2, 0))
+        ttk.Button(
+            editor_header,
+            text="Back to Stock",
+            command=lambda: self._show_rm_section("timeline"),
+        ).pack(side=tk.RIGHT, anchor=tk.N)
+
         pane = ttk.Panedwindow(self.assortment_actual_tab, orient=tk.HORIZONTAL)
         pane.pack(fill=tk.BOTH, expand=True)
         form_panel = ttk.Frame(pane, padding=(0, 0, 10, 0))
@@ -2084,7 +2125,7 @@ class ProductionPlanApp(tk.Tk):
         pane.add(form_panel, weight=4)
         pane.add(history_panel, weight=5)
 
-        ttk.Label(form_panel, text="Update RM Stock", style="Summary.TLabel").pack(anchor=tk.W)
+        ttk.Label(form_panel, text="New stock arrival", style="Summary.TLabel").pack(anchor=tk.W)
         ttk.Label(
             form_panel,
             text="Add an RM arrival, enter its size ranges and weights, then save it to Stock.",
@@ -2557,6 +2598,10 @@ class ProductionPlanApp(tk.Tk):
             f"with {len(record.entries)} entries "
             f"for {record.record_date}."
         )
+        self.rm_timeline_status_var.set(
+            f"{action} stock {record.rm_id} for {record.record_date}."
+        )
+        self._show_rm_section("timeline")
 
     def _load_assortment_actual_history(self) -> None:
         try:

@@ -121,18 +121,18 @@ output yield percentage. Each base-size column is checked to ensure its output
 distribution totals 100%. Enter a harvest date, base size (for example `74`),
 and weight in kilograms above the matrix to predict the actual size distribution.
 The app uses column `S.74`, splits the weight by its percentages, and transfers
-the size/weight rows to **Update Stock** for review and saving.
+the size/weight rows to the Stock editor for review and saving.
 Generated weights use whole kilograms and are allocated so their sum remains
 equal to the rounded harvest weight.
 Transferred and manually entered rows use the same stock workflow. Older saved
 records that contain an internal stock type remain readable and are combined in
 Stock totals, but the type is no longer shown or selected in the app. A saved
-history row can also be permanently deleted after confirmation. The
-separate **Update Stock** page is used for RM arrival data. Stock
-details and actions are grouped at the top, while each size and weight entry uses
-one compact row. Use **Add row** for additional entries. The page shows completed
-row count and total weight while entering data. Saved stock appears in the panel
-on the right and can be loaded, edited, and updated.
+history row can also be permanently deleted after confirmation. Use **+ Add
+stock** on the Stock page to open the stock editor. Stock details and actions are
+grouped at the top, while each size and weight entry uses one compact row. Use
+**Add row** for additional entries. The editor shows completed row count and total
+weight while entering data. Saved stock appears in the panel on the right and can
+be loaded, edited, and updated. Saving returns to the refreshed Stock overview.
 Legacy class-only stock from the removed Existing Stock page is also listed in
 Saved stock so it can be deleted. Because it has no original size range, it must
 be deleted and re-entered rather than edited in the size-range form.
