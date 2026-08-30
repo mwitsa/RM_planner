@@ -23,6 +23,7 @@ class RmTimelineRow:
     rm_ids: tuple[str, ...]
     actual_in_kg: float
     prediction_in_kg: float
+    existing_in_kg: float
     incoming_kg: float
     cumulative_kg: float
     m_stock: SizeClassWeightSummary
@@ -73,6 +74,11 @@ def build_rm_timeline(
             for record in dated_records
             if record.record_type == "prediction"
         )
+        existing_in = sum(
+            record.total_weight
+            for record in dated_records
+            if record.record_type == "existing"
+        )
         daily_summaries = _summarize_records(dated_records, range_list)
         cumulative_kg += incoming_kg
         cumulative_wontons += incoming_wontons
@@ -86,6 +92,7 @@ def build_rm_timeline(
                 rm_ids=tuple(record.rm_id for record in dated_records),
                 actual_in_kg=actual_in,
                 prediction_in_kg=prediction_in,
+                existing_in_kg=existing_in,
                 incoming_kg=incoming_kg,
                 cumulative_kg=cumulative_kg,
                 m_stock=_summary(cumulative_totals["M"], cumulative_overlaps["M"]),
@@ -114,11 +121,23 @@ def _summarize_records(
             "Unused": SizeClassWeightSummary(total, 0),
         }
     entries: list[tuple[str, str, float]] = []
+    direct_totals = {key: 0.0 for key in ("M", "S", "SS")}
     for record in records:
         for entry in record.entries:
+            size_class = entry.size_class.strip().upper()
+            if size_class in direct_totals:
+                direct_totals[size_class] += float(entry.weight)
+                continue
             start, end = split_size_range(entry.size)
             entries.append((start, end, entry.weight))
-    return summarize_size_class_weight_details(entries, ranges)
+    summarized = summarize_size_class_weight_details(entries, ranges)
+    return {
+        size_class: SizeClassWeightSummary(
+            summarized[size_class].total + direct_totals.get(size_class, 0),
+            summarized[size_class].overlap,
+        )
+        for size_class in ("M", "S", "SS", "Unused")
+    }
 
 
 def _summary(total: float, overlap: float) -> SizeClassWeightSummary:

@@ -12,9 +12,10 @@ from typing import Iterable
 from uuid import uuid4
 
 
-STORE_VERSION = 4
-RECORD_TYPES = {"actual", "prediction"}
+STORE_VERSION = 5
+RECORD_TYPES = {"actual", "prediction", "existing"}
 MARKET_TYPES = {"domestic", "export", "unassigned"}
+SIZE_CLASSES = {"M", "S", "SS"}
 RM_ID_PREFIX = "RM-"
 RM_ID_WIDTH = 6
 RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
@@ -24,6 +25,8 @@ RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
 class ActualAssortmentEntry:
     size: str
     weight: float
+    size_class: str = ""
+    pieces_per_kg: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,11 +70,27 @@ def estimate_wonton_pieces(entries: Iterable[ActualAssortmentEntry]) -> int | fl
 
     total = 0.0
     for entry in entries:
+        try:
+            weight = float(entry.weight)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Cannot estimate wontons for RM size {entry.size}.") from exc
+        if entry.pieces_per_kg is not None:
+            try:
+                pieces_per_kg = float(entry.pieces_per_kg)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Cannot estimate wontons for RM size {entry.size}.") from exc
+            if (
+                not all(math.isfinite(value) for value in (pieces_per_kg, weight))
+                or pieces_per_kg <= 0
+                or weight < 0
+            ):
+                raise ValueError(f"Cannot estimate wontons for RM size {entry.size}.")
+            total += weight * pieces_per_kg
+            continue
         size_start, size_end = split_size_range(entry.size)
         try:
             start = float(size_start)
             end = float(size_end)
-            weight = float(entry.weight)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"Cannot estimate wontons for RM size {entry.size}.") from exc
         if (
@@ -230,7 +249,7 @@ def _validate_date(value: str) -> None:
 def _normalize_record_type(value: object) -> str:
     record_type = str(value).strip().casefold()
     if record_type not in RECORD_TYPES:
-        raise ValueError("Actual assortment record type must be actual or prediction.")
+        raise ValueError("RM record type must be actual, prediction, or existing.")
     return record_type
 
 
@@ -243,6 +262,7 @@ def _normalize_market_type(value: object) -> str:
 
 def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
     size = entry.size.strip()
+    size_class = entry.size_class.strip().upper()
     try:
         weight = float(entry.weight)
     except (TypeError, ValueError) as exc:
@@ -251,7 +271,26 @@ def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
         raise ValueError("Every actual assortment entry must have a Size.")
     if weight <= 0:
         raise ValueError(f"Weight for size {size} must be greater than zero.")
-    return ActualAssortmentEntry(size=size, weight=weight)
+    pieces_per_kg = entry.pieces_per_kg
+    if size_class or pieces_per_kg is not None:
+        if size_class not in SIZE_CLASSES:
+            raise ValueError("Existing stock Size class must be M, S, or SS.")
+        try:
+            pieces_per_kg = float(pieces_per_kg)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Existing {size_class} stock needs a valid average pieces/kg value."
+            ) from exc
+        if not math.isfinite(pieces_per_kg) or pieces_per_kg <= 0:
+            raise ValueError(
+                f"Existing {size_class} stock pieces/kg must be greater than zero."
+            )
+    return ActualAssortmentEntry(
+        size=size,
+        weight=weight,
+        size_class=size_class,
+        pieces_per_kg=pieces_per_kg,
+    )
 
 
 def _entry_from_json(raw_entry: object) -> ActualAssortmentEntry:
@@ -261,6 +300,8 @@ def _entry_from_json(raw_entry: object) -> ActualAssortmentEntry:
         ActualAssortmentEntry(
             size=str(raw_entry.get("size", "")),
             weight=raw_entry.get("weight", 0),
+            size_class=str(raw_entry.get("size_class", "")),
+            pieces_per_kg=raw_entry.get("pieces_per_kg"),
         )
     )
 
@@ -278,7 +319,18 @@ def _write_records(path: Path, records: list[ActualAssortmentRecord]) -> None:
                 "record_type": record.record_type,
                 "market_type": record.market_type,
                 "entries": [
-                    {"size": entry.size, "weight": entry.weight}
+                    {
+                        "size": entry.size,
+                        "weight": entry.weight,
+                        **(
+                            {
+                                "size_class": entry.size_class,
+                                "pieces_per_kg": entry.pieces_per_kg,
+                            }
+                            if entry.size_class
+                            else {}
+                        ),
+                    }
                     for entry in record.entries
                 ],
                 "created_at": record.created_at,

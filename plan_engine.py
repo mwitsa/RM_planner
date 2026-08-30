@@ -418,13 +418,17 @@ def _inventory_lots(
     for record in records:
         available_date = date.fromisoformat(record.record_date)
         for entry in record.entries:
-            start, end = split_size_range(entry.size)
-            pieces_per_kg = _pieces_per_kg(start, end)
-            classes = tuple(
-                value
-                for value in classify_size_range(start, end, ranges)
-                if value in SUPPORTED_RM_SIZES
-            )
+            if entry.size_class and entry.pieces_per_kg is not None:
+                classes = (entry.size_class.strip().upper(),)
+                pieces_per_kg = float(entry.pieces_per_kg)
+            else:
+                start, end = split_size_range(entry.size)
+                pieces_per_kg = _pieces_per_kg(start, end)
+                classes = tuple(
+                    value
+                    for value in classify_size_range(start, end, ranges)
+                    if value in SUPPORTED_RM_SIZES
+                )
             if not classes:
                 continue
             lots.append(

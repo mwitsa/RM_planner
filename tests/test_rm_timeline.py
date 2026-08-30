@@ -73,6 +73,39 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].rm_ids, ("RM-000001",))
         self.assertEqual(rows[0].cumulative_kg, 10)
 
+    def test_existing_stock_adds_direct_class_without_assortment_overlap(self) -> None:
+        existing = ActualAssortmentRecord(
+            record_id="existing-1",
+            rm_id="RM-OPENING",
+            record_date="2026-08-20",
+            entries=(
+                ActualAssortmentEntry(
+                    "S",
+                    100,
+                    size_class="S",
+                    pieces_per_kg=65,
+                ),
+            ),
+            record_type="existing",
+            market_type="domestic",
+            created_at="2026-08-20T00:00:00+00:00",
+            updated_at="2026-08-20T00:00:00+00:00",
+        )
+
+        rows = build_rm_timeline(
+            [existing],
+            RANGES,
+            record_type="existing",
+            market_type="domestic",
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].existing_in_kg, 100)
+        self.assertEqual(rows[0].s_stock.total, 100)
+        self.assertEqual(rows[0].s_stock.overlap, 0)
+        self.assertEqual(rows[0].ss_stock.total, 0)
+        self.assertEqual(rows[0].cumulative_wontons, 6500)
+
 
 if __name__ == "__main__":
     unittest.main()

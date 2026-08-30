@@ -300,6 +300,55 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual(result.unplanned[0].order_id, "export")
         self.assertIn("EXPORT M RM", result.unplanned[0].reason)
 
+    def test_existing_stock_supplies_only_its_explicit_rm_class(self) -> None:
+        definitions = [class_definition("Country", "DOMESTIC", "2")]
+        existing = ActualAssortmentRecord(
+            record_id="existing-1",
+            rm_id="RM-OPENING",
+            record_date="2026-08-20",
+            entries=(
+                ActualAssortmentEntry(
+                    "S",
+                    10,
+                    size_class="S",
+                    pieces_per_kg=65,
+                ),
+            ),
+            record_type="existing",
+            market_type="domestic",
+            created_at="2026-08-20T00:00:00+00:00",
+            updated_at="2026-08-20T00:00:00+00:00",
+        )
+        result = generate_plan(
+            [
+                order(
+                    "s-order",
+                    country="DOMESTIC",
+                    rm_size="S",
+                    order_cups=650,
+                    wontons_per_cup=1,
+                    order_unit=650,
+                ),
+                order(
+                    "ss-order",
+                    country="DOMESTIC",
+                    rm_size="SS",
+                    order_cups=650,
+                    wontons_per_cup=1,
+                    order_unit=650,
+                ),
+            ],
+            [existing],
+            RANGES,
+            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            definitions,
+            [],
+            planning_date=date(2026, 8, 28),
+        )
+
+        self.assertEqual([(row.order_id, row.rm_sources) for row in result.allocations], [("s-order", "RM-OPENING: 10.00 kg")])
+        self.assertEqual([row.order_id for row in result.unplanned], ["ss-order"])
+
     def test_existing_production_reduces_outstanding_order(self) -> None:
         result = generate_plan(
             [order("a", order_cups=100, wontons_per_cup=10, order_unit=10, production=5)],

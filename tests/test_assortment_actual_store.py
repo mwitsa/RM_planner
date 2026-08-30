@@ -78,6 +78,44 @@ class ActualAssortmentStoreTests(unittest.TestCase):
         self.assertEqual(saved.market_type, "export")
         self.assertEqual(load_actual_records(self.store_path)[0].market_type, "export")
 
+    def test_saves_existing_stock_with_explicit_class_and_pieces_per_kg(self) -> None:
+        saved = upsert_actual_record(
+            self.store_path,
+            "2026-08-20",
+            [
+                ActualAssortmentEntry(
+                    size="S",
+                    weight=100,
+                    size_class="S",
+                    pieces_per_kg=65,
+                )
+            ],
+            record_type="existing",
+            market_type="domestic",
+        )
+
+        loaded = load_actual_records(self.store_path)[0]
+        self.assertEqual(saved.record_type, "existing")
+        self.assertEqual(loaded.entries[0].size_class, "S")
+        self.assertEqual(loaded.entries[0].pieces_per_kg, 65)
+        self.assertEqual(estimate_wonton_pieces(loaded.entries), 6500)
+
+    def test_existing_stock_requires_valid_size_class_and_pieces_per_kg(self) -> None:
+        with self.assertRaisesRegex(ValueError, "M, S, or SS"):
+            upsert_actual_record(
+                self.store_path,
+                "2026-08-20",
+                [
+                    ActualAssortmentEntry(
+                        size="XL",
+                        weight=100,
+                        size_class="XL",
+                        pieces_per_kg=50,
+                    )
+                ],
+                record_type="existing",
+            )
+
     def test_legacy_record_without_type_loads_as_actual(self) -> None:
         self.store_path.write_text(
             json.dumps(
