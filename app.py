@@ -126,7 +126,7 @@ class ProductionPlanApp(tk.Tk):
         self.status_var = tk.StringVar(value="Ready")
         self.rule_status_var = tk.StringVar(value="Rules apply from top to bottom.")
         self.assortment_status_var = tk.StringVar(value="Assortment master has not been loaded.")
-        self.assortment_actual_status_var = tk.StringVar(value="No saved actual assortment history yet.")
+        self.assortment_actual_status_var = tk.StringVar(value="No saved stock records yet.")
         self.existing_stock_status_var = tk.StringVar(value="No saved existing stock yet.")
         self.class_status_var = tk.StringVar(value="No saved classes yet.")
         self.class_value_var = tk.StringVar()
@@ -1811,7 +1811,7 @@ class ProductionPlanApp(tk.Tk):
         self._editing_actual_record_id = None
         self._set_assortment_record_type("prediction")
         self.actual_market_type_var.set("DOMESTIC")
-        self.assortment_actual_save_button.configure(text="Save prediction")
+        self.assortment_actual_save_button.configure(text="Save prediction stock")
         self._set_assortment_actual_boxes(
             [
                 ActualAssortmentEntry(size=item.output_size, weight=item.weight)
@@ -1828,7 +1828,7 @@ class ProductionPlanApp(tk.Tk):
         message = (
             f"Predicted {len(predictions)} output sizes from {resolved_size} and "
             f"{allocated_weight:,} kg in whole kilograms. "
-            "Review the result, then click Save actual."
+            "Review the result, then click Save prediction stock."
         )
         self.assortment_status_var.set(message)
         self.assortment_actual_status_var.set(message)
@@ -2106,91 +2106,126 @@ class ProductionPlanApp(tk.Tk):
 
         pane = ttk.Panedwindow(self.assortment_actual_tab, orient=tk.HORIZONTAL)
         pane.pack(fill=tk.BOTH, expand=True)
-        form_panel = ttk.Frame(pane, padding=(0, 0, 12, 0))
-        history_panel = ttk.Frame(pane, padding=(12, 0, 0, 0), width=620)
-        pane.add(form_panel, weight=3)
-        pane.add(history_panel, weight=3)
+        form_panel = ttk.Frame(pane, padding=(0, 0, 10, 0))
+        history_panel = ttk.Frame(pane, padding=(10, 0, 0, 0), width=650)
+        pane.add(form_panel, weight=4)
+        pane.add(history_panel, weight=5)
 
-        ttk.Label(form_panel, text="Actual shrimp assortment", style="Summary.TLabel").pack(anchor=tk.W)
+        ttk.Label(form_panel, text="Update RM Stock", style="Summary.TLabel").pack(anchor=tk.W)
         ttk.Label(
             form_panel,
-            text="Choose the harvest date, then enter one Size and Weight pair in each box.",
-        ).pack(anchor=tk.W, pady=(2, 10))
+            text="Add an RM arrival, enter its size ranges and weights, then save it to Stock.",
+        ).pack(anchor=tk.W, pady=(2, 12))
 
-        self.assortment_record_type_badge = tk.Label(
-            form_panel,
-            font=("Segoe UI", 9, "bold"),
-            anchor=tk.W,
-            padx=10,
-            pady=6,
-        )
-        self.assortment_record_type_badge.pack(fill=tk.X, pady=(0, 10))
         self._set_assortment_record_type("actual")
 
-        date_frame = ttk.LabelFrame(form_panel, text="Harvest date", padding=10)
-        date_frame.pack(fill=tk.X, pady=(0, 10))
-        ttk.Label(date_frame, text="Date").pack(side=tk.LEFT)
+        details_frame = ttk.LabelFrame(form_panel, text="1. Stock details", padding=10)
+        details_frame.pack(fill=tk.X, pady=(0, 12))
+        details_frame.columnconfigure(0, weight=2)
+        details_frame.columnconfigure(1, weight=1)
+        details_frame.columnconfigure(2, weight=1)
+
+        ttk.Label(details_frame, text="Availability date").grid(
+            row=0, column=0, sticky=tk.W, padx=(0, 12)
+        )
+        ttk.Label(details_frame, text="Stock type").grid(
+            row=0, column=1, sticky=tk.W, padx=(0, 12)
+        )
+        ttk.Label(details_frame, text="Use for").grid(
+            row=0, column=2, sticky=tk.W
+        )
+
+        date_inputs = ttk.Frame(details_frame)
+        date_inputs.grid(row=1, column=0, sticky="ew", padx=(0, 12), pady=(4, 0))
         ttk.Combobox(
-            date_frame,
+            date_inputs,
             textvariable=self.actual_day_var,
             values=[f"{day:02d}" for day in range(1, 32)],
             state="readonly",
             width=5,
-        ).pack(side=tk.LEFT, padx=(6, 14))
-        ttk.Label(date_frame, text="Month").pack(side=tk.LEFT)
+        ).pack(side=tk.LEFT)
+        ttk.Label(date_inputs, text="/").pack(side=tk.LEFT, padx=4)
         ttk.Combobox(
-            date_frame,
+            date_inputs,
             textvariable=self.actual_month_var,
             values=[f"{month:02d}" for month in range(1, 13)],
             state="readonly",
             width=5,
-        ).pack(side=tk.LEFT, padx=(6, 14))
-        ttk.Label(date_frame, text="Year").pack(side=tk.LEFT)
+        ).pack(side=tk.LEFT)
+        ttk.Label(date_inputs, text="/").pack(side=tk.LEFT, padx=4)
         ttk.Combobox(
-            date_frame,
+            date_inputs,
             textvariable=self.actual_year_var,
             values=[str(year) for year in range(today.year - 5, today.year + 6)],
             width=7,
-        ).pack(side=tk.LEFT, padx=(6, 0))
-        ttk.Label(date_frame, text="Type").pack(side=tk.LEFT, padx=(18, 0))
+        ).pack(side=tk.LEFT)
         record_type_combo = ttk.Combobox(
-            date_frame,
+            details_frame,
             textvariable=self.actual_record_type_var,
             values=("ACTUAL", "PREDICTION"),
             state="readonly",
             width=12,
         )
-        record_type_combo.pack(side=tk.LEFT, padx=(6, 0))
+        record_type_combo.grid(row=1, column=1, sticky="ew", padx=(0, 12), pady=(4, 0))
         record_type_combo.bind(
             "<<ComboboxSelected>>",
             self._manual_assortment_record_type_changed,
         )
-        ttk.Label(date_frame, text="Use for").pack(side=tk.LEFT, padx=(14, 0))
         ttk.Combobox(
-            date_frame,
+            details_frame,
             textvariable=self.actual_market_type_var,
             values=("DOMESTIC", "EXPORT"),
             state="readonly",
             width=10,
-        ).pack(side=tk.LEFT, padx=(6, 0))
+        ).grid(row=1, column=2, sticky="ew", pady=(4, 0))
+
+        form_actions = ttk.Frame(form_panel)
+        form_actions.pack(fill=tk.X, pady=(0, 12))
+        ttk.Button(
+            form_actions,
+            text="Clear / New stock",
+            command=self._new_assortment_actual_form,
+        ).pack(side=tk.LEFT)
         self.assortment_actual_save_button = ttk.Button(
-            date_frame,
-            text="Save actual",
+            form_actions,
+            text="Save actual stock",
             command=self._save_assortment_actual,
         )
         self.assortment_actual_save_button.pack(side=tk.RIGHT)
-        ttk.Button(date_frame, text="New", command=self._new_assortment_actual_form).pack(
-            side=tk.RIGHT, padx=(0, 8)
-        )
 
         box_header = ttk.Frame(form_panel)
-        box_header.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(box_header, text="Size / Weight entries", style="Summary.TLabel").pack(side=tk.LEFT)
+        box_header.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(box_header, text="2. Size and weight", style="Summary.TLabel").pack(side=tk.LEFT)
+        self.assortment_entry_summary_var = tk.StringVar(value="1 row | Total 0 kg")
+        ttk.Label(
+            box_header,
+            textvariable=self.assortment_entry_summary_var,
+        ).pack(side=tk.LEFT, padx=(12, 0))
         ttk.Button(
             box_header,
-            text="+ Add another box",
+            text="+ Add row",
             command=self._add_assortment_actual_box,
         ).pack(side=tk.RIGHT)
+
+        ttk.Label(
+            form_panel,
+            text="Size class is filled automatically from Assortment STD. Crossing ranges become Unused.",
+        ).pack(anchor=tk.W, pady=(0, 6))
+
+        entry_headings = ttk.Frame(form_panel, padding=(6, 5))
+        entry_headings.pack(fill=tk.X)
+        entry_headings.columnconfigure(1, weight=1)
+        entry_headings.columnconfigure(3, weight=1)
+        entry_headings.columnconfigure(5, weight=1)
+        ttk.Label(entry_headings, text="#", width=4).grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(entry_headings, text="Size start").grid(row=0, column=1, sticky=tk.W)
+        ttk.Label(entry_headings, text="").grid(row=0, column=2, padx=5)
+        ttk.Label(entry_headings, text="Size end").grid(row=0, column=3, sticky=tk.W)
+        ttk.Label(entry_headings, text="Class", width=12).grid(
+            row=0, column=4, sticky=tk.W, padx=(10, 8)
+        )
+        ttk.Label(entry_headings, text="Weight (kg)").grid(row=0, column=5, sticky=tk.W)
+        ttk.Label(entry_headings, text="", width=8).grid(row=0, column=6)
 
         list_container = ttk.Frame(form_panel)
         list_container.pack(fill=tk.BOTH, expand=True)
@@ -2230,9 +2265,9 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_boxes: list[dict[str, object]] = []
         self._add_assortment_actual_box()
 
-        ttk.Label(history_panel, text="Saved history", style="Summary.TLabel").pack(anchor=tk.W)
-        ttk.Label(history_panel, text="Select a saved day to edit its entries.").pack(
-            anchor=tk.W, pady=(2, 10)
+        ttk.Label(history_panel, text="Saved stock", style="Summary.TLabel").pack(anchor=tk.W)
+        ttk.Label(history_panel, text="Double-click a record to load and edit it.").pack(
+            anchor=tk.W, pady=(2, 12)
         )
         history_table = ttk.Frame(history_panel)
         history_table.pack(fill=tk.BOTH, expand=True)
@@ -2286,16 +2321,6 @@ class ProductionPlanApp(tk.Tk):
             yscrollcommand=history_scrollbar.set,
             xscrollcommand=history_horizontal.set,
         )
-        self.assortment_actual_history_tree.tag_configure(
-            "prediction",
-            background="#fff1cc",
-            foreground="#7a4b00",
-        )
-        self.assortment_actual_history_tree.tag_configure(
-            "actual",
-            background="#e5f4e3",
-            foreground="#205b2a",
-        )
         self.assortment_actual_history_tree.grid(row=0, column=0, sticky="nsew")
         history_scrollbar.grid(row=0, column=1, sticky="ns")
         history_horizontal.grid(row=1, column=0, sticky="ew")
@@ -2306,12 +2331,12 @@ class ProductionPlanApp(tk.Tk):
         history_actions.pack(fill=tk.X, pady=(8, 0))
         ttk.Button(
             history_actions,
-            text="Edit selected",
+            text="Edit selected stock",
             command=self._edit_selected_assortment_actual,
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         ttk.Button(
             history_actions,
-            text="Delete selected",
+            text="Delete selected stock",
             command=self._delete_selected_assortment_actual,
         ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
         ttk.Label(
@@ -2326,27 +2351,13 @@ class ProductionPlanApp(tk.Tk):
         self._assortment_record_type = record_type
         if hasattr(self, "actual_record_type_var"):
             self.actual_record_type_var.set(record_type.upper())
-        if not hasattr(self, "assortment_record_type_badge"):
-            return
-        if record_type == "prediction":
-            self.assortment_record_type_badge.configure(
-                text="PREDICTION • Not actual harvest data",
-                background="#fff1cc",
-                foreground="#7a4b00",
-            )
-        else:
-            self.assortment_record_type_badge.configure(
-                text="ACTUAL • Manually entered assortment",
-                background="#e5f4e3",
-                foreground="#205b2a",
-            )
 
     def _manual_assortment_record_type_changed(self, _event: tk.Event | None = None) -> None:
         record_type = self.actual_record_type_var.get().strip().casefold()
         self._set_assortment_record_type(record_type)
         action = "Update" if self._editing_actual_record_id else "Save"
         self.assortment_actual_save_button.configure(
-            text=f"{action} {record_type}"
+            text=f"{action} {record_type} stock"
         )
         self.assortment_actual_status_var.set(
             f"Record type manually set to {record_type.upper()}."
@@ -2361,50 +2372,42 @@ class ProductionPlanApp(tk.Tk):
         size_start_var = tk.StringVar(value=size_start)
         size_end_var = tk.StringVar(value=size_end)
         weight_var = tk.StringVar(value=weight)
-        box = ttk.LabelFrame(self.assortment_actual_list, padding=12)
-        box.pack(fill=tk.X, pady=(0, 10))
-        box.columnconfigure(0, weight=1)
-        box.columnconfigure(2, weight=1)
-        box.columnconfigure(4, weight=1)
+        row_number_var = tk.StringVar()
+        box = ttk.Frame(self.assortment_actual_list, padding=(6, 5))
+        box.pack(fill=tk.X, pady=(0, 2))
+        box.columnconfigure(1, weight=1)
+        box.columnconfigure(3, weight=1)
+        box.columnconfigure(5, weight=1)
 
-        size_start_section = ttk.LabelFrame(box, text="Size (start)", padding=10)
-        size_start_section.grid(row=0, column=0, sticky="ew", padx=(0, 6))
-        size_start_section.columnconfigure(0, weight=1)
-        ttk.Entry(size_start_section, textvariable=size_start_var).grid(
-            row=0, column=0, sticky="ew"
+        ttk.Label(box, textvariable=row_number_var, width=4).grid(
+            row=0, column=0, sticky=tk.W
         )
-
-        ttk.Label(box, text="–").grid(row=0, column=1, padx=(0, 6))
-
-        size_end_section = ttk.LabelFrame(box, text="Size (end)", padding=10)
-        size_end_section.grid(row=0, column=2, sticky="ew", padx=(0, 8))
-        size_end_section.columnconfigure(0, weight=1)
-        ttk.Entry(size_end_section, textvariable=size_end_var).grid(
-            row=0, column=0, sticky="ew"
+        ttk.Entry(box, textvariable=size_start_var).grid(
+            row=0, column=1, sticky="ew"
+        )
+        ttk.Label(box, text="–").grid(row=0, column=2, padx=5)
+        ttk.Entry(box, textvariable=size_end_var).grid(
+            row=0, column=3, sticky="ew"
         )
 
         size_class_var = tk.StringVar()
-        size_class_section = ttk.LabelFrame(box, text="Size class", padding=10)
-        size_class_section.grid(row=0, column=3, sticky="ew", padx=(0, 8))
-        size_class_label = tk.Label(
-            size_class_section,
+        size_class_label = ttk.Label(
+            box,
             textvariable=size_class_var,
-            width=14,
+            width=12,
             anchor=tk.CENTER,
             font=("Segoe UI", 9, "bold"),
         )
-        size_class_label.pack(fill=tk.X)
-
-        weight_section = ttk.LabelFrame(box, text="Weight", padding=10)
-        weight_section.grid(row=0, column=4, sticky="ew", padx=(0, 8))
-        weight_section.columnconfigure(0, weight=1)
-        ttk.Entry(weight_section, textvariable=weight_var).grid(row=0, column=0, sticky="ew")
+        size_class_label.grid(row=0, column=4, sticky="ew", padx=(10, 8))
+        ttk.Entry(box, textvariable=weight_var).grid(
+            row=0, column=5, sticky="ew"
+        )
 
         ttk.Button(
             box,
             text="Remove",
             command=lambda current_box=box: self._remove_assortment_actual_box(current_box),
-        ).grid(row=0, column=5, sticky=tk.E)
+        ).grid(row=0, column=6, sticky=tk.E, padx=(8, 0))
 
         box_entry: dict[str, object] = {
             "frame": box,
@@ -2413,6 +2416,7 @@ class ProductionPlanApp(tk.Tk):
             "size_class": size_class_var,
             "size_class_label": size_class_label,
             "weight": weight_var,
+            "row_number": row_number_var,
         }
         size_start_var.trace_add(
             "write",
@@ -2422,16 +2426,21 @@ class ProductionPlanApp(tk.Tk):
             "write",
             lambda *_args, current=box_entry: self._update_assortment_box_size_class(current),
         )
+        weight_var.trace_add(
+            "write",
+            lambda *_args: self._update_assortment_entry_summary(),
+        )
         self.assortment_actual_boxes.append(box_entry)
         self._update_assortment_box_size_class(box_entry)
         self._renumber_assortment_actual_boxes()
+        self._update_assortment_entry_summary()
         self.assortment_actual_canvas.after_idle(
             lambda: self.assortment_actual_canvas.configure(
                 scrollregion=self.assortment_actual_canvas.bbox("all")
             )
         )
 
-    def _remove_assortment_actual_box(self, box: ttk.LabelFrame) -> None:
+    def _remove_assortment_actual_box(self, box: ttk.Frame) -> None:
         for index, entry in enumerate(self.assortment_actual_boxes):
             if entry["frame"] == box:
                 box.destroy()
@@ -2441,12 +2450,36 @@ class ProductionPlanApp(tk.Tk):
             self._add_assortment_actual_box()
         else:
             self._renumber_assortment_actual_boxes()
+        self._update_assortment_entry_summary()
 
     def _renumber_assortment_actual_boxes(self) -> None:
         for number, entry in enumerate(self.assortment_actual_boxes, start=1):
-            frame = entry["frame"]
-            if isinstance(frame, ttk.LabelFrame):
-                frame.configure(text=f"Assortment box {number}")
+            row_number = entry.get("row_number")
+            if isinstance(row_number, tk.StringVar):
+                row_number.set(str(number))
+
+    def _update_assortment_entry_summary(self) -> None:
+        if not hasattr(self, "assortment_entry_summary_var"):
+            return
+        completed_rows = 0
+        total_weight = 0.0
+        for entry in self.assortment_actual_boxes:
+            start = entry["size_start"]
+            end = entry["size_end"]
+            weight = entry["weight"]
+            if not all(isinstance(value, tk.StringVar) for value in (start, end, weight)):
+                continue
+            if start.get().strip() and end.get().strip() and weight.get().strip():
+                completed_rows += 1
+            try:
+                total_weight += float(weight.get().strip().replace(",", "") or 0)
+            except ValueError:
+                continue
+        row_label = "row" if completed_rows == 1 else "rows"
+        self.assortment_entry_summary_var.set(
+            f"{completed_rows} completed {row_label} | "
+            f"Total {self._format_optional_number(total_weight)} kg"
+        )
 
     def _current_assortment_size_range_definitions(
         self,
@@ -2470,25 +2503,20 @@ class ProductionPlanApp(tk.Tk):
         if not all(
             isinstance(value, tk.StringVar)
             for value in (size_start_var, size_end_var, size_class_var)
-        ) or not isinstance(size_class_label, tk.Label):
+        ) or not isinstance(size_class_label, ttk.Label):
             return
         size_start = size_start_var.get().strip()
         size_end = size_end_var.get().strip()
         ranges = self._current_assortment_size_range_definitions()
         if not size_start or not size_end or not ranges:
             size_class_var.set("")
-            size_class_label.configure(foreground="#333333")
             return
         try:
             classes = classify_size_range(size_start, size_end, ranges)
         except ValueError:
             size_class_var.set("Invalid range")
-            size_class_label.configure(foreground="#a12622")
             return
         size_class_var.set(", ".join(classes))
-        size_class_label.configure(
-            foreground="#9a5b00" if classes == ("Unused",) else "#205b2a"
-        )
 
     def _refresh_assortment_actual_size_classes(self) -> None:
         if not hasattr(self, "assortment_actual_boxes"):
@@ -2504,15 +2532,15 @@ class ProductionPlanApp(tk.Tk):
         self._editing_actual_record_id = None
         self._set_assortment_record_type("actual")
         self.actual_market_type_var.set("DOMESTIC")
-        self.assortment_actual_save_button.configure(text="Save actual")
+        self.assortment_actual_save_button.configure(text="Save actual stock")
         self._set_assortment_actual_boxes([])
         if set_status:
-            self.assortment_actual_status_var.set("New actual assortment form ready.")
+            self.assortment_actual_status_var.set("New stock form ready.")
 
     def _set_assortment_actual_boxes(self, entries: list[ActualAssortmentEntry]) -> None:
         for box_entry in self.assortment_actual_boxes:
             frame = box_entry["frame"]
-            if isinstance(frame, ttk.LabelFrame):
+            if isinstance(frame, ttk.Frame):
                 frame.destroy()
         self.assortment_actual_boxes.clear()
         if entries:
@@ -2544,19 +2572,19 @@ class ProductionPlanApp(tk.Tk):
                 continue
             if not size_start or not size_end or not weight_text:
                 raise ValueError(
-                    f"Assortment box {number} needs Size (start), Size (end), and Weight."
+                    f"Row {number} needs Size start, Size end, and Weight."
                 )
             try:
                 weight = float(weight_text)
             except ValueError as exc:
-                raise ValueError(f"Assortment box {number} has an invalid Weight.") from exc
+                raise ValueError(f"Row {number} has an invalid Weight.") from exc
             ranges = self._current_assortment_size_range_definitions()
             if ranges:
                 try:
                     classify_size_range(size_start, size_end, ranges)
                 except ValueError as exc:
                     raise ValueError(
-                        f"Assortment box {number} has an invalid Size range: {exc}"
+                        f"Row {number} has an invalid Size range: {exc}"
                     ) from exc
             size = combine_size_range(size_start, size_end)
             entries.append(ActualAssortmentEntry(size=size, weight=weight))
@@ -2584,7 +2612,7 @@ class ProductionPlanApp(tk.Tk):
                 market_type=self.actual_market_type_var.get(),
             )
         except ValueError as exc:
-            messagebox.showerror("Save actual assortment", str(exc))
+            messagebox.showerror("Save stock", str(exc))
             return
         action = "Updated" if self._editing_actual_record_id else "Saved"
         self._load_assortment_actual_history()
@@ -2609,7 +2637,7 @@ class ProductionPlanApp(tk.Tk):
         )
         if assortment_count:
             self.assortment_actual_status_var.set(
-                f"Loaded {assortment_count} saved assortment history records."
+                f"Loaded {assortment_count} saved stock records."
             )
 
     def _refresh_assortment_actual_history_table(self) -> None:
@@ -2677,11 +2705,11 @@ class ProductionPlanApp(tk.Tk):
     def _edit_selected_assortment_actual(self) -> None:
         selected = self.assortment_actual_history_tree.selection()
         if not selected:
-            messagebox.showwarning("No history selected", "Select a saved record to edit.")
+            messagebox.showwarning("No stock selected", "Select a saved stock record to edit.")
             return
         record = self.assortment_actual_records.get(selected[0])
         if not record:
-            messagebox.showerror("History error", "The selected record could not be found.")
+            messagebox.showerror("Stock error", "The selected stock record could not be found.")
             return
         year, month, day = record.record_date.split("-")
         self.actual_day_var.set(day)
@@ -2692,23 +2720,23 @@ class ProductionPlanApp(tk.Tk):
         self._editing_actual_record_id = record.record_id
         self._set_assortment_record_type(record.record_type)
         self.assortment_actual_save_button.configure(
-            text=f"Update {record.record_type}"
+            text=f"Update {record.record_type} stock"
         )
         self.assortment_actual_status_var.set(
-            f"Editing saved {record.record_type} assortment for {record.record_date}."
+            f"Editing saved {record.record_type} stock for {record.record_date}."
         )
 
     def _delete_selected_assortment_actual(self) -> None:
         selected = self.assortment_actual_history_tree.selection()
         if not selected:
-            messagebox.showwarning("No history selected", "Select a saved record to delete.")
+            messagebox.showwarning("No stock selected", "Select a saved stock record to delete.")
             return
         record = self.assortment_actual_records.get(selected[0])
         if not record:
-            messagebox.showerror("History error", "The selected record could not be found.")
+            messagebox.showerror("Stock error", "The selected stock record could not be found.")
             return
         confirmed = messagebox.askyesno(
-            "Delete assortment history",
+            "Delete saved stock",
             f"Permanently delete the {record.record_type.upper()} record for "
             f"{record.record_date}?\n\nThis cannot be undone.",
         )
@@ -2720,13 +2748,13 @@ class ProductionPlanApp(tk.Tk):
                 record.record_id,
             )
         except ValueError as exc:
-            messagebox.showerror("Delete assortment history", str(exc))
+            messagebox.showerror("Delete saved stock", str(exc))
             return
         if self._editing_actual_record_id == deleted.record_id:
             self._new_assortment_actual_form(set_status=False)
         self._load_assortment_actual_history()
         self.assortment_actual_status_var.set(
-            f"Deleted {deleted.record_type.upper()} history for {deleted.record_date}."
+            f"Deleted {deleted.record_type.upper()} stock for {deleted.record_date}."
         )
 
     @staticmethod

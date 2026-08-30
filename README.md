@@ -124,17 +124,17 @@ The app uses column `S.74`, splits the weight by its percentages, and transfers
 the size/weight rows to **Update Stock** for review and saving.
 Generated weights use whole kilograms and are allocated so their sum remains
 equal to the rounded harvest weight.
-Transferred rows carry a persistent amber **PREDICTION** flag, while manually
-entered data carries a green **ACTUAL** flag. Saved history also displays and
-preserves this Type when a record is edited. The Type dropdown allows either
+Transferred rows carry a persistent **PREDICTION** type, while manually entered
+data carries an **ACTUAL** type. Saved stock also displays and preserves this
+Type when a record is edited. The Type dropdown allows either
 classification to be selected manually before saving or while editing. A saved
 history row can also be permanently deleted after confirmation. The
-separate **Update Stock** page is reserved
-for actual harvest assortment data. It starts with one empty card containing
-Size (start), Size (end), and Weight fields; use **Add another box** to record additional actual
-assortment entries. Choose Date, Month, and Year before saving. Saved records
-appear in the history panel on the right and can be loaded, edited, and updated.
+separate **Update Stock** page is used for actual harvest assortment data. Stock
+details and actions are grouped at the top, while each size and weight entry uses
+one compact row. Use **Add row** for additional entries. The page shows completed
+row count and total weight while entering data. Saved stock appears in the panel
+on the right and can be loaded, edited, and updated.
 Each completed size range is automatically classified against the current M/S+
 ranges. A range crossing both classes or outside both classifications shows
 `Unused`.
-Saved history summarizes the weight for M, S+, and Unused in separate columns.
+Saved stock summarizes the weight for M, S+, and Unused in separate columns.
