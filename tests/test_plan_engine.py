@@ -9,6 +9,7 @@ from capacity_store import CapacitySettings
 from class_store import ClassDefinition
 from extractor import OrderRecord
 from plan_engine import generate_plan, market_type_for_order, order_due_date, priority_for_order
+from wonton_weight_store import WontonWeightSettings
 
 
 RANGES = (
@@ -133,24 +134,22 @@ class PlanEngineTests(unittest.TestCase):
     def test_month_only_order_is_due_on_last_day(self) -> None:
         self.assertEqual(order_due_date(order("a", day="", month="02")), date(2026, 2, 28))
 
-    def test_size_midpoint_converts_stock_kg_to_shrimp_pieces(self) -> None:
+    def test_configured_wonton_weight_converts_stock_kg_to_wontons(self) -> None:
         result = generate_plan(
-            [order("a", rm_size="S", order_cups=650, wontons_per_cup=1, order_unit=650)],
-            [stock((("61-69", 10),))],
+            [order("a", rm_size="M", order_cups=200, wontons_per_cup=1, order_unit=200)],
+            [stock((("51-55", 1),))],
             RANGES,
             balanced_capacity(1000, 1000),
             [],
             [],
             planning_date=date(2026, 8, 28),
+            wonton_weight_settings=WontonWeightSettings(m_grams=8.6),
         )
 
         self.assertEqual(len(result.allocations), 1)
-        self.assertAlmostEqual(result.allocations[0].planned_wontons, 650)
-        self.assertAlmostEqual(result.allocations[0].order_cups, 650)
-        self.assertAlmostEqual(result.allocations[0].order_wontons, 650)
-        self.assertAlmostEqual(result.allocations[0].produced_wontons, 650)
-        self.assertAlmostEqual(result.allocations[0].rm_kg, 10)
-        self.assertEqual(result.allocations[0].rm_size, "S")
+        self.assertAlmostEqual(result.allocations[0].planned_wontons, 1000 / 8.6)
+        self.assertAlmostEqual(result.allocations[0].rm_kg, 1)
+        self.assertEqual(result.allocations[0].rm_size, "M")
 
     def test_order_can_split_over_multiple_capacity_days(self) -> None:
         result = generate_plan(
@@ -179,6 +178,7 @@ class PlanEngineTests(unittest.TestCase):
             [],
             [],
             planning_date=date(2026, 8, 28),
+            wonton_weight_settings=WontonWeightSettings(s_plus_grams=1000 / 65),
         )
 
         self.assertAlmostEqual(result.planned_wontons, 650)
@@ -190,8 +190,8 @@ class PlanEngineTests(unittest.TestCase):
 
     def test_s_and_ss_orders_share_s_plus_stock_without_changing_order_values(self) -> None:
         orders = [
-            order("a-ss", rm_size="SS", order_cups=730, wontons_per_cup=1, order_unit=730),
-            order("z-s", rm_size="S", order_cups=630, wontons_per_cup=1, order_unit=630),
+            order("a-ss", rm_size="SS", order_cups=650, wontons_per_cup=1, order_unit=650),
+            order("z-s", rm_size="S", order_cups=650, wontons_per_cup=1, order_unit=650),
         ]
         result = generate_plan(
             orders,
@@ -201,9 +201,10 @@ class PlanEngineTests(unittest.TestCase):
             [],
             [],
             planning_date=date(2026, 8, 28),
+            wonton_weight_settings=WontonWeightSettings(s_plus_grams=1000 / 65),
         )
 
-        self.assertAlmostEqual(result.planned_wontons, 1360)
+        self.assertAlmostEqual(result.planned_wontons, 1300)
         self.assertEqual(len(result.unplanned), 0)
         self.assertEqual([record.rm_size for record in orders], ["SS", "S"])
         self.assertEqual({row.rm_size for row in result.allocations}, {"S", "SS"})
@@ -363,7 +364,7 @@ class PlanEngineTests(unittest.TestCase):
                     "S",
                     10,
                     size_class="S",
-                    pieces_per_kg=65,
+                    pieces_per_kg=999,
                 ),
             ),
             record_type="existing",
@@ -396,6 +397,7 @@ class PlanEngineTests(unittest.TestCase):
             definitions,
             [],
             planning_date=date(2026, 8, 28),
+            wonton_weight_settings=WontonWeightSettings(s_plus_grams=1000 / 65),
         )
 
         self.assertEqual([(row.order_id, row.rm_sources) for row in result.allocations], [("s-order", "RM-OPENING: 10.00 kg")])

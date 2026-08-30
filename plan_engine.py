@@ -24,6 +24,7 @@ from capacity_store import CapacitySettings, capacities_at_percentage
 from class_store import ClassDefinition
 from extractor import OrderRecord
 from market_labels import market_display_label
+from wonton_weight_store import WontonWeightSettings
 
 
 SUPPORTED_RM_SIZES = {"M", "S+"}
@@ -95,7 +96,7 @@ class _InventoryLot:
     rm_id: str
     record_id: str
     size_range: str
-    pieces_per_kg: float
+    wontons_per_kg: float
     eligible_classes: tuple[str, ...]
     remaining_kg: float
 
@@ -126,18 +127,19 @@ def generate_plan(
     class_definitions: Iterable[ClassDefinition],
     class_rules: Iterable[str],
     planning_date: date | None = None,
+    wonton_weight_settings: WontonWeightSettings | None = None,
 ) -> PlanResult:
     """Generate a finite daily plan through the latest eligible order due date.
 
     Assumptions for the first planning model:
-    - one wonton consumes one shrimp;
-    - an output range such as 60-70 is estimated at 65 shrimp/kg;
+    - each M/S+ class uses its configured wonton weight to convert RM kg;
     - blank order days are due on the final day of their month;
     - assortment lots become available on their saved date and carry forward;
     - orders may split across days and inventory lots.
     """
 
     start_date = planning_date or date.today()
+    weight_settings = wonton_weight_settings or WontonWeightSettings()
     ranges = tuple(size_ranges)
     if not ranges:
         raise ValueError("Define and save the M/S+ assortment ranges first.")
@@ -243,7 +245,7 @@ def generate_plan(
             end_date=start_date.isoformat(),
         )
 
-    lots = _inventory_lots(assortment_records, ranges)
+    lots = _inventory_lots(assortment_records, ranges, weight_settings)
     horizon_end = max(item.due_date for item in pending)
     allocations: list[PlanAllocation] = []
     pending.sort(key=lambda item: item.priority_key)
@@ -263,8 +265,14 @@ def generate_plan(
                 item.market_type,
                 current_day,
             )
-            material_pieces = sum(lot.remaining_kg * lot.pieces_per_kg for lot in compatible)
-            planned_wontons = min(item.remaining_wontons, available_capacity, material_pieces)
+            material_wontons = sum(
+                lot.remaining_kg * lot.wontons_per_kg for lot in compatible
+            )
+            planned_wontons = min(
+                item.remaining_wontons,
+                available_capacity,
+                material_wontons,
+            )
             if planned_wontons <= EPSILON:
                 continue
             used_kg, sources = _consume_material(compatible, planned_wontons)
@@ -417,17 +425,16 @@ def priority_for_order(
 def _inventory_lots(
     records: Iterable[ActualAssortmentRecord],
     ranges: tuple[AssortmentSizeRange, ...],
+    wonton_weight_settings: WontonWeightSettings,
 ) -> list[_InventoryLot]:
     lots: list[_InventoryLot] = []
     for record in records:
         available_date = date.fromisoformat(record.record_date)
         for entry in record.entries:
-            if entry.size_class and entry.pieces_per_kg is not None:
+            if entry.size_class:
                 classes = (normalize_size_class(entry.size_class),)
-                pieces_per_kg = float(entry.pieces_per_kg)
             else:
                 start, end = split_size_range(entry.size)
-                pieces_per_kg = _pieces_per_kg(start, end)
                 classes = tuple(
                     value
                     for value in classify_size_range(start, end, ranges)
@@ -435,6 +442,7 @@ def _inventory_lots(
                 )
             if not classes:
                 continue
+            wontons_per_kg = wonton_weight_settings.wontons_per_kg(classes[0])
             lots.append(
                 _InventoryLot(
                     available_date=available_date,
@@ -442,7 +450,7 @@ def _inventory_lots(
                     rm_id=record.rm_id,
                     record_id=record.record_id,
                     size_range=entry.size,
-                    pieces_per_kg=pieces_per_kg,
+                    wontons_per_kg=wontons_per_kg,
                     eligible_classes=classes,
                     remaining_kg=float(entry.weight),
                 )
@@ -470,7 +478,7 @@ def _compatible_lots(
         key=lambda lot: (
             len(lot.eligible_classes),
             lot.available_date,
-            -lot.pieces_per_kg,
+            -lot.wontons_per_kg,
             lot.record_id,
             lot.size_range,
         ),
@@ -479,19 +487,19 @@ def _compatible_lots(
 
 def _consume_material(
     lots: Iterable[_InventoryLot],
-    required_pieces: float,
+    required_wontons: float,
 ) -> tuple[float, list[str]]:
-    pieces_left = required_pieces
+    wontons_left = required_wontons
     total_kg = 0.0
     source_amounts: dict[str, float] = {}
     for lot in lots:
-        if pieces_left <= EPSILON:
+        if wontons_left <= EPSILON:
             break
-        available_pieces = lot.remaining_kg * lot.pieces_per_kg
-        used_pieces = min(pieces_left, available_pieces)
-        used_kg = used_pieces / lot.pieces_per_kg
+        available_wontons = lot.remaining_kg * lot.wontons_per_kg
+        used_wontons = min(wontons_left, available_wontons)
+        used_kg = used_wontons / lot.wontons_per_kg
         lot.remaining_kg = max(lot.remaining_kg - used_kg, 0)
-        pieces_left -= used_pieces
+        wontons_left -= used_wontons
         total_kg += used_kg
         source_amounts[lot.source_label] = source_amounts.get(lot.source_label, 0) + used_kg
     sources = [
@@ -499,17 +507,6 @@ def _consume_material(
         for source_id, used_kg in source_amounts.items()
     ]
     return total_kg, sources
-
-
-def _pieces_per_kg(start: str, end: str) -> float:
-    try:
-        start_number = float(start)
-        end_number = float(end)
-    except ValueError as exc:
-        raise ValueError(f"RM size range must be numeric: {start}-{end}") from exc
-    if start_number <= 0 or end_number <= 0 or start_number > end_number:
-        raise ValueError(f"Invalid RM size range: {start}-{end}")
-    return (start_number + end_number) / 2
 
 
 def _unplanned(

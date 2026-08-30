@@ -7,17 +7,16 @@ from typing import Iterable
 
 from assortment_actual_store import (
     ActualAssortmentRecord,
-    estimate_wonton_pieces,
     split_size_range,
 )
 from assortment_range_store import (
     AssortmentSizeRange,
     SIZE_CLASSES,
     SizeClassWeightSummary,
-    classify_size_range,
     normalize_size_class,
     summarize_size_class_weight_details,
 )
+from wonton_weight_store import WontonWeightSettings
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,10 +38,12 @@ def build_rm_timeline(
     records: Iterable[ActualAssortmentRecord],
     ranges: Iterable[AssortmentSizeRange],
     market_type: str | None = None,
+    wonton_weight_settings: WontonWeightSettings | None = None,
 ) -> tuple[RmTimelineRow, ...]:
     """Group filtered RM arrivals by date and return cumulative stock rows."""
 
     range_list = tuple(ranges)
+    weight_settings = wonton_weight_settings or WontonWeightSettings()
     normalized_market = _normalize_filter(market_type)
     filtered = [
         record
@@ -62,11 +63,16 @@ def build_rm_timeline(
     for record_date in sorted(by_date):
         dated_records = sorted(by_date[record_date], key=lambda item: item.rm_id)
         incoming_kg = sum(record.total_weight for record in dated_records)
-        incoming_wontons = sum(
-            float(estimate_wonton_pieces(record.entries)) for record in dated_records
-        )
         daily_summaries = _summarize_records(dated_records, range_list)
-        daily_class_wontons = _summarize_wontons_by_class(dated_records, range_list)
+        daily_class_wontons = {
+            size_class: weight_settings.estimate_wontons(
+                size_class,
+                daily_summaries[size_class].total,
+            )
+            for size_class in SIZE_CLASSES
+        }
+        daily_class_wontons["Unused"] = 0.0
+        incoming_wontons = sum(daily_class_wontons.values())
         cumulative_kg += incoming_kg
         cumulative_wontons += incoming_wontons
         for size_class, summary in daily_summaries.items():
@@ -139,27 +145,6 @@ def _summarize_records(
 
 def _summary(total: float) -> SizeClassWeightSummary:
     return SizeClassWeightSummary(_number(total))
-
-
-def _summarize_wontons_by_class(
-    records: Iterable[ActualAssortmentRecord],
-    ranges: tuple[AssortmentSizeRange, ...],
-) -> dict[str, float]:
-    totals = {**{size_class: 0.0 for size_class in SIZE_CLASSES}, "Unused": 0.0}
-    for record in records:
-        for entry in record.entries:
-            size_class = normalize_size_class(entry.size_class)
-            if size_class not in SIZE_CLASSES:
-                if ranges:
-                    size_start, size_end = split_size_range(entry.size)
-                    try:
-                        size_class = classify_size_range(size_start, size_end, ranges)[0]
-                    except ValueError:
-                        size_class = "Unused"
-                else:
-                    size_class = "Unused"
-            totals[size_class] += float(estimate_wonton_pieces((entry,)))
-    return totals
 
 
 def _number(total: float) -> int | float:

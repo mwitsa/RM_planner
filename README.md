@@ -62,6 +62,11 @@ actual output-size column. Drag a colored box to move its complete range, or
 drag its top or bottom handle to expand or contract it vertically. Click
 **Save ranges** to keep the selections in
 `Data/RM/assortment_size_ranges.json` for the next app session.
+Assortment STD also stores a finished-wonton weight for M and S+ in
+`Data/RM/wonton_weights.json`. Enter grams per wonton and the page previews the
+estimated yield using `1,000 / grams` wontons per kg; for example, 8.6 g gives
+about 116.28 wontons/kg. Stock estimates and Plan RM consumption both use these
+class settings, while Unused stock has no estimated wonton yield.
 The Order table uses compact Excel-style filters directly in its column
 headers, so no separate filter panel takes up space. Click a header to sort,
 search its available values, select one or several values with checkboxes, or
@@ -124,8 +129,9 @@ The **Assortment STD** page automatically loads `Data/RM/assortment.xlsx` as
 read-only shrimp assortment master data. Its columns are harvested base sizes,
 its rows are actual output-size ranges, and every matrix cell is the expected
 output yield percentage. Each base-size column is checked to ensure its output
-distribution totals 100%. Assortment STD contains only master-data review and
-M/S+ range maintenance; stock entry is handled in the Stock editor.
+distribution totals 100%. Assortment STD contains master-data review, M/S+
+range maintenance, and per-class wonton-weight settings; stock entry is handled
+in the Stock editor.
 In **+ Add stock**, enter the availability date and optionally use **Fill from
 Assortment STD** with a harvest size (for example `74`) and total weight. The app
 uses column `S.74` and fills editable size/weight rows from its percentages.

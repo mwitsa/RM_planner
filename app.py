@@ -27,7 +27,6 @@ from assortment_actual_store import (
     ActualAssortmentRecord,
     combine_size_range,
     delete_actual_record,
-    estimate_wonton_pieces,
     load_actual_records,
     split_size_range,
     upsert_actual_record,
@@ -71,6 +70,11 @@ from order_filters import (
 from plan_engine import PlanResult, generate_plan
 from rm_timeline import build_rm_timeline, stock_distribution_percentages
 from rule_store import load_rules, save_rules
+from wonton_weight_store import (
+    WontonWeightSettings,
+    load_wonton_weight_settings,
+    save_wonton_weight_settings,
+)
 
 
 RM_NAVIGATION_ITEMS = (
@@ -169,6 +173,9 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_size_range_file_path = (
             Path(__file__).resolve().parent / "Data" / "RM" / "assortment_size_ranges.json"
         )
+        self.wonton_weight_file_path = (
+            Path(__file__).resolve().parent / "Data" / "RM" / "wonton_weights.json"
+        )
         self.assortment_actual_file_path = (
             Path(__file__).resolve().parent / "Data" / "RM" / "assortment_actual.json"
         )
@@ -182,6 +189,7 @@ class ProductionPlanApp(tk.Tk):
             Path(__file__).resolve().parent / "Data" / "Capacity" / "capacity.json"
         )
         self.capacity_settings = CapacitySettings()
+        self.wonton_weight_settings = WontonWeightSettings()
         self.plan_result: PlanResult | None = None
         self.class_definitions: dict[str, ClassDefinition] = {}
         self._editing_class_id: str | None = None
@@ -200,6 +208,7 @@ class ProductionPlanApp(tk.Tk):
         self._load_default_workbook()
         self._load_saved_rules()
         self._load_assortment_data()
+        self._load_wonton_weight_settings()
         self._load_assortment_actual_history()
         self._load_saved_orders()
         self._load_saved_class_definitions()
@@ -815,9 +824,18 @@ class ProductionPlanApp(tk.Tk):
         try:
             records = tuple(self.assortment_actual_records.values())
             ranges = self._current_assortment_size_range_definitions()
-            rows = build_rm_timeline(records, ranges)
+            rows = build_rm_timeline(
+                records,
+                ranges,
+                wonton_weight_settings=self.wonton_weight_settings,
+            )
             market_rows = {
-                market: build_rm_timeline(records, ranges, market_type=market)
+                market: build_rm_timeline(
+                    records,
+                    ranges,
+                    market_type=market,
+                    wonton_weight_settings=self.wonton_weight_settings,
+                )
                 for market in ("domestic", "export")
             }
         except ValueError as exc:
@@ -1179,6 +1197,7 @@ class ProductionPlanApp(tk.Tk):
             reverse=True,
         ):
             entries = {entry.size_class: entry for entry in record.entries}
+            class_summaries = self._assortment_record_class_summaries(record)
             values: list[str] = [
                 record.rm_id,
                 record.record_date,
@@ -1195,7 +1214,9 @@ class ProductionPlanApp(tk.Tk):
             values.extend(
                 [
                     self._format_optional_number(record.total_weight),
-                    self._format_optional_number(estimate_wonton_pieces(record.entries)),
+                    self._format_optional_number(
+                        self._estimate_wontons_from_class_summaries(class_summaries)
+                    ),
                 ]
             )
             self.existing_stock_tree.insert("", tk.END, iid=record.record_id, values=values)
@@ -1459,6 +1480,7 @@ class ProductionPlanApp(tk.Tk):
                 self.class_definitions.values(),
                 rules,
                 planning_date=date.today(),
+                wonton_weight_settings=self.wonton_weight_settings,
             )
         except (ValueError, OSError) as exc:
             messagebox.showerror("Generate Plan", str(exc))
@@ -1861,7 +1883,10 @@ class ProductionPlanApp(tk.Tk):
         ).pack(anchor=tk.W)
         ttk.Label(
             self.assortment_std_tab,
-            text="Review the assortment master and maintain the M and S+ output-size ranges.",
+            text=(
+                "Maintain M/S+ output-size ranges and the finished wonton weight "
+                "used to estimate yield."
+            ),
         ).pack(anchor=tk.W, pady=(2, 10))
 
         source_frame = ttk.Frame(self.assortment_std_tab)
@@ -1872,6 +1897,61 @@ class ProductionPlanApp(tk.Tk):
         ttk.Button(source_frame, text="Save ranges", command=self._save_assortment_size_ranges).pack(
             side=tk.RIGHT, padx=(0, 8)
         )
+
+        self.wonton_weight_vars = {
+            size_class: tk.StringVar(
+                value=self._format_optional_number(
+                    self.wonton_weight_settings.grams_for(size_class)
+                )
+            )
+            for size_class in SIZE_CLASSES
+        }
+        self.wonton_yield_preview_vars = {
+            size_class: tk.StringVar()
+            for size_class in SIZE_CLASSES
+        }
+        weight_frame = ttk.LabelFrame(
+            self.assortment_std_tab,
+            text="Wonton weight and estimated yield",
+            padding=10,
+        )
+        weight_frame.pack(fill=tk.X, pady=(0, 10))
+        for column, size_class in enumerate(SIZE_CLASSES):
+            weight_frame.columnconfigure(column, weight=1)
+            class_frame = ttk.Frame(weight_frame)
+            class_frame.grid(
+                row=0,
+                column=column,
+                sticky="ew",
+                padx=(0, 20) if column == 0 else (0, 12),
+            )
+            ttk.Label(
+                class_frame,
+                text=size_class,
+                style="Summary.TLabel",
+            ).pack(side=tk.LEFT, padx=(0, 8))
+            weight_entry = ttk.Entry(
+                class_frame,
+                textvariable=self.wonton_weight_vars[size_class],
+                width=10,
+            )
+            weight_entry.pack(side=tk.LEFT)
+            ttk.Label(class_frame, text="g/wonton").pack(side=tk.LEFT, padx=(5, 12))
+            ttk.Label(
+                class_frame,
+                textvariable=self.wonton_yield_preview_vars[size_class],
+                style="Summary.TLabel",
+            ).pack(side=tk.LEFT)
+            self.wonton_weight_vars[size_class].trace_add(
+                "write",
+                lambda *_args: self._update_wonton_yield_previews(),
+            )
+        ttk.Button(
+            weight_frame,
+            text="Save wonton weights",
+            command=self._save_wonton_weight_settings,
+        ).grid(row=0, column=len(SIZE_CLASSES), sticky=tk.E)
+        self._update_wonton_yield_previews()
 
         table_frame = ttk.Frame(self.assortment_std_tab)
         table_frame.pack(fill=tk.BOTH, expand=True)
@@ -1902,6 +1982,78 @@ class ProductionPlanApp(tk.Tk):
             anchor=tk.W,
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(8, 0))
+
+    def _wonton_weight_settings_from_form(self) -> WontonWeightSettings:
+        values: dict[str, float] = {}
+        for size_class in SIZE_CLASSES:
+            text = self.wonton_weight_vars[size_class].get().strip().replace(",", "")
+            try:
+                values[size_class] = float(text)
+            except ValueError as exc:
+                raise ValueError(
+                    f"{size_class} wonton weight must be a valid number."
+                ) from exc
+        return WontonWeightSettings(
+            m_grams=values["M"],
+            s_plus_grams=values["S+"],
+        )
+
+    def _update_wonton_yield_previews(self) -> None:
+        if not hasattr(self, "wonton_yield_preview_vars"):
+            return
+        try:
+            settings = self._wonton_weight_settings_from_form()
+        except ValueError:
+            for variable in self.wonton_yield_preview_vars.values():
+                variable.set("Enter a weight above 0")
+            return
+        for size_class in SIZE_CLASSES:
+            self.wonton_yield_preview_vars[size_class].set(
+                f"≈ {self._format_optional_number(settings.wontons_per_kg(size_class))} "
+                "wontons/kg"
+            )
+
+    def _load_wonton_weight_settings(self) -> None:
+        try:
+            settings = load_wonton_weight_settings(self.wonton_weight_file_path)
+        except ValueError as exc:
+            self.assortment_status_var.set(str(exc))
+            return
+        self.wonton_weight_settings = settings
+        if hasattr(self, "wonton_weight_vars"):
+            for size_class in SIZE_CLASSES:
+                self.wonton_weight_vars[size_class].set(
+                    self._format_optional_number(settings.grams_for(size_class))
+                )
+            self._update_wonton_yield_previews()
+
+    def _save_wonton_weight_settings(self) -> None:
+        try:
+            settings = self._wonton_weight_settings_from_form()
+            save_wonton_weight_settings(self.wonton_weight_file_path, settings)
+        except ValueError as exc:
+            messagebox.showerror("Save wonton weights", str(exc))
+            return
+        self.wonton_weight_settings = settings
+        self._update_wonton_yield_previews()
+        self._refresh_assortment_actual_history_table()
+        self._refresh_rm_timeline()
+        self.plan_result = None
+        if hasattr(self, "plan_tree"):
+            self.plan_tree.delete(*self.plan_tree.get_children())
+            self.unplanned_tree.delete(*self.unplanned_tree.get_children())
+            self.plan_summary_var.set(
+                "Wonton weights changed | Generate Plan to recalculate RM yield."
+            )
+        self.plan_status_var.set(
+            "Wonton weights changed. Generate Plan again to apply the new RM yield."
+        )
+        summary = " | ".join(
+            f"{size_class} {self._format_optional_number(settings.grams_for(size_class))} g "
+            f"= {self._format_optional_number(settings.wontons_per_kg(size_class))} wontons/kg"
+            for size_class in SIZE_CLASSES
+        )
+        self.assortment_status_var.set(f"Saved wonton weights. {summary}")
 
     def _fill_stock_from_assortment_std(self) -> None:
         if self.assortment_table is None:
@@ -2771,12 +2923,9 @@ class ProductionPlanApp(tk.Tk):
             self.assortment_actual_records.values()
         ):
             class_summaries = self._assortment_record_class_summaries(record)
-            try:
-                estimated_wontons = self._format_optional_number(
-                    estimate_wonton_pieces(record.entries)
-                )
-            except ValueError:
-                estimated_wontons = "Invalid size"
+            estimated_wontons = self._format_optional_number(
+                self._estimate_wontons_from_class_summaries(class_summaries)
+            )
             self.assortment_actual_history_tree.insert(
                 "",
                 tk.END,
@@ -2841,6 +2990,18 @@ class ProductionPlanApp(tk.Tk):
 
     def _format_size_class_summary(self, summary: SizeClassWeightSummary) -> str:
         return self._format_weight(summary.total)
+
+    def _estimate_wontons_from_class_summaries(
+        self,
+        summaries: dict[str, SizeClassWeightSummary],
+    ) -> float:
+        return sum(
+            self.wonton_weight_settings.estimate_wontons(
+                size_class,
+                summaries[size_class].total,
+            )
+            for size_class in SIZE_CLASSES
+        )
 
     def _edit_selected_assortment_actual(self) -> None:
         selected = self.assortment_actual_history_tree.selection()

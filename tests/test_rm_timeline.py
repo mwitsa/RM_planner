@@ -5,6 +5,7 @@ import unittest
 from assortment_actual_store import ActualAssortmentEntry, ActualAssortmentRecord
 from assortment_range_store import AssortmentSizeRange
 from rm_timeline import build_rm_timeline, stock_distribution_percentages
+from wonton_weight_store import WontonWeightSettings
 
 
 RANGES = (
@@ -57,10 +58,10 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].s_plus_stock.total, 20)
         self.assertEqual(rows[1].s_plus_stock.total, 50)
         self.assertEqual(rows[0].m_wontons, 530)
-        self.assertEqual(rows[0].s_plus_wontons, 1260)
-        self.assertEqual(rows[1].s_plus_wontons, 3450)
-        self.assertEqual(rows[0].cumulative_wontons, 1790)
-        self.assertEqual(rows[1].cumulative_wontons, 3980)
+        self.assertEqual(rows[0].s_plus_wontons, 1385)
+        self.assertEqual(rows[1].s_plus_wontons, 3462.5)
+        self.assertEqual(rows[0].cumulative_wontons, 1915)
+        self.assertEqual(rows[1].cumulative_wontons, 3992.5)
 
     def test_filters_market_before_calculating_cumulative_stock(self) -> None:
         rows = build_rm_timeline(
@@ -101,6 +102,7 @@ class RmTimelineTests(unittest.TestCase):
             [existing],
             RANGES,
             market_type="domestic",
+            wonton_weight_settings=WontonWeightSettings(s_plus_grams=1000 / 65),
         )
 
         self.assertEqual(len(rows), 1)
@@ -108,6 +110,16 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].s_plus_stock.total, 100)
         self.assertEqual(rows[0].s_plus_wontons, 6500)
         self.assertEqual(rows[0].cumulative_wontons, 6500)
+
+    def test_custom_m_wonton_weight_controls_estimated_yield(self) -> None:
+        rows = build_rm_timeline(
+            [record("RM-000001", "2026-08-28", "actual", "domestic", (("51-55", 1),))],
+            RANGES,
+            wonton_weight_settings=WontonWeightSettings(m_grams=8.6),
+        )
+
+        self.assertAlmostEqual(rows[0].m_wontons, 1000 / 8.6)
+        self.assertAlmostEqual(rows[0].cumulative_wontons, 1000 / 8.6)
 
 
 if __name__ == "__main__":
