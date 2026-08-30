@@ -113,8 +113,8 @@ can consume the shared `S+` stock pool without changing the Order or Plan displa
 **Stock** shows the latest availability date, total weight, estimated wontons,
 and a responsive horizontal bar for the M, S+, and Unused stock percentages and
 weights. M and S+ have separate stock sections,
-each with DOMESTIC and EXPORT weight and estimated-wonton details that follow the
-active Use for filter.
+each with DOMESTIC and EXPORT weight and estimated-wonton details. Stock always
+shows the combined inventory; its market breakdown remains visible in these cards.
 The dated RM-arrival table is always visible so the individual RM IDs behind the
 balances can be inspected directly. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused

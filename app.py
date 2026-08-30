@@ -452,7 +452,6 @@ class ProductionPlanApp(tk.Tk):
             )
 
     def _build_rm_timeline_tab(self) -> None:
-        self.rm_timeline_market_var = tk.StringVar(value="ALL")
         self.rm_stock_as_of_var = tk.StringVar(value="—")
         self.rm_stock_total_var = tk.StringVar(value="0 kg")
         self.rm_stock_wontons_var = tk.StringVar(value="0")
@@ -493,24 +492,6 @@ class ProductionPlanApp(tk.Tk):
             text="+ Add stock",
             command=self._open_stock_editor,
         ).pack(side=tk.RIGHT, anchor=tk.N)
-
-        controls = ttk.LabelFrame(self.rm_timeline_tab, text="Stock filters", padding=8)
-        controls.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(controls, text="Use for").pack(side=tk.LEFT)
-        market_combo = ttk.Combobox(
-            controls,
-            textvariable=self.rm_timeline_market_var,
-            values=("ALL", "DOMESTIC", "EXPORT", "UNASSIGNED"),
-            state="readonly",
-            width=12,
-        )
-        market_combo.pack(side=tk.LEFT, padx=(6, 16))
-        ttk.Button(
-            controls,
-            text="Clear filters",
-            command=self._clear_rm_timeline_filters,
-        ).pack(side=tk.LEFT)
-        market_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
 
         overview = ttk.LabelFrame(
             self.rm_timeline_tab,
@@ -773,10 +754,6 @@ class ProductionPlanApp(tk.Tk):
         self._new_assortment_actual_form()
         self._show_rm_section("actual")
 
-    def _clear_rm_timeline_filters(self) -> None:
-        self.rm_timeline_market_var.set("ALL")
-        self._refresh_rm_timeline()
-
     def _set_rm_stock_distribution(
         self,
         m_stock: int | float,
@@ -851,24 +828,11 @@ class ProductionPlanApp(tk.Tk):
         try:
             records = tuple(self.assortment_actual_records.values())
             ranges = self._current_assortment_size_range_definitions()
-            selected_market = self.rm_timeline_market_var.get().strip().casefold()
-            rows = build_rm_timeline(
-                records,
-                ranges,
-                market_type=selected_market,
-            )
-            market_rows = {}
-            for market in ("domestic", "export"):
-                if selected_market == market:
-                    market_rows[market] = rows
-                elif selected_market == "all":
-                    market_rows[market] = build_rm_timeline(
-                        records,
-                        ranges,
-                        market_type=market,
-                    )
-                else:
-                    market_rows[market] = ()
+            rows = build_rm_timeline(records, ranges)
+            market_rows = {
+                market: build_rm_timeline(records, ranges, market_type=market)
+                for market in ("domestic", "export")
+            }
         except ValueError as exc:
             self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
             self.rm_stock_as_of_var.set("Unavailable")
