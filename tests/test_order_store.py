@@ -55,6 +55,18 @@ class OrderStoreTests(unittest.TestCase):
         self.assertEqual(loaded[0].record_id, "แผนผลิต:10")
         self.assertEqual(loaded[0].order_no, "ORD-000001")
 
+    def test_legacy_s_and_ss_order_sizes_save_as_s_plus(self) -> None:
+        first = sample_order()
+        first.rm_size = "S"
+        second = sample_order()
+        second.record_id = "legacy:ss"
+        second.rm_size = "SS"
+        save_order_records(self.store_path, [first, second])
+
+        loaded = load_order_records(self.store_path)
+
+        self.assertEqual([record.rm_size for record in loaded], ["S+", "S+"])
+
     def test_rejects_negative_production(self) -> None:
         with self.assertRaises(ValueError):
             save_order_records(self.store_path, [sample_order(-1)])

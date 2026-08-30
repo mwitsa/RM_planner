@@ -2,7 +2,7 @@
 
 The engine is deliberately independent of Tkinter.  It treats every assortment
 entry as one physical inventory lot, even when that lot is eligible for more
-than one M/S/SS class.
+than one M/S+ class.
 """
 
 from __future__ import annotations
@@ -15,13 +15,17 @@ from datetime import date, timedelta
 from typing import Iterable
 
 from assortment_actual_store import ActualAssortmentRecord, split_size_range
-from assortment_range_store import AssortmentSizeRange, classify_size_range
+from assortment_range_store import (
+    AssortmentSizeRange,
+    classify_size_range,
+    normalize_size_class,
+)
 from capacity_store import CapacitySettings, capacities_at_percentage
 from class_store import ClassDefinition
 from extractor import OrderRecord
 
 
-SUPPORTED_RM_SIZES = {"M", "S", "SS"}
+SUPPORTED_RM_SIZES = {"M", "S+"}
 SKIPPED_RM_SIZES = {"BK", "HC"}
 SUPPORTED_MARKETS = {"export", "domestic", "unassigned"}
 MISSING_PRIORITY = 1_000_000
@@ -136,7 +140,7 @@ def generate_plan(
     start_date = planning_date or date.today()
     ranges = tuple(size_ranges)
     if not ranges:
-        raise ValueError("Define and save the M/S/SS assortment ranges first.")
+        raise ValueError("Define and save the M/S+ assortment ranges first.")
 
     raw_capacity, cooked_capacity = capacities_at_percentage(capacity_settings)
     if raw_capacity is None or cooked_capacity is None:
@@ -162,7 +166,7 @@ def generate_plan(
         production_type = production_type_for_order(record)
         market_type = market_type_for_order(record, definitions)
         outstanding = outstanding_order_quantities(record)
-        rm_size = record.rm_size.strip().upper()
+        rm_size = normalize_size_class(record.rm_size)
         if rm_size in SKIPPED_RM_SIZES:
             unplanned.append(
                 _unplanned(
@@ -255,7 +259,7 @@ def generate_plan(
                 continue
             compatible = _compatible_lots(
                 lots,
-                item.record.rm_size,
+                normalize_size_class(item.record.rm_size),
                 item.market_type,
                 current_day,
             )
@@ -277,7 +281,7 @@ def generate_plan(
                     group_1=item.record.group_1,
                     production_type=item.production_type,
                     market_type=item.market_type,
-                    rm_size=item.record.rm_size.strip().upper(),
+                    rm_size=normalize_size_class(item.record.rm_size),
                     priority=item.priority_label,
                     order_cups=float(item.record.order_cups or 0),
                     order_wontons=float(item.record.total_wontons or 0),
@@ -298,14 +302,14 @@ def generate_plan(
         future_compatible = [
             lot
             for lot in lots
-            if item.record.rm_size.strip().upper() in lot.eligible_classes
+            if normalize_size_class(item.record.rm_size) in lot.eligible_classes
             and lot.market_type == item.market_type
             and lot.remaining_kg > EPSILON
         ]
         if not future_compatible:
             reason = (
                 f"Insufficient {item.market_type.upper()} "
-                f"{item.record.rm_size.strip().upper()} RM stock."
+                f"{normalize_size_class(item.record.rm_size)} RM stock."
             )
         else:
             reason = "Daily capacity exhausted before the latest order load date."
@@ -419,7 +423,7 @@ def _inventory_lots(
         available_date = date.fromisoformat(record.record_date)
         for entry in record.entries:
             if entry.size_class and entry.pieces_per_kg is not None:
-                classes = (entry.size_class.strip().upper(),)
+                classes = (normalize_size_class(entry.size_class),)
                 pieces_per_kg = float(entry.pieces_per_kg)
             else:
                 start, end = split_size_range(entry.size)
@@ -453,7 +457,7 @@ def _compatible_lots(
     market_type: str,
     current_day: date,
 ) -> list[_InventoryLot]:
-    target = rm_size.strip().upper()
+    target = normalize_size_class(rm_size)
     target_market = _normalize_market_type(market_type)
     return sorted(
         (
@@ -526,7 +530,7 @@ def _unplanned(
         group_1=record.group_1,
         production_type=production_type,
         market_type=_normalize_market_type(market_type),
-        rm_size=record.rm_size.strip().upper(),
+        rm_size=normalize_size_class(record.rm_size),
         remaining_wontons=remaining_wontons,
         reason=reason,
     )

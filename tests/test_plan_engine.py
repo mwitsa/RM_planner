@@ -13,8 +13,7 @@ from plan_engine import generate_plan, market_type_for_order, order_due_date, pr
 
 RANGES = (
     AssortmentSizeRange("M", "46-50", "56-60"),
-    AssortmentSizeRange("S", "61-65", "66-70"),
-    AssortmentSizeRange("SS", "61-65", "81-85"),
+    AssortmentSizeRange("S+", "61-65", "81-85"),
 )
 
 
@@ -116,6 +115,7 @@ class PlanEngineTests(unittest.TestCase):
         self.assertAlmostEqual(result.allocations[0].order_wontons, 650)
         self.assertAlmostEqual(result.allocations[0].produced_wontons, 650)
         self.assertAlmostEqual(result.allocations[0].rm_kg, 10)
+        self.assertEqual(result.allocations[0].rm_size, "S+")
 
     def test_order_can_split_over_multiple_capacity_days(self) -> None:
         result = generate_plan(
@@ -150,7 +150,7 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual(len(result.unplanned), 1)
         self.assertIn("Insufficient", result.unplanned[0].reason)
 
-    def test_exact_stock_is_used_before_flexible_overlap_stock(self) -> None:
+    def test_legacy_s_and_ss_orders_share_s_plus_stock(self) -> None:
         result = generate_plan(
             [
                 order("a-ss", rm_size="SS", order_cups=730, wontons_per_cup=1, order_unit=730),
@@ -311,7 +311,7 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual(result.unplanned[0].order_id, "export")
         self.assertIn("EXPORT M RM", result.unplanned[0].reason)
 
-    def test_existing_stock_supplies_only_its_explicit_rm_class(self) -> None:
+    def test_legacy_existing_small_stock_is_shared_as_s_plus(self) -> None:
         definitions = [class_definition("Country", "DOMESTIC", "2")]
         existing = ActualAssortmentRecord(
             record_id="existing-1",

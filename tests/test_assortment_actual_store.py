@@ -96,12 +96,12 @@ class ActualAssortmentStoreTests(unittest.TestCase):
 
         loaded = load_actual_records(self.store_path)[0]
         self.assertEqual(saved.record_type, "existing")
-        self.assertEqual(loaded.entries[0].size_class, "S")
+        self.assertEqual(loaded.entries[0].size_class, "S+")
         self.assertEqual(loaded.entries[0].pieces_per_kg, 65)
         self.assertEqual(estimate_wonton_pieces(loaded.entries), 6500)
 
     def test_existing_stock_requires_valid_size_class_and_pieces_per_kg(self) -> None:
-        with self.assertRaisesRegex(ValueError, "M, S, or SS"):
+        with self.assertRaisesRegex(ValueError, r"M or S\+"):
             upsert_actual_record(
                 self.store_path,
                 "2026-08-20",

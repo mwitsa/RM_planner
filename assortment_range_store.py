@@ -1,4 +1,4 @@
-"""Persistence for M/S/SS output-size ranges used by Assortment STD."""
+"""Persistence for M/S+ output-size ranges used by Assortment STD."""
 
 from __future__ import annotations
 
@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Iterable
 
 
-STORE_VERSION = 1
-SIZE_CLASSES = ("M", "S", "SS")
+STORE_VERSION = 2
+SIZE_CLASSES = ("M", "S+")
+LEGACY_SIZE_CLASSES = ("M", "S", "SS")
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,12 +28,19 @@ class SizeClassWeightSummary:
     overlap: int | float
 
 
+def normalize_size_class(value: object) -> str:
+    """Return the current RM class while accepting legacy S and SS values."""
+
+    normalized = str(value or "").strip().upper()
+    return "S+" if normalized in {"S", "SS", "S+"} else normalized
+
+
 def classify_size_range(
     size_start: str | int | float,
     size_end: str | int | float,
     ranges: Iterable[AssortmentSizeRange],
 ) -> tuple[str, ...]:
-    """Return every M/S/SS range intersected by an actual numeric size range."""
+    """Return every M/S+ range intersected by an actual numeric size range."""
 
     actual_start = _parse_size_number(size_start)
     actual_end = _parse_size_number(size_end)
@@ -142,7 +150,7 @@ def load_size_ranges(
     if not isinstance(payload, dict) or not isinstance(payload.get("ranges"), list):
         raise ValueError("Assortment size range file has an invalid structure.")
 
-    parsed: dict[str, AssortmentSizeRange] = {}
+    raw_ranges: list[AssortmentSizeRange] = []
     for raw in payload["ranges"]:
         if not isinstance(raw, dict):
             raise ValueError("Assortment size range file contains an invalid range.")
@@ -151,13 +159,24 @@ def load_size_ranges(
             str(raw.get("start_size", "")),
             str(raw.get("end_size", "")),
         )
-        _validate_range(size_range, sizes)
-        if size_range.size_class in parsed:
+        _validate_range_bounds(size_range, sizes)
+        if any(item.size_class == size_range.size_class for item in raw_ranges):
             raise ValueError(f"Duplicate assortment size class: {size_range.size_class}")
-        parsed[size_range.size_class] = size_range
+        raw_ranges.append(size_range)
 
+    parsed = {item.size_class: item for item in raw_ranges}
+    if set(parsed) == set(LEGACY_SIZE_CLASSES):
+        small_ranges = (parsed["S"], parsed["SS"])
+        start = min(sizes.index(item.start_size) for item in small_ranges)
+        end = max(sizes.index(item.end_size) for item in small_ranges)
+        parsed = {
+            "M": parsed["M"],
+            "S+": AssortmentSizeRange("S+", sizes[start], sizes[end]),
+        }
     if set(parsed) != set(SIZE_CLASSES):
-        raise ValueError("Assortment size ranges must contain M, S, and SS.")
+        raise ValueError("Assortment size ranges must contain M and S+.")
+    for size_range in parsed.values():
+        _validate_range(size_range, sizes)
     return tuple(parsed[size_class] for size_class in SIZE_CLASSES)
 
 
@@ -172,7 +191,7 @@ def save_size_ranges(
     for size_range in range_list:
         _validate_range(size_range, sizes)
     if tuple(size_range.size_class for size_range in range_list) != SIZE_CLASSES:
-        raise ValueError("Assortment size ranges must be ordered M, S, and SS.")
+        raise ValueError("Assortment size ranges must be ordered M and S+.")
 
     payload = {
         "version": STORE_VERSION,
@@ -200,6 +219,13 @@ def save_size_ranges(
 def _validate_range(size_range: AssortmentSizeRange, output_sizes: tuple[str, ...]) -> None:
     if size_range.size_class not in SIZE_CLASSES:
         raise ValueError(f"Invalid assortment size class: {size_range.size_class}")
+    _validate_range_bounds(size_range, output_sizes)
+
+
+def _validate_range_bounds(
+    size_range: AssortmentSizeRange,
+    output_sizes: tuple[str, ...],
+) -> None:
     try:
         start_index = output_sizes.index(size_range.start_size)
         end_index = output_sizes.index(size_range.end_size)

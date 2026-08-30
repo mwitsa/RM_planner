@@ -57,7 +57,7 @@ preserved. The accumulated dataset reloads when the app starts. Double-click a
 Production cell to enter the quantity produced, then click **Save orders** to
 keep that manual Production change.
 
-The **Assortment STD** page places three range columns—M, S, and SS—before the
+The **Assortment STD** page places two range columns—M and S+—before the
 actual output-size column. Drag a colored box to move its complete range, or
 drag its top or bottom handle to expand or contract it vertically. Click
 **Save ranges** to keep the selections in
@@ -108,7 +108,7 @@ orders. Unassigned orders and RM only match each other. The generated and
 unplanned tables show **Use for** so this decision is visible.
 
 **Stock** shows a plain overview for total weight, unused weight, estimated
-wontons, and the latest availability date. M, S, and SS have separate sections
+wontons, and the latest availability date. M and S+ have separate sections
 showing stock and overlap weight. Click **Show details** to expand the dated
 RM-arrival table and inspect the individual RM IDs behind the balances. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused
@@ -134,10 +134,10 @@ for actual harvest assortment data. It starts with one empty card containing
 Size (start), Size (end), and Weight fields; use **Add another box** to record additional actual
 assortment entries. Choose Date, Month, and Year before saving. Saved records
 appear in the history panel on the right and can be loaded, edited, and updated.
-Each completed size range is automatically classified against the current M/S/SS
-ranges. Intersections show every matching class (for example `S, SS`), and a
-range outside all three classifications shows `Unused`.
-Saved history summarizes the weight for M, S, SS, and Unused in separate columns.
+Each completed size range is automatically classified against the current M/S+
+ranges. Intersections show every matching class, and a
+range outside both classifications shows `Unused`.
+Saved history summarizes the weight for M, S+, and Unused in separate columns.
 An overlapping row contributes its full weight to every matching class. The
 overlap portion appears in parentheses after that class total, such as
-`SS 4,244 (2,145)`.
+`S+ 4,244 (2,145)`.

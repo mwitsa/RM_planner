@@ -12,7 +12,9 @@ from assortment_actual_store import (
 )
 from assortment_range_store import (
     AssortmentSizeRange,
+    SIZE_CLASSES,
     SizeClassWeightSummary,
+    normalize_size_class,
     summarize_size_class_weight_details,
 )
 
@@ -27,8 +29,7 @@ class RmTimelineRow:
     incoming_kg: float
     cumulative_kg: float
     m_stock: SizeClassWeightSummary
-    s_stock: SizeClassWeightSummary
-    ss_stock: SizeClassWeightSummary
+    s_plus_stock: SizeClassWeightSummary
     unused_stock: SizeClassWeightSummary
     incoming_wontons: float
     cumulative_wontons: float
@@ -57,8 +58,9 @@ def build_rm_timeline(
 
     cumulative_kg = 0.0
     cumulative_wontons = 0.0
-    cumulative_totals = {key: 0.0 for key in ("M", "S", "SS", "Unused")}
-    cumulative_overlaps = {key: 0.0 for key in ("M", "S", "SS", "Unused")}
+    summary_classes = (*SIZE_CLASSES, "Unused")
+    cumulative_totals = {key: 0.0 for key in summary_classes}
+    cumulative_overlaps = {key: 0.0 for key in summary_classes}
     rows: list[RmTimelineRow] = []
     for record_date in sorted(by_date):
         dated_records = sorted(by_date[record_date], key=lambda item: item.rm_id)
@@ -96,8 +98,9 @@ def build_rm_timeline(
                 incoming_kg=incoming_kg,
                 cumulative_kg=cumulative_kg,
                 m_stock=_summary(cumulative_totals["M"], cumulative_overlaps["M"]),
-                s_stock=_summary(cumulative_totals["S"], cumulative_overlaps["S"]),
-                ss_stock=_summary(cumulative_totals["SS"], cumulative_overlaps["SS"]),
+                s_plus_stock=_summary(
+                    cumulative_totals["S+"], cumulative_overlaps["S+"]
+                ),
                 unused_stock=_summary(
                     cumulative_totals["Unused"], cumulative_overlaps["Unused"]
                 ),
@@ -116,15 +119,14 @@ def _summarize_records(
         total = sum(record.total_weight for record in records)
         return {
             "M": SizeClassWeightSummary(0, 0),
-            "S": SizeClassWeightSummary(0, 0),
-            "SS": SizeClassWeightSummary(0, 0),
+            "S+": SizeClassWeightSummary(0, 0),
             "Unused": SizeClassWeightSummary(total, 0),
         }
     entries: list[tuple[str, str, float]] = []
-    direct_totals = {key: 0.0 for key in ("M", "S", "SS")}
+    direct_totals = {key: 0.0 for key in SIZE_CLASSES}
     for record in records:
         for entry in record.entries:
-            size_class = entry.size_class.strip().upper()
+            size_class = normalize_size_class(entry.size_class)
             if size_class in direct_totals:
                 direct_totals[size_class] += float(entry.weight)
                 continue
@@ -136,7 +138,7 @@ def _summarize_records(
             summarized[size_class].total + direct_totals.get(size_class, 0),
             summarized[size_class].overlap,
         )
-        for size_class in ("M", "S", "SS", "Unused")
+        for size_class in (*SIZE_CLASSES, "Unused")
     }
 
 

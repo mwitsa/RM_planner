@@ -16,6 +16,8 @@ from typing import Any, Iterable
 
 from openpyxl import load_workbook
 
+from assortment_range_store import normalize_size_class
+
 
 PRODUCTION_DATE_COLUMN = 3  # C
 COUNTRY_COLUMN = 8  # H
@@ -70,6 +72,9 @@ class OrderRecord:
     production: int | float | None = None
     record_id: str = ""
     order_no: str = ""
+
+    def __post_init__(self) -> None:
+        self.rm_size = normalize_size_class(self.rm_size)
 
     @property
     def month_key(self) -> str:

@@ -11,11 +11,12 @@ from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
+from assortment_range_store import SIZE_CLASSES, normalize_size_class
+
 
 STORE_VERSION = 5
 RECORD_TYPES = {"actual", "prediction", "existing"}
 MARKET_TYPES = {"domestic", "export", "unassigned"}
-SIZE_CLASSES = {"M", "S", "SS"}
 RM_ID_PREFIX = "RM-"
 RM_ID_WIDTH = 6
 RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
@@ -262,7 +263,7 @@ def _normalize_market_type(value: object) -> str:
 
 def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
     size = entry.size.strip()
-    size_class = entry.size_class.strip().upper()
+    size_class = normalize_size_class(entry.size_class)
     try:
         weight = float(entry.weight)
     except (TypeError, ValueError) as exc:
@@ -274,7 +275,7 @@ def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
     pieces_per_kg = entry.pieces_per_kg
     if size_class or pieces_per_kg is not None:
         if size_class not in SIZE_CLASSES:
-            raise ValueError("Existing stock Size class must be M, S, or SS.")
+            raise ValueError("Existing stock Size class must be M or S+.")
         try:
             pieces_per_kg = float(pieces_per_kg)
         except (TypeError, ValueError) as exc:

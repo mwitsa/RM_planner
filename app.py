@@ -78,8 +78,7 @@ ASSORTMENT_HEADER_HEIGHT = 34
 ASSORTMENT_ROW_HEIGHT = 29
 ASSORTMENT_CLASS_COLORS = {
     "M": ("#d8edff", "#2374ab"),
-    "S": ("#dcf5df", "#338a3e"),
-    "SS": ("#ffe5cc", "#c66a16"),
+    "S+": ("#dcf5df", "#338a3e"),
 }
 ORDER_COLUMN_FILTER_KEYS = {
     "order_no": "order_no",
@@ -102,8 +101,7 @@ ORDER_COLUMN_FILTER_KEYS = {
 }
 DEFAULT_EXISTING_STOCK_PIECES_PER_KG = {
     "M": "53",
-    "S": "65.5",
-    "SS": "73",
+    "S+": "69.25",
 }
 
 
@@ -551,7 +549,10 @@ class ProductionPlanApp(tk.Tk):
                 row=0,
                 column=column,
                 sticky="nsew",
-                padx=(0 if column == 0 else 4, 0 if column == 2 else 4),
+                padx=(
+                    0 if column == 0 else 4,
+                    0 if column == len(SIZE_CLASSES) - 1 else 4,
+                ),
             )
             ttk.Label(section, text="Stock").pack(anchor=tk.W)
             ttk.Label(
@@ -581,8 +582,7 @@ class ProductionPlanApp(tk.Tk):
             "incoming",
             "stock",
             "M",
-            "S",
-            "SS",
+            "S+",
             "unused",
             "incoming_wontons",
             "stock_wontons",
@@ -597,8 +597,7 @@ class ProductionPlanApp(tk.Tk):
             "incoming": "RM in (kg)",
             "stock": "Stock (kg)",
             "M": "M stock (kg)",
-            "S": "S stock (kg)",
-            "SS": "SS stock (kg)",
+            "S+": "S+ stock (kg)",
             "unused": "Unused stock (kg)",
             "incoming_wontons": "RM in Est. wonton",
             "stock_wontons": "Stock Est. wonton",
@@ -612,8 +611,7 @@ class ProductionPlanApp(tk.Tk):
             "incoming": 100,
             "stock": 100,
             "M": 110,
-            "S": 110,
-            "SS": 110,
+            "S+": 110,
             "unused": 125,
             "incoming_wontons": 135,
             "stock_wontons": 135,
@@ -711,8 +709,7 @@ class ProductionPlanApp(tk.Tk):
                     self._format_optional_number(row.incoming_kg),
                     self._format_optional_number(row.cumulative_kg),
                     self._format_size_class_summary(row.m_stock),
-                    self._format_size_class_summary(row.s_stock),
-                    self._format_size_class_summary(row.ss_stock),
+                    self._format_size_class_summary(row.s_plus_stock),
                     self._format_size_class_summary(row.unused_stock),
                     self._format_optional_number(row.incoming_wontons),
                     self._format_optional_number(row.cumulative_wontons),
@@ -733,8 +730,7 @@ class ProductionPlanApp(tk.Tk):
             )
             size_summaries = {
                 "M": final.m_stock,
-                "S": final.s_stock,
-                "SS": final.ss_stock,
+                "S+": final.s_plus_stock,
             }
             for size_class, summary in size_summaries.items():
                 variables = self.rm_stock_size_vars[size_class]
@@ -769,7 +765,7 @@ class ProductionPlanApp(tk.Tk):
         ttk.Label(
             self.existing_stock_tab,
             text=(
-                "Enter old/opening stock directly by M, S, and SS class. "
+                "Enter old/opening stock directly by M and S+ class. "
                 "Average pieces/kg is used to estimate how many wontons the stock can produce."
             ),
         ).pack(anchor=tk.W, pady=(2, 10))
@@ -873,10 +869,8 @@ class ProductionPlanApp(tk.Tk):
             "market",
             "m_kg",
             "m_ppkg",
-            "s_kg",
-            "s_ppkg",
-            "ss_kg",
-            "ss_ppkg",
+            "s_plus_kg",
+            "s_plus_ppkg",
             "total_kg",
             "wontons",
         )
@@ -887,10 +881,8 @@ class ProductionPlanApp(tk.Tk):
             "market": "Use for",
             "m_kg": "M (kg)",
             "m_ppkg": "M pcs/kg",
-            "s_kg": "S (kg)",
-            "s_ppkg": "S pcs/kg",
-            "ss_kg": "SS (kg)",
-            "ss_ppkg": "SS pcs/kg",
+            "s_plus_kg": "S+ (kg)",
+            "s_plus_ppkg": "S+ pcs/kg",
             "total_kg": "Total (kg)",
             "wontons": "Est. wonton",
         }
@@ -2265,8 +2257,7 @@ class ProductionPlanApp(tk.Tk):
                 "date",
                 "weight",
                 "M",
-                "S",
-                "SS",
+                "S+",
                 "unused",
                 "est_wonton",
             ),
@@ -2279,8 +2270,7 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_history_tree.heading("date", text="Date")
         self.assortment_actual_history_tree.heading("weight", text="Total weight")
         self.assortment_actual_history_tree.heading("M", text="M (kg)")
-        self.assortment_actual_history_tree.heading("S", text="S (kg)")
-        self.assortment_actual_history_tree.heading("SS", text="SS (kg)")
+        self.assortment_actual_history_tree.heading("S+", text="S+ (kg)")
         self.assortment_actual_history_tree.heading("unused", text="Unused (kg)")
         self.assortment_actual_history_tree.heading("est_wonton", text="Est. wonton")
         self.assortment_actual_history_tree.column("rm_id", width=100, anchor=tk.CENTER)
@@ -2289,8 +2279,7 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_history_tree.column("date", width=95, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("weight", width=95, anchor=tk.E)
         self.assortment_actual_history_tree.column("M", width=105, anchor=tk.E)
-        self.assortment_actual_history_tree.column("S", width=105, anchor=tk.E)
-        self.assortment_actual_history_tree.column("SS", width=105, anchor=tk.E)
+        self.assortment_actual_history_tree.column("S+", width=105, anchor=tk.E)
         self.assortment_actual_history_tree.column("unused", width=90, anchor=tk.E)
         self.assortment_actual_history_tree.column("est_wonton", width=115, anchor=tk.E)
         history_scrollbar = ttk.Scrollbar(
@@ -2665,8 +2654,7 @@ class ProductionPlanApp(tk.Tk):
                     record.record_date,
                     self._format_weight(record.total_weight),
                     self._format_size_class_summary(class_summaries["M"]),
-                    self._format_size_class_summary(class_summaries["S"]),
-                    self._format_size_class_summary(class_summaries["SS"]),
+                    self._format_size_class_summary(class_summaries["S+"]),
                     self._format_size_class_summary(class_summaries["Unused"]),
                     estimated_wontons,
                 ),
@@ -2684,8 +2672,7 @@ class ProductionPlanApp(tk.Tk):
         if not ranges:
             return {
                 "M": SizeClassWeightSummary(0, 0),
-                "S": SizeClassWeightSummary(0, 0),
-                "SS": SizeClassWeightSummary(0, 0),
+                "S+": SizeClassWeightSummary(0, 0),
                 "Unused": SizeClassWeightSummary(record.total_weight, 0),
             }
         entries: list[tuple[str, str, float]] = []
@@ -2780,7 +2767,7 @@ class ProductionPlanApp(tk.Tk):
 
         self.assortment_table = table
         range_note = (
-            " Initial M/S/SS ranges are placeholders; drag and save them."
+            " Initial M/S+ ranges are placeholders; drag and save them."
             if not self.assortment_size_range_file_path.exists()
             else ""
         )
