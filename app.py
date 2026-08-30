@@ -534,12 +534,21 @@ class ProductionPlanApp(tk.Tk):
 
         size_sections = ttk.Frame(self.rm_timeline_tab)
         size_sections.pack(fill=tk.X, pady=(0, 8))
+        stock_card_colors = {
+            "M": ("#eaf3fb", "#8bb8dd", "#174f78"),
+            "S+": ("#edf7ee", "#97c79b", "#285f2d"),
+        }
         for column, size_class in enumerate(SIZE_CLASSES):
             size_sections.columnconfigure(column, weight=1)
-            section = ttk.LabelFrame(
+            background, border, foreground = stock_card_colors[size_class]
+            section = tk.Frame(
                 size_sections,
-                text=size_class,
-                padding=12,
+                background=background,
+                highlightbackground=border,
+                highlightcolor=border,
+                highlightthickness=1,
+                padx=14,
+                pady=12,
             )
             section.grid(
                 row=0,
@@ -550,11 +559,25 @@ class ProductionPlanApp(tk.Tk):
                     0 if column == len(SIZE_CLASSES) - 1 else 4,
                 ),
             )
-            ttk.Label(section, text="Stock").pack(anchor=tk.W)
-            ttk.Label(
+            tk.Label(
+                section,
+                text=size_class,
+                background=background,
+                foreground=foreground,
+                font=("Segoe UI", 11, "bold"),
+            ).pack(anchor=tk.W)
+            tk.Label(
+                section,
+                text="Stock",
+                background=background,
+                foreground="#333333",
+            ).pack(anchor=tk.W, pady=(8, 0))
+            tk.Label(
                 section,
                 textvariable=self.rm_stock_size_vars[size_class]["stock"],
-                style="Summary.TLabel",
+                background=background,
+                foreground=foreground,
+                font=("Segoe UI", 12, "bold"),
             ).pack(anchor=tk.W, pady=(3, 0))
 
         table_frame = ttk.LabelFrame(
