@@ -91,14 +91,12 @@ Customer, Group 1, Group 2, Packaging, Soup, and ถ้วย/Unit. Existing pai
 their manually assigned Group values are preserved. Saved rows can be filtered
 by Class, partial Name text, and Group, including rows whose Group is blank.
 
-The **Capacity** tab stores a complementary production split between เกี๊ยวดิบ
-and เกี๊ยวสุก plus separate maximum capacities for each type. The slider value
-is the raw-wonton share and cooked receives the remainder; for example, ดิบ 60%
-automatically means สุก 40%. Split and maximum-capacity settings can be saved
-independently and reload when the app starts. Moving the slider previews the
-available daily capacity for both types, and Plan uses those split limits. The
-page is organized as maximum inputs, a colored allocation bar/slider, and the
-resulting Plan capacity; one button saves the complete setup.
+The **Capacity** tab stores separate maximum capacities and independent 0–100%
+utilization settings for เกี๊ยวดิบ and เกี๊ยวสุก. Changing one slider does not
+change the other. Each plain settings panel previews the daily capacity that
+Plan will use. One button saves both maximums and percentages, which reload when
+the app starts. Existing complementary-split settings are migrated while
+preserving their previous raw and cooked available capacities.
 
 The **Plan** tab treats the Country class Group as the order market: Group `1`
 is **Export**, Group `2` is **Domestic**, and any other/blank value is

@@ -85,12 +85,13 @@ def class_definition(class_value: str, name: str, group: str) -> ClassDefinition
 
 
 def balanced_capacity(raw_wonton: float, cooked_wonton: float) -> CapacitySettings:
-    """Build a 50/50 split whose available limits equal the supplied numbers."""
+    """Build independent full-utilization limits for both production types."""
 
     return CapacitySettings(
-        percentage=50,
-        raw_wonton=raw_wonton * 2,
-        cooked_wonton=cooked_wonton * 2,
+        raw_percentage=100,
+        cooked_percentage=100,
+        raw_wonton=raw_wonton,
+        cooked_wonton=cooked_wonton,
     )
 
 
