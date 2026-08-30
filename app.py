@@ -679,8 +679,6 @@ class ProductionPlanApp(tk.Tk):
             "M",
             "S+",
             "unused",
-            "incoming_wontons",
-            "stock_wontons",
         )
         self.rm_timeline_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         headings = {
@@ -691,8 +689,6 @@ class ProductionPlanApp(tk.Tk):
             "M": "M stock (kg)",
             "S+": "S+ stock (kg)",
             "unused": "Unused stock (kg)",
-            "incoming_wontons": "RM in Est. wonton",
-            "stock_wontons": "Stock Est. wonton",
         }
         widths = {
             "date": 95,
@@ -702,8 +698,6 @@ class ProductionPlanApp(tk.Tk):
             "M": 110,
             "S+": 110,
             "unused": 125,
-            "incoming_wontons": 135,
-            "stock_wontons": 135,
         }
         numeric = set(columns) - {"date", "rm_ids"}
         for column in columns:
@@ -861,8 +855,6 @@ class ProductionPlanApp(tk.Tk):
                     self._format_size_class_summary(row.m_stock),
                     self._format_size_class_summary(row.s_plus_stock),
                     self._format_size_class_summary(row.unused_stock),
-                    self._format_optional_number(row.incoming_wontons),
-                    self._format_optional_number(row.cumulative_wontons),
                 ),
             )
         record_count = sum(len(row.rm_ids) for row in rows)
