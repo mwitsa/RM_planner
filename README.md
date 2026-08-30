@@ -107,16 +107,12 @@ Export RM can only supply Export orders and Domestic RM can only supply Domestic
 orders. Unassigned orders and RM only match each other. The generated and
 unplanned tables show **Use for** so this decision is visible.
 
-The RM sidebar includes **Existing Stock** for old/opening inventory that is
-already classified and does not need an assortment calculation. Choose its
-availability date and Domestic/Export use, then enter weight and average shrimp
-pieces/kg directly for any M, S, and SS classes. Existing stock receives an RM
-ID, can be edited or deleted, appears as **Existing in (kg)** under **Stock**,
-and is consumed by Plan only for an order with the same market and RM class.
 **Stock** shows a plain overview for total weight, unused weight, estimated
 wontons, and the latest availability date. M, S, and SS have separate sections
 showing stock and overlap weight. Click **Show details** to expand the dated
-RM-arrival table and inspect the individual RM IDs behind the balances.
+RM-arrival table and inspect the individual RM IDs behind the balances. Legacy
+existing-stock records remain readable in Stock and Plan, but the unused
+Existing Stock entry page is no longer shown.
 
 The **Assortment Predict** tab automatically loads `Data/RM/assortment.xlsx` as
 read-only shrimp assortment master data. Its columns are harvested base sizes,

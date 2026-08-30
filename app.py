@@ -387,7 +387,6 @@ class ProductionPlanApp(tk.Tk):
         self.rm_navigation_buttons: dict[str, tk.Button] = {}
         for key, label in (
             ("timeline", "Stock"),
-            ("existing", "Existing Stock"),
             ("predict", "Assortment Predict"),
             ("actual", "Assortment Actual"),
         ):
@@ -413,15 +412,12 @@ class ProductionPlanApp(tk.Tk):
         content.columnconfigure(0, weight=1)
 
         self.rm_timeline_tab = ttk.Frame(content, padding=14)
-        self.existing_stock_tab = ttk.Frame(content, padding=14)
         self.assortment_std_tab = ttk.Frame(content, padding=14)
         self.assortment_actual_tab = ttk.Frame(content, padding=14)
         self.rm_timeline_tab.grid(row=0, column=0, sticky="nsew")
-        self.existing_stock_tab.grid(row=0, column=0, sticky="nsew")
         self.assortment_std_tab.grid(row=0, column=0, sticky="nsew")
         self.assortment_actual_tab.grid(row=0, column=0, sticky="nsew")
         self._build_rm_timeline_tab()
-        self._build_existing_stock_tab()
         self._build_assortment_std_tab()
         self._build_assortment_actual_tab()
         self._show_rm_section("timeline")
@@ -429,7 +425,6 @@ class ProductionPlanApp(tk.Tk):
     def _show_rm_section(self, section: str) -> None:
         frames = {
             "timeline": self.rm_timeline_tab,
-            "existing": self.existing_stock_tab,
             "predict": self.assortment_std_tab,
             "actual": self.assortment_actual_tab,
         }
@@ -2629,7 +2624,6 @@ class ProductionPlanApp(tk.Tk):
             return
         self.assortment_actual_records = {record.record_id: record for record in records}
         self._refresh_assortment_actual_history_table()
-        self._refresh_existing_stock_history_table()
         self._refresh_rm_timeline()
         assortment_count = sum(
             record.record_type in {"actual", "prediction"} for record in records
