@@ -91,6 +91,22 @@ def build_rm_timeline(
     return tuple(rows)
 
 
+def stock_distribution_percentages(
+    m_stock: int | float,
+    s_plus_stock: int | float,
+    unused_stock: int | float,
+) -> tuple[float, float, float]:
+    """Return the M, S+, and Unused shares of total stock."""
+
+    weights = tuple(float(value) for value in (m_stock, s_plus_stock, unused_stock))
+    if any(value < 0 for value in weights):
+        raise ValueError("Stock distribution weights cannot be negative.")
+    total = sum(weights)
+    if total == 0:
+        return (0.0, 0.0, 0.0)
+    return tuple(value / total * 100 for value in weights)
+
+
 def _summarize_records(
     records: Iterable[ActualAssortmentRecord],
     ranges: tuple[AssortmentSizeRange, ...],

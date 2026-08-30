@@ -4,7 +4,7 @@ import unittest
 
 from assortment_actual_store import ActualAssortmentEntry, ActualAssortmentRecord
 from assortment_range_store import AssortmentSizeRange
-from rm_timeline import build_rm_timeline
+from rm_timeline import build_rm_timeline, stock_distribution_percentages
 
 
 RANGES = (
@@ -33,6 +33,12 @@ def record(
 
 
 class RmTimelineTests(unittest.TestCase):
+    def test_stock_distribution_percentages_follow_each_weight_share(self) -> None:
+        self.assertEqual(stock_distribution_percentages(20, 60, 20), (20, 60, 20))
+        self.assertEqual(stock_distribution_percentages(0, 0, 0), (0, 0, 0))
+        with self.assertRaisesRegex(ValueError, "cannot be negative"):
+            stock_distribution_percentages(20, -1, 20)
+
     def test_groups_same_day_and_builds_cumulative_stock(self) -> None:
         rows = build_rm_timeline(
             [

@@ -68,7 +68,7 @@ from order_filters import (
     sort_orders,
 )
 from plan_engine import PlanResult, generate_plan
-from rm_timeline import build_rm_timeline
+from rm_timeline import build_rm_timeline, stock_distribution_percentages
 from rule_store import load_rules, save_rules
 
 
@@ -92,6 +92,11 @@ ASSORTMENT_ROW_HEIGHT = 29
 ASSORTMENT_CLASS_COLORS = {
     "M": ("#d8edff", "#2374ab"),
     "S+": ("#dcf5df", "#338a3e"),
+}
+RM_STOCK_DISTRIBUTION_COLORS = {
+    "M": "#4f91c3",
+    "S+": "#63a967",
+    "Unused": "#91979d",
 }
 ORDER_COLUMN_FILTER_KEYS = {
     "order_no": "order_no",
@@ -450,8 +455,12 @@ class ProductionPlanApp(tk.Tk):
         self.rm_timeline_market_var = tk.StringVar(value="ALL")
         self.rm_stock_as_of_var = tk.StringVar(value="—")
         self.rm_stock_total_var = tk.StringVar(value="0 kg")
-        self.rm_stock_unused_var = tk.StringVar(value="0 kg")
         self.rm_stock_wontons_var = tk.StringVar(value="0")
+        self.rm_stock_distribution_weights = (0.0, 0.0, 0.0)
+        self.rm_stock_distribution_vars = {
+            size_class: tk.StringVar(value=f"{size_class} 0% | 0 kg")
+            for size_class in ("M", "S+", "Unused")
+        }
         self.rm_stock_size_vars = {
             size_class: {
                 "stock": tk.StringVar(value="0 kg"),
@@ -509,12 +518,11 @@ class ProductionPlanApp(tk.Tk):
             padding=12,
         )
         overview.pack(fill=tk.X, pady=(0, 8))
-        for column in range(4):
+        for column in range(3):
             overview.columnconfigure(column, weight=1)
         overview_fields = (
             ("As of", self.rm_stock_as_of_var),
             ("Total stock", self.rm_stock_total_var),
-            ("Unused stock", self.rm_stock_unused_var),
             ("Est. wontons", self.rm_stock_wontons_var),
         )
         for column, (label, variable) in enumerate(overview_fields):
@@ -535,6 +543,42 @@ class ProductionPlanApp(tk.Tk):
                 padx=(0, 20),
                 pady=(3, 0),
             )
+
+        self.rm_stock_distribution_canvas = tk.Canvas(
+            overview,
+            height=38,
+            background="#ffffff",
+            highlightbackground="#b8b8b8",
+            highlightthickness=1,
+        )
+        self.rm_stock_distribution_canvas.grid(
+            row=2,
+            column=0,
+            columnspan=3,
+            sticky="ew",
+            pady=(12, 8),
+        )
+        self.rm_stock_distribution_canvas.bind(
+            "<Configure>",
+            self._draw_rm_stock_distribution,
+        )
+
+        distribution_legend = ttk.Frame(overview)
+        distribution_legend.grid(row=3, column=0, columnspan=3, sticky="ew")
+        for column, size_class in enumerate(("M", "S+", "Unused")):
+            distribution_legend.columnconfigure(column, weight=1)
+            legend_item = ttk.Frame(distribution_legend)
+            legend_item.grid(row=0, column=column, sticky=tk.W)
+            tk.Label(
+                legend_item,
+                text="  ",
+                background=RM_STOCK_DISTRIBUTION_COLORS[size_class],
+                width=2,
+            ).pack(side=tk.LEFT, padx=(0, 6))
+            ttk.Label(
+                legend_item,
+                textvariable=self.rm_stock_distribution_vars[size_class],
+            ).pack(side=tk.LEFT)
 
         size_sections = ttk.Frame(self.rm_timeline_tab)
         size_sections.pack(fill=tk.X, pady=(0, 8))
@@ -733,6 +777,74 @@ class ProductionPlanApp(tk.Tk):
         self.rm_timeline_market_var.set("ALL")
         self._refresh_rm_timeline()
 
+    def _set_rm_stock_distribution(
+        self,
+        m_stock: int | float,
+        s_plus_stock: int | float,
+        unused_stock: int | float,
+    ) -> None:
+        weights = (float(m_stock), float(s_plus_stock), float(unused_stock))
+        percentages = stock_distribution_percentages(*weights)
+        self.rm_stock_distribution_weights = weights
+        for size_class, weight, percentage in zip(
+            ("M", "S+", "Unused"),
+            weights,
+            percentages,
+        ):
+            self.rm_stock_distribution_vars[size_class].set(
+                f"{size_class} {self._format_optional_number(percentage)}% | "
+                f"{self._format_optional_number(weight)} kg"
+            )
+        self.rm_stock_distribution_canvas.after_idle(self._draw_rm_stock_distribution)
+
+    def _draw_rm_stock_distribution(self, _event: tk.Event | None = None) -> None:
+        canvas = self.rm_stock_distribution_canvas
+        canvas.delete("all")
+        width = max(canvas.winfo_width() - 2, 1)
+        height = max(canvas.winfo_height() - 2, 1)
+        percentages = stock_distribution_percentages(
+            *self.rm_stock_distribution_weights
+        )
+        if sum(percentages) == 0:
+            canvas.create_rectangle(1, 1, width + 1, height + 1, fill="#eeeeee", outline="")
+            canvas.create_text(
+                (width + 2) / 2,
+                (height + 2) / 2,
+                text="No stock",
+                fill="#555555",
+                font=("Segoe UI", 9, "bold"),
+            )
+            return
+
+        left = 1.0
+        size_classes = ("M", "S+", "Unused")
+        for index, (size_class, percentage) in enumerate(zip(size_classes, percentages)):
+            right = (
+                width + 1.0
+                if index == len(size_classes) - 1
+                else left + (width * percentage / 100)
+            )
+            canvas.create_rectangle(
+                left,
+                1,
+                right,
+                height + 1,
+                fill=RM_STOCK_DISTRIBUTION_COLORS[size_class],
+                outline="#ffffff",
+            )
+            if right - left >= 72:
+                canvas.create_text(
+                    (left + right) / 2,
+                    (height + 2) / 2,
+                    text=(
+                        f"{size_class} "
+                        f"{self._format_optional_number(percentage)}%"
+                    ),
+                    fill="#ffffff",
+                    font=("Segoe UI", 9, "bold"),
+                )
+            left = right
+
     def _refresh_rm_timeline(self, _event: tk.Event | None = None) -> None:
         if not hasattr(self, "rm_timeline_tree"):
             return
@@ -761,8 +873,8 @@ class ProductionPlanApp(tk.Tk):
             self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
             self.rm_stock_as_of_var.set("Unavailable")
             self.rm_stock_total_var.set("—")
-            self.rm_stock_unused_var.set("—")
             self.rm_stock_wontons_var.set("—")
+            self._set_rm_stock_distribution(0, 0, 0)
             for variables in self.rm_stock_size_vars.values():
                 for variable in variables.values():
                     variable.set("—")
@@ -794,11 +906,13 @@ class ProductionPlanApp(tk.Tk):
             self.rm_stock_total_var.set(
                 f"{self._format_optional_number(final.cumulative_kg)} kg"
             )
-            self.rm_stock_unused_var.set(
-                f"{self._format_optional_number(final.unused_stock.total)} kg"
-            )
             self.rm_stock_wontons_var.set(
                 self._format_optional_number(final.cumulative_wontons)
+            )
+            self._set_rm_stock_distribution(
+                final.m_stock.total,
+                final.s_plus_stock.total,
+                final.unused_stock.total,
             )
             size_summaries = {
                 "M": final.m_stock,
@@ -839,8 +953,8 @@ class ProductionPlanApp(tk.Tk):
         else:
             self.rm_stock_as_of_var.set("—")
             self.rm_stock_total_var.set("0 kg")
-            self.rm_stock_unused_var.set("0 kg")
             self.rm_stock_wontons_var.set("0")
+            self._set_rm_stock_distribution(0, 0, 0)
             for variables in self.rm_stock_size_vars.values():
                 variables["stock"].set("0 kg")
                 for market in ("domestic", "export"):
