@@ -280,7 +280,7 @@ def generate_plan(
                     group_1=item.record.group_1,
                     production_type=item.production_type,
                     market_type=item.market_type,
-                    rm_size=normalize_size_class(item.record.rm_size),
+                    rm_size=item.record.rm_size,
                     priority=item.priority_label,
                     order_cups=float(item.record.order_cups or 0),
                     order_wontons=float(item.record.total_wontons or 0),
@@ -308,7 +308,7 @@ def generate_plan(
         if not future_compatible:
             reason = (
                 f"Insufficient {item.market_type.upper()} "
-                f"{normalize_size_class(item.record.rm_size)} RM stock."
+                f"{item.record.rm_size or '(blank)'} RM stock."
             )
         else:
             reason = "Daily capacity exhausted before the latest order load date."
@@ -527,7 +527,7 @@ def _unplanned(
         group_1=record.group_1,
         production_type=production_type,
         market_type=_normalize_market_type(market_type),
-        rm_size=normalize_size_class(record.rm_size),
+        rm_size=record.rm_size,
         remaining_wontons=remaining_wontons,
         reason=reason,
     )

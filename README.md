@@ -108,7 +108,7 @@ orders. Unassigned orders and RM only match each other. The generated and
 unplanned tables show **Use for** so this decision is visible.
 Order keeps the original RM Size from Excel, including separate `S` and `SS`
 values. Plan normalizes both only while matching material, so either order size
-can consume the shared `S+` stock pool without changing the Order display.
+can consume the shared `S+` stock pool without changing the Order or Plan display.
 
 **Stock** shows a plain overview for total weight, unused weight, estimated
 wontons, and the latest availability date. M and S+ have separate stock sections.
