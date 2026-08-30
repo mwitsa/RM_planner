@@ -121,7 +121,7 @@ output yield percentage. Each base-size column is checked to ensure its output
 distribution totals 100%. Enter a harvest date, base size (for example `74`),
 and weight in kilograms above the matrix to predict the actual size distribution.
 The app uses column `S.74`, splits the weight by its percentages, and transfers
-the size/weight rows to the **Assortment Actual** tab for review and saving.
+the size/weight rows to **Update Stock** for review and saving.
 Generated weights use whole kilograms and are allocated so their sum remains
 equal to the rounded harvest weight.
 Transferred rows carry a persistent amber **PREDICTION** flag, while manually
@@ -129,7 +129,7 @@ entered data carries a green **ACTUAL** flag. Saved history also displays and
 preserves this Type when a record is edited. The Type dropdown allows either
 classification to be selected manually before saving or while editing. A saved
 history row can also be permanently deleted after confirmation. The
-separate **Assortment Actual** tab is reserved
+separate **Update Stock** page is reserved
 for actual harvest assortment data. It starts with one empty card containing
 Size (start), Size (end), and Weight fields; use **Add another box** to record additional actual
 assortment entries. Choose Date, Month, and Year before saving. Saved records

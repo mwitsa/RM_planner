@@ -388,7 +388,7 @@ class ProductionPlanApp(tk.Tk):
         for key, label in (
             ("timeline", "Stock"),
             ("predict", "Assortment Predict"),
-            ("actual", "Assortment Actual"),
+            ("actual", "Update Stock"),
         ):
             button = tk.Button(
                 sidebar,
@@ -1749,7 +1749,7 @@ class ProductionPlanApp(tk.Tk):
         ).pack(side=tk.LEFT, padx=(6, 12))
         ttk.Button(
             prediction_frame,
-            text="Predict → Assortment Actual",
+            text="Predict → Update Stock",
             command=self._transfer_assortment_prediction,
         ).pack(side=tk.RIGHT)
 
