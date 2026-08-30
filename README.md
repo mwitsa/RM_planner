@@ -121,10 +121,11 @@ The **Assortment STD** page automatically loads `Data/RM/assortment.xlsx` as
 read-only shrimp assortment master data. Its columns are harvested base sizes,
 its rows are actual output-size ranges, and every matrix cell is the expected
 output yield percentage. Each base-size column is checked to ensure its output
-distribution totals 100%. Enter a harvest date, base size (for example `74`),
-and weight in kilograms above the matrix to predict the actual size distribution.
-The app uses column `S.74`, splits the weight by its percentages, and transfers
-the size/weight rows to the Stock editor for review and saving.
+distribution totals 100%. Assortment STD contains only master-data review and
+M/S+ range maintenance; stock entry is handled in the Stock editor.
+In **+ Add stock**, enter the availability date and optionally use **Fill from
+Assortment STD** with a harvest size (for example `74`) and total weight. The app
+uses column `S.74` and fills editable size/weight rows from its percentages.
 Generated weights use whole kilograms and are allocated so their sum remains
 equal to the rounded harvest weight.
 Transferred and manually entered rows use the same stock workflow. Older saved

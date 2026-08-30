@@ -1678,59 +1678,15 @@ class ProductionPlanApp(tk.Tk):
         self.class_status_var.set(f"Editing class {item.class_value}.")
 
     def _build_assortment_std_tab(self) -> None:
-        today = date.today()
-        self.std_day_var = tk.StringVar(value=f"{today.day:02d}")
-        self.std_month_var = tk.StringVar(value=f"{today.month:02d}")
-        self.std_year_var = tk.StringVar(value=f"{today.year:04d}")
-        self.std_harvest_size_var = tk.StringVar()
-        self.std_harvest_weight_var = tk.StringVar()
-
-        prediction_frame = ttk.LabelFrame(
+        ttk.Label(
             self.assortment_std_tab,
-            text="Predict actual assortment",
-            padding=10,
-        )
-        prediction_frame.pack(fill=tk.X, pady=(0, 10))
-        ttk.Label(prediction_frame, text="Date").pack(side=tk.LEFT)
-        ttk.Combobox(
-            prediction_frame,
-            textvariable=self.std_day_var,
-            values=[f"{day:02d}" for day in range(1, 32)],
-            state="readonly",
-            width=5,
-        ).pack(side=tk.LEFT, padx=(6, 12))
-        ttk.Label(prediction_frame, text="Month").pack(side=tk.LEFT)
-        ttk.Combobox(
-            prediction_frame,
-            textvariable=self.std_month_var,
-            values=[f"{month:02d}" for month in range(1, 13)],
-            state="readonly",
-            width=5,
-        ).pack(side=tk.LEFT, padx=(6, 12))
-        ttk.Label(prediction_frame, text="Year").pack(side=tk.LEFT)
-        ttk.Combobox(
-            prediction_frame,
-            textvariable=self.std_year_var,
-            values=[str(year) for year in range(today.year - 5, today.year + 6)],
-            width=7,
-        ).pack(side=tk.LEFT, padx=(6, 18))
-        ttk.Label(prediction_frame, text="Harvest size").pack(side=tk.LEFT)
-        ttk.Entry(
-            prediction_frame,
-            textvariable=self.std_harvest_size_var,
-            width=10,
-        ).pack(side=tk.LEFT, padx=(6, 18))
-        ttk.Label(prediction_frame, text="Weight (kg)").pack(side=tk.LEFT)
-        ttk.Entry(
-            prediction_frame,
-            textvariable=self.std_harvest_weight_var,
-            width=14,
-        ).pack(side=tk.LEFT, padx=(6, 12))
-        ttk.Button(
-            prediction_frame,
-            text="Predict → Add stock",
-            command=self._transfer_assortment_prediction,
-        ).pack(side=tk.RIGHT)
+            text="Assortment STD",
+            style="Summary.TLabel",
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.assortment_std_tab,
+            text="Review the assortment master and maintain the M and S+ output-size ranges.",
+        ).pack(anchor=tk.W, pady=(2, 10))
 
         source_frame = ttk.Frame(self.assortment_std_tab)
         source_frame.pack(fill=tk.X, pady=(0, 10))
@@ -1771,42 +1727,26 @@ class ProductionPlanApp(tk.Tk):
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(8, 0))
 
-    def _transfer_assortment_prediction(self) -> None:
+    def _fill_stock_from_assortment_std(self) -> None:
         if self.assortment_table is None:
             messagebox.showerror(
-                "Predict assortment",
-                "Load a valid assortment master before creating a prediction.",
+                "Fill from Assortment STD",
+                "Load a valid assortment master before calculating stock rows.",
             )
             return
         try:
-            harvest_date = date(
-                int(self.std_year_var.get()),
-                int(self.std_month_var.get()),
-                int(self.std_day_var.get()),
-            )
-        except ValueError:
-            messagebox.showerror(
-                "Predict assortment",
-                "Choose a valid Date, Month, and Year.",
-            )
-            return
-        try:
-            weight_text = self.std_harvest_weight_var.get().strip().replace(",", "")
+            weight_text = self.stock_harvest_weight_var.get().strip().replace(",", "")
             predictions = predict_assortment(
                 self.assortment_table,
-                self.std_harvest_size_var.get(),
+                self.stock_harvest_size_var.get(),
                 weight_text,
             )
             allocated_weight = sum(item.weight for item in predictions)
         except ValueError as exc:
-            messagebox.showerror("Predict assortment", str(exc))
+            messagebox.showerror("Fill from Assortment STD", str(exc))
             return
 
-        self.actual_day_var.set(f"{harvest_date.day:02d}")
-        self.actual_month_var.set(f"{harvest_date.month:02d}")
-        self.actual_year_var.set(f"{harvest_date.year:04d}")
         self._editing_actual_record_id = None
-        self.actual_market_type_var.set("DOMESTIC")
         self.assortment_actual_save_button.configure(text="Save stock")
         self._set_assortment_actual_boxes(
             [
@@ -1814,7 +1754,7 @@ class ProductionPlanApp(tk.Tk):
                 for item in predictions
             ]
         )
-        requested_size = self.std_harvest_size_var.get().strip()
+        requested_size = self.stock_harvest_size_var.get().strip()
         master_size = requested_size if requested_size.casefold().startswith("s.") else f"S.{requested_size}"
         resolved_size = next(
             base_size
@@ -1822,14 +1762,11 @@ class ProductionPlanApp(tk.Tk):
             if base_size.casefold() == master_size.casefold()
         )
         message = (
-            f"Predicted {len(predictions)} output sizes from {resolved_size} and "
+            f"Filled {len(predictions)} size rows from {resolved_size} and "
             f"{allocated_weight:,} kg in whole kilograms. "
-            "Review the result, then click Save stock."
+            "Review or edit the rows before saving."
         )
-        self.assortment_status_var.set(message)
         self.assortment_actual_status_var.set(message)
-        self.notebook.select(self.rm_tab)
-        self._show_rm_section("actual")
 
     def _build_capacity_tab(self) -> None:
         self.raw_capacity_percentage_var = tk.DoubleVar(value=50)
@@ -2098,20 +2035,11 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var = tk.StringVar(value=f"{today.month:02d}")
         self.actual_year_var = tk.StringVar(value=f"{today.year:04d}")
         self.actual_market_type_var = tk.StringVar(value="DOMESTIC")
+        self.stock_harvest_size_var = tk.StringVar()
+        self.stock_harvest_weight_var = tk.StringVar()
 
         editor_header = ttk.Frame(self.assortment_actual_tab)
-        editor_header.pack(fill=tk.X, pady=(0, 12))
-        editor_header_text = ttk.Frame(editor_header)
-        editor_header_text.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Label(
-            editor_header_text,
-            text="Add and manage stock",
-            style="Summary.TLabel",
-        ).pack(anchor=tk.W)
-        ttk.Label(
-            editor_header_text,
-            text="Create a stock arrival or manage records already included in Stock.",
-        ).pack(anchor=tk.W, pady=(2, 0))
+        editor_header.pack(fill=tk.X, pady=(0, 6))
         ttk.Button(
             editor_header,
             text="Back to Stock",
@@ -2124,12 +2052,6 @@ class ProductionPlanApp(tk.Tk):
         history_panel = ttk.Frame(pane, padding=(10, 0, 0, 0), width=650)
         pane.add(form_panel, weight=4)
         pane.add(history_panel, weight=5)
-
-        ttk.Label(form_panel, text="New stock arrival", style="Summary.TLabel").pack(anchor=tk.W)
-        ttk.Label(
-            form_panel,
-            text="Add an RM arrival, enter its size ranges and weights, then save it to Stock.",
-        ).pack(anchor=tk.W, pady=(2, 12))
 
         details_frame = ttk.LabelFrame(form_panel, text="1. Stock details", padding=10)
         details_frame.pack(fill=tk.X, pady=(0, 12))
@@ -2175,6 +2097,42 @@ class ProductionPlanApp(tk.Tk):
             width=10,
         ).grid(row=1, column=1, sticky="ew", pady=(4, 0))
 
+        std_fill_frame = ttk.LabelFrame(
+            form_panel,
+            text="2. Fill from Assortment STD (optional)",
+            padding=10,
+        )
+        std_fill_frame.pack(fill=tk.X, pady=(0, 12))
+        std_fill_frame.columnconfigure(4, weight=1)
+        ttk.Label(std_fill_frame, text="Harvest size").grid(
+            row=0, column=0, sticky=tk.W
+        )
+        self.stock_harvest_size_combo = ttk.Combobox(
+            std_fill_frame,
+            textvariable=self.stock_harvest_size_var,
+            width=12,
+        )
+        self.stock_harvest_size_combo.grid(
+            row=0, column=1, sticky=tk.W, padx=(6, 18)
+        )
+        ttk.Label(std_fill_frame, text="Total weight (kg)").grid(
+            row=0, column=2, sticky=tk.W
+        )
+        ttk.Entry(
+            std_fill_frame,
+            textvariable=self.stock_harvest_weight_var,
+            width=16,
+        ).grid(row=0, column=3, sticky=tk.W, padx=(6, 18))
+        ttk.Button(
+            std_fill_frame,
+            text="Calculate rows",
+            command=self._fill_stock_from_assortment_std,
+        ).grid(row=0, column=4, sticky=tk.E)
+        ttk.Label(
+            std_fill_frame,
+            text="Uses STD percentages to fill the size rows below; all calculated rows remain editable.",
+        ).grid(row=1, column=0, columnspan=5, sticky=tk.W, pady=(6, 0))
+
         form_actions = ttk.Frame(form_panel)
         form_actions.pack(fill=tk.X, pady=(0, 12))
         ttk.Button(
@@ -2191,7 +2149,7 @@ class ProductionPlanApp(tk.Tk):
 
         box_header = ttk.Frame(form_panel)
         box_header.pack(fill=tk.X, pady=(0, 6))
-        ttk.Label(box_header, text="2. Size and weight", style="Summary.TLabel").pack(side=tk.LEFT)
+        ttk.Label(box_header, text="3. Size and weight", style="Summary.TLabel").pack(side=tk.LEFT)
         self.assortment_entry_summary_var = tk.StringVar(value="1 row | Total 0 kg")
         ttk.Label(
             box_header,
@@ -2508,6 +2466,8 @@ class ProductionPlanApp(tk.Tk):
         self.actual_year_var.set(f"{today.year:04d}")
         self._editing_actual_record_id = None
         self.actual_market_type_var.set("DOMESTIC")
+        self.stock_harvest_size_var.set("")
+        self.stock_harvest_weight_var.set("")
         self.assortment_actual_save_button.configure(text="Save stock")
         self._set_assortment_actual_boxes([])
         if set_status:
@@ -2719,6 +2679,8 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var.set(month)
         self.actual_year_var.set(year)
         self.actual_market_type_var.set(record.market_type.upper())
+        self.stock_harvest_size_var.set("")
+        self.stock_harvest_weight_var.set("")
         self._set_assortment_actual_boxes(list(record.entries))
         self._editing_actual_record_id = record.record_id
         self.assortment_actual_save_button.configure(text="Update stock")
@@ -2776,11 +2738,20 @@ class ProductionPlanApp(tk.Tk):
             table = load_assortment(self.assortment_file_path)
         except (FileNotFoundError, ValueError) as exc:
             self.assortment_table = None
+            self.stock_harvest_size_combo.configure(values=())
             self.assortment_canvas.delete("all")
             self.assortment_status_var.set(str(exc))
             return
 
         self.assortment_table = table
+        self.stock_harvest_size_combo.configure(
+            values=tuple(
+                base_size[2:]
+                if base_size.casefold().startswith("s.")
+                else base_size
+                for base_size in table.base_sizes
+            )
+        )
         range_note = (
             " Initial M/S+ ranges are placeholders; drag and save them."
             if not self.assortment_size_range_file_path.exists()
