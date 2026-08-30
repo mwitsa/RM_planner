@@ -123,6 +123,7 @@ class ProductionPlanApp(tk.Tk):
             key: [] for key, _label in FILTER_SPECS
         }
         self._order_filter_popup: tk.Toplevel | None = None
+        self._order_filter_outside_binding: str | None = None
         self.summary_var = tk.StringVar(value="Select a workbook to begin.")
         self.status_var = tk.StringVar(value="Ready")
         self.rule_status_var = tk.StringVar(value="Rules apply from top to bottom.")
@@ -3514,6 +3515,18 @@ class ProductionPlanApp(tk.Tk):
         popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
         popup.deiconify()
         popup.lift()
+        # Install after the header's current click has finished propagating;
+        # otherwise that same click would immediately close the new popup.
+        self.after_idle(self._enable_order_filter_outside_click, popup)
+
+    def _enable_order_filter_outside_click(self, popup: tk.Toplevel) -> None:
+        if self._order_filter_popup is not popup:
+            return
+        self._order_filter_outside_binding = self.bind(
+            "<Button-1>",
+            self._order_filter_clicked_outside,
+            add="+",
+        )
 
     def _set_order_column_filter(self, filter_key: str, value: str) -> None:
         self.order_filter_selections[filter_key] = value
@@ -3521,12 +3534,18 @@ class ProductionPlanApp(tk.Tk):
         self._refresh_preview(filter_key)
 
     def _close_order_filter_popup(self) -> None:
+        if self._order_filter_outside_binding is not None:
+            self.unbind("<Button-1>", self._order_filter_outside_binding)
+            self._order_filter_outside_binding = None
         if self._order_filter_popup is not None:
             try:
                 self._order_filter_popup.destroy()
             except tk.TclError:
                 pass
             self._order_filter_popup = None
+
+    def _order_filter_clicked_outside(self, _event: tk.Event) -> None:
+        self._close_order_filter_popup()
 
     def _clear_order_filters(self) -> None:
         self._close_order_filter_popup()
