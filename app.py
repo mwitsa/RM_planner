@@ -386,7 +386,7 @@ class ProductionPlanApp(tk.Tk):
 
         self.rm_navigation_buttons: dict[str, tk.Button] = {}
         for key, label in (
-            ("timeline", "Stock Timeline"),
+            ("timeline", "Stock"),
             ("existing", "Existing Stock"),
             ("predict", "Assortment Predict"),
             ("actual", "Assortment Actual"),
@@ -447,7 +447,17 @@ class ProductionPlanApp(tk.Tk):
     def _build_rm_timeline_tab(self) -> None:
         self.rm_timeline_type_var = tk.StringVar(value="ALL")
         self.rm_timeline_market_var = tk.StringVar(value="ALL")
-        self.rm_timeline_summary_var = tk.StringVar(value="No RM stock records.")
+        self.rm_stock_as_of_var = tk.StringVar(value="—")
+        self.rm_stock_total_var = tk.StringVar(value="0 kg")
+        self.rm_stock_unused_var = tk.StringVar(value="0 kg")
+        self.rm_stock_wontons_var = tk.StringVar(value="0")
+        self.rm_stock_size_vars = {
+            size_class: {
+                "stock": tk.StringVar(value="0 kg"),
+                "overlap": tk.StringVar(value="Overlap: 0 kg"),
+            }
+            for size_class in SIZE_CLASSES
+        }
         self.rm_timeline_detail_visible = False
         self.rm_timeline_status_var = tk.StringVar(
             value="Cumulative stock before generated Plan consumption."
@@ -455,18 +465,18 @@ class ProductionPlanApp(tk.Tk):
 
         ttk.Label(
             self.rm_timeline_tab,
-            text="RM Stock Timeline",
+            text="RM Stock",
             style="Summary.TLabel",
         ).pack(anchor=tk.W)
         ttk.Label(
             self.rm_timeline_tab,
             text=(
-                "Incoming RM grouped by availability date. Stock columns are cumulative and "
-                "do not subtract generated Plan usage yet."
+                "Current incoming RM stock before generated Plan usage. "
+                "Use Show details to audit stock by availability date."
             ),
         ).pack(anchor=tk.W, pady=(2, 10))
 
-        controls = ttk.LabelFrame(self.rm_timeline_tab, text="Timeline filters", padding=8)
+        controls = ttk.LabelFrame(self.rm_timeline_tab, text="Stock filters", padding=8)
         controls.pack(fill=tk.X, pady=(0, 8))
         ttk.Label(controls, text="Type").pack(side=tk.LEFT)
         type_combo = ttk.Combobox(
@@ -500,27 +510,68 @@ class ProductionPlanApp(tk.Tk):
         type_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
         market_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
 
-        summary_frame = tk.Frame(
+        overview = ttk.LabelFrame(
             self.rm_timeline_tab,
-            background="#e8f2fb",
-            highlightbackground="#b8d2e8",
-            highlightthickness=1,
+            text="Stock overview",
+            padding=12,
         )
-        summary_frame.pack(fill=tk.X, pady=(0, 8))
-        tk.Label(
-            summary_frame,
-            textvariable=self.rm_timeline_summary_var,
-            background="#e8f2fb",
-            foreground="#173f5f",
-            font=("Segoe UI", 11, "bold"),
-            anchor=tk.W,
-            padx=12,
-            pady=12,
-        ).pack(fill=tk.X)
+        overview.pack(fill=tk.X, pady=(0, 8))
+        for column in range(4):
+            overview.columnconfigure(column, weight=1)
+        overview_fields = (
+            ("As of", self.rm_stock_as_of_var),
+            ("Total stock", self.rm_stock_total_var),
+            ("Unused stock", self.rm_stock_unused_var),
+            ("Est. wontons", self.rm_stock_wontons_var),
+        )
+        for column, (label, variable) in enumerate(overview_fields):
+            ttk.Label(overview, text=label).grid(
+                row=0,
+                column=column,
+                sticky=tk.W,
+                padx=(0, 20),
+            )
+            ttk.Label(
+                overview,
+                textvariable=variable,
+                style="Summary.TLabel",
+            ).grid(
+                row=1,
+                column=column,
+                sticky=tk.W,
+                padx=(0, 20),
+                pady=(3, 0),
+            )
+
+        size_sections = ttk.Frame(self.rm_timeline_tab)
+        size_sections.pack(fill=tk.X, pady=(0, 8))
+        for column, size_class in enumerate(SIZE_CLASSES):
+            size_sections.columnconfigure(column, weight=1)
+            section = ttk.LabelFrame(
+                size_sections,
+                text=size_class,
+                padding=12,
+            )
+            section.grid(
+                row=0,
+                column=column,
+                sticky="nsew",
+                padx=(0 if column == 0 else 4, 0 if column == 2 else 4),
+            )
+            ttk.Label(section, text="Stock").pack(anchor=tk.W)
+            ttk.Label(
+                section,
+                textvariable=self.rm_stock_size_vars[size_class]["stock"],
+                style="Summary.TLabel",
+            ).pack(anchor=tk.W, pady=(3, 8))
+            ttk.Label(
+                section,
+                textvariable=self.rm_stock_size_vars[size_class]["overlap"],
+            ).pack(anchor=tk.W)
 
         table_frame = ttk.LabelFrame(
             self.rm_timeline_tab,
-            text="RM arrival details",
+            text="RM stock arrival details",
             padding=8,
         )
         self.rm_timeline_detail_frame = table_frame
@@ -640,7 +691,13 @@ class ProductionPlanApp(tk.Tk):
             )
         except ValueError as exc:
             self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
-            self.rm_timeline_summary_var.set("Timeline unavailable")
+            self.rm_stock_as_of_var.set("Unavailable")
+            self.rm_stock_total_var.set("—")
+            self.rm_stock_unused_var.set("—")
+            self.rm_stock_wontons_var.set("—")
+            for variables in self.rm_stock_size_vars.values():
+                variables["stock"].set("—")
+                variables["overlap"].set("Overlap: —")
             self.rm_timeline_status_var.set(str(exc))
             return
 
@@ -669,23 +726,43 @@ class ProductionPlanApp(tk.Tk):
         record_count = sum(len(row.rm_ids) for row in rows)
         if rows:
             final = rows[-1]
-            self.rm_timeline_summary_var.set(
-                f"Current stock as of {final.record_date}: "
-                f"{self._format_optional_number(final.cumulative_kg)} kg total  |  "
-                f"M {self._format_size_class_summary(final.m_stock)} kg  |  "
-                f"S {self._format_size_class_summary(final.s_stock)} kg  |  "
-                f"SS {self._format_size_class_summary(final.ss_stock)} kg  |  "
-                f"Unused {self._format_size_class_summary(final.unused_stock)} kg  |  "
-                f"Est. {self._format_optional_number(final.cumulative_wontons)} wontons"
+            self.rm_stock_as_of_var.set(final.record_date)
+            self.rm_stock_total_var.set(
+                f"{self._format_optional_number(final.cumulative_kg)} kg"
             )
+            self.rm_stock_unused_var.set(
+                f"{self._format_optional_number(final.unused_stock.total)} kg"
+            )
+            self.rm_stock_wontons_var.set(
+                self._format_optional_number(final.cumulative_wontons)
+            )
+            size_summaries = {
+                "M": final.m_stock,
+                "S": final.s_stock,
+                "SS": final.ss_stock,
+            }
+            for size_class, summary in size_summaries.items():
+                variables = self.rm_stock_size_vars[size_class]
+                variables["stock"].set(
+                    f"{self._format_optional_number(summary.total)} kg"
+                )
+                variables["overlap"].set(
+                    f"Overlap: {self._format_optional_number(summary.overlap)} kg"
+                )
             self.rm_timeline_status_var.set(
                 f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
                 "Stock is before Plan usage. Click Show details to audit arrivals."
             )
         else:
-            self.rm_timeline_summary_var.set("No RM stock records for these filters.")
+            self.rm_stock_as_of_var.set("—")
+            self.rm_stock_total_var.set("0 kg")
+            self.rm_stock_unused_var.set("0 kg")
+            self.rm_stock_wontons_var.set("0")
+            for variables in self.rm_stock_size_vars.values():
+                variables["stock"].set("0 kg")
+                variables["overlap"].set("Overlap: 0 kg")
             self.rm_timeline_status_var.set(
-                "Cumulative stock before generated Plan consumption."
+                "No RM stock records for these filters."
             )
 
     def _build_existing_stock_tab(self) -> None:
