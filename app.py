@@ -1383,7 +1383,7 @@ class ProductionPlanApp(tk.Tk):
         ttk.Entry(name_box, textvariable=self.class_name_var).grid(row=0, column=0, sticky="ew")
 
         group_box = ttk.LabelFrame(form, text="3. Group", padding=10)
-        group_box.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        group_box.grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=(10, 0))
         group_box.columnconfigure(0, weight=1)
         self.class_group_text = tk.Text(
             group_box,
@@ -1393,6 +1393,18 @@ class ProductionPlanApp(tk.Tk):
             undo=True,
         )
         self.class_group_text.grid(row=0, column=0, sticky="ew")
+
+        value_box = ttk.LabelFrame(form, text="4. Value", padding=10)
+        value_box.grid(row=1, column=1, sticky="ew", pady=(10, 0))
+        value_box.columnconfigure(0, weight=1)
+        self.class_detail_value_text = tk.Text(
+            value_box,
+            height=4,
+            wrap=tk.WORD,
+            font=("Segoe UI", 10),
+            undo=True,
+        )
+        self.class_detail_value_text.grid(row=0, column=0, sticky="ew")
 
         actions = ttk.Frame(form)
         actions.grid(row=2, column=0, columnspan=2, sticky="e", pady=(10, 0))
@@ -1460,16 +1472,18 @@ class ProductionPlanApp(tk.Tk):
 
         self.class_tree = ttk.Treeview(
             saved_frame,
-            columns=("class", "name", "group"),
+            columns=("class", "name", "group", "value"),
             show="headings",
             selectmode="browse",
         )
         self.class_tree.heading("class", text="Class")
         self.class_tree.heading("name", text="Name")
         self.class_tree.heading("group", text="Group")
+        self.class_tree.heading("value", text="Value")
         self.class_tree.column("class", width=140, minwidth=100, stretch=False)
         self.class_tree.column("name", width=260, minwidth=160)
-        self.class_tree.column("group", width=600, minwidth=260)
+        self.class_tree.column("group", width=280, minwidth=160)
+        self.class_tree.column("value", width=320, minwidth=180)
         class_scrollbar = ttk.Scrollbar(saved_frame, orient=tk.VERTICAL, command=self.class_tree.yview)
         self.class_tree.configure(yscrollcommand=class_scrollbar.set)
         self.class_tree.grid(row=1, column=0, sticky="nsew")
@@ -1491,6 +1505,7 @@ class ProductionPlanApp(tk.Tk):
         self.class_value_var.set("")
         self.class_name_var.set("")
         self.class_group_text.delete("1.0", tk.END)
+        self.class_detail_value_text.delete("1.0", tk.END)
         self._editing_class_id = None
         self.save_class_button.configure(text="Save class")
         if set_status:
@@ -1503,7 +1518,8 @@ class ProductionPlanApp(tk.Tk):
                 self.class_value_var.get(),
                 self.class_name_var.get(),
                 self.class_group_text.get("1.0", "end-1c"),
-                self._editing_class_id,
+                class_id=self._editing_class_id,
+                value=self.class_detail_value_text.get("1.0", "end-1c"),
             )
         except ValueError as exc:
             messagebox.showerror("Save class", str(exc))
@@ -1572,6 +1588,7 @@ class ProductionPlanApp(tk.Tk):
                     item.class_value,
                     self._format_class_name_for_display(item),
                     " ".join(item.group.split()),
+                    " ".join(item.value.split()),
                 ),
             )
         self.class_filter_count_var.set(
@@ -1597,6 +1614,8 @@ class ProductionPlanApp(tk.Tk):
         self.class_name_var.set(item.name)
         self.class_group_text.delete("1.0", tk.END)
         self.class_group_text.insert("1.0", item.group)
+        self.class_detail_value_text.delete("1.0", tk.END)
+        self.class_detail_value_text.insert("1.0", item.value)
         self._editing_class_id = item.class_id
         self.save_class_button.configure(text="Update class")
         self.class_status_var.set(f"Editing class {item.class_value}.")

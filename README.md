@@ -74,7 +74,9 @@ The **Class Rule** tab stores text rules in waterfall priority. Add or update a
 rule, drag it up or down (or use the Move buttons), and click **Save rules**.
 The rule at the top is applied first. Saved rules reload when the app starts.
 
-The **Class Define** tab stores Class, Name, and optional Group fields. Each
+The **Class Define** tab stores Class, Name, optional Group, and optional Value
+fields. Group remains the numeric planning priority, while Value is additional
+master-data information available for future planning rules. Each
 Order extraction automatically adds missing Class + Name pairs for Country,
 Customer, Group 1, Group 2, Packaging, Soup, and ถ้วย/Unit. Existing pairs and
 their manually assigned Group values are preserved. Saved rows can be filtered

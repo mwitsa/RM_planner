@@ -28,19 +28,27 @@ class ClassStoreTests(unittest.TestCase):
         self.assertEqual(load_class_definitions(self.store_path), [])
 
     def test_saves_and_updates_class(self) -> None:
-        saved = upsert_class_definition(self.store_path, "Country", "USA", "Export")
+        saved = upsert_class_definition(
+            self.store_path,
+            "Country",
+            "USA",
+            "Export",
+            value="Initial value",
+        )
         updated = upsert_class_definition(
             self.store_path,
             "Country",
             "USA",
             "North America",
-            saved.class_id,
+            class_id=saved.class_id,
+            value="Updated value",
         )
         loaded = load_class_definitions(self.store_path)
         self.assertEqual(len(loaded), 1)
         self.assertEqual(updated.class_id, saved.class_id)
         self.assertEqual(loaded[0].name, "USA")
         self.assertEqual(loaded[0].group, "North America")
+        self.assertEqual(loaded[0].value, "Updated value")
 
     def test_allows_many_names_per_class_but_rejects_duplicate_pair(self) -> None:
         upsert_class_definition(self.store_path, "Country", "USA")
@@ -98,6 +106,7 @@ class ClassStoreTests(unittest.TestCase):
         loaded = load_class_definitions(self.store_path)
 
         self.assertEqual(loaded[0].group, "North America")
+        self.assertEqual(loaded[0].value, "")
 
     def test_builds_class_names_from_order_fields(self) -> None:
         record = OrderRecord(

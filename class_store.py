@@ -12,7 +12,7 @@ from uuid import uuid4
 from extractor import OrderRecord
 
 
-STORE_VERSION = 2
+STORE_VERSION = 3
 ALL_CLASS_FILTER = "All"
 BLANK_CLASS_FILTER = "(blank)"
 ORDER_CLASS_FIELDS = (
@@ -33,6 +33,7 @@ class ClassDefinition:
     group: str
     created_at: str
     updated_at: str
+    value: str = ""
 
 
 def load_class_definitions(store_path: str | Path) -> list[ClassDefinition]:
@@ -54,17 +55,19 @@ def load_class_definitions(store_path: str | Path) -> list[ClassDefinition]:
         if not isinstance(raw, dict):
             raise ValueError("Saved class file contains an invalid class.")
         group = raw.get("group", raw.get("define", ""))
+        detail_value = raw.get("value", "")
         values = (
             raw.get("id"),
             raw.get("class"),
             raw.get("name"),
             group,
+            detail_value,
             raw.get("created_at"),
             raw.get("updated_at"),
         )
         if not all(isinstance(value, str) for value in values):
             raise ValueError("Saved class file contains invalid class fields.")
-        class_id, class_value, name, group, created_at, updated_at = values
+        class_id, class_value, name, group, detail_value, created_at, updated_at = values
         normalized_key = (class_value.strip().casefold(), name.strip().casefold())
         if (
             not class_id
@@ -84,6 +87,7 @@ def load_class_definitions(store_path: str | Path) -> list[ClassDefinition]:
                 group=group.strip(),
                 created_at=created_at,
                 updated_at=updated_at,
+                value=detail_value.strip(),
             )
         )
     return definitions
@@ -95,11 +99,13 @@ def upsert_class_definition(
     name: str,
     group: str = "",
     class_id: str | None = None,
+    value: str = "",
 ) -> ClassDefinition:
     path = Path(store_path)
     class_value = class_value.strip()
     name = name.strip()
     group = group.strip()
+    value = value.strip()
     if not class_value or not name:
         raise ValueError("Class and Name are required.")
 
@@ -119,6 +125,7 @@ def upsert_class_definition(
             group=group,
             created_at=now,
             updated_at=now,
+            value=value,
         )
         definitions.append(saved)
     else:
@@ -132,6 +139,7 @@ def upsert_class_definition(
                     group=group,
                     created_at=existing.created_at,
                     updated_at=now,
+                    value=value,
                 )
                 definitions[index] = saved
                 break
@@ -171,6 +179,7 @@ def add_missing_class_definitions(
                 group="",
                 created_at=now,
                 updated_at=now,
+                value="",
             )
         )
         existing_keys.add(key)
@@ -258,6 +267,7 @@ def _write_definitions(path: Path, definitions: list[ClassDefinition]) -> None:
                 "class": item.class_value,
                 "name": item.name,
                 "group": item.group,
+                "value": item.value,
                 "created_at": item.created_at,
                 "updated_at": item.updated_at,
             }
