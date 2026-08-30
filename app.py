@@ -442,6 +442,7 @@ class ProductionPlanApp(tk.Tk):
         self.rm_timeline_type_var = tk.StringVar(value="ALL")
         self.rm_timeline_market_var = tk.StringVar(value="ALL")
         self.rm_timeline_summary_var = tk.StringVar(value="No RM stock records.")
+        self.rm_timeline_detail_visible = False
         self.rm_timeline_status_var = tk.StringVar(
             value="Cumulative stock before generated Plan consumption."
         )
@@ -484,16 +485,39 @@ class ProductionPlanApp(tk.Tk):
             text="Clear filters",
             command=self._clear_rm_timeline_filters,
         ).pack(side=tk.LEFT)
-        ttk.Label(
+        self.rm_timeline_detail_button = ttk.Button(
             controls,
-            textvariable=self.rm_timeline_summary_var,
-            style="Summary.TLabel",
-        ).pack(side=tk.LEFT, padx=(18, 0))
+            text="Show details",
+            command=self._toggle_rm_timeline_details,
+        )
+        self.rm_timeline_detail_button.pack(side=tk.RIGHT)
         type_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
         market_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
 
-        table_frame = ttk.Frame(self.rm_timeline_tab)
-        table_frame.pack(fill=tk.BOTH, expand=True)
+        summary_frame = tk.Frame(
+            self.rm_timeline_tab,
+            background="#e8f2fb",
+            highlightbackground="#b8d2e8",
+            highlightthickness=1,
+        )
+        summary_frame.pack(fill=tk.X, pady=(0, 8))
+        tk.Label(
+            summary_frame,
+            textvariable=self.rm_timeline_summary_var,
+            background="#e8f2fb",
+            foreground="#173f5f",
+            font=("Segoe UI", 11, "bold"),
+            anchor=tk.W,
+            padx=12,
+            pady=12,
+        ).pack(fill=tk.X)
+
+        table_frame = ttk.LabelFrame(
+            self.rm_timeline_tab,
+            text="RM arrival details",
+            padding=8,
+        )
+        self.rm_timeline_detail_frame = table_frame
         table_frame.rowconfigure(0, weight=1)
         table_frame.columnconfigure(0, weight=1)
         columns = (
@@ -570,14 +594,28 @@ class ProductionPlanApp(tk.Tk):
         vertical.grid(row=0, column=1, sticky="ns")
         horizontal.grid(row=1, column=0, sticky="ew")
 
-        ttk.Label(
+        self.rm_timeline_status_label = ttk.Label(
             self.rm_timeline_tab,
             textvariable=self.rm_timeline_status_var,
             relief=tk.SUNKEN,
             anchor=tk.W,
             padding=(6, 3),
-        ).pack(fill=tk.X, pady=(8, 0))
+        )
+        self.rm_timeline_status_label.pack(fill=tk.X, pady=(8, 0))
         self._refresh_rm_timeline()
+
+    def _toggle_rm_timeline_details(self) -> None:
+        self.rm_timeline_detail_visible = not self.rm_timeline_detail_visible
+        if self.rm_timeline_detail_visible:
+            self.rm_timeline_detail_frame.pack(
+                fill=tk.BOTH,
+                expand=True,
+                before=self.rm_timeline_status_label,
+            )
+            self.rm_timeline_detail_button.configure(text="Hide details")
+        else:
+            self.rm_timeline_detail_frame.pack_forget()
+            self.rm_timeline_detail_button.configure(text="Show details")
 
     def _clear_rm_timeline_filters(self) -> None:
         self.rm_timeline_type_var.set("ALL")
@@ -626,12 +664,17 @@ class ProductionPlanApp(tk.Tk):
         if rows:
             final = rows[-1]
             self.rm_timeline_summary_var.set(
-                f"{record_count:,} RM records  |  {len(rows):,} dates  |  "
-                f"stock {self._format_optional_number(final.cumulative_kg)} kg  |  "
+                f"Current stock as of {final.record_date}: "
+                f"{self._format_optional_number(final.cumulative_kg)} kg total  |  "
+                f"M {self._format_size_class_summary(final.m_stock)} kg  |  "
+                f"S {self._format_size_class_summary(final.s_stock)} kg  |  "
+                f"SS {self._format_size_class_summary(final.ss_stock)} kg  |  "
+                f"Unused {self._format_size_class_summary(final.unused_stock)} kg  |  "
                 f"Est. {self._format_optional_number(final.cumulative_wontons)} wontons"
             )
             self.rm_timeline_status_var.set(
-                f"Timeline through {final.record_date}. Cumulative stock is before Plan usage."
+                f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
+                "Stock is before Plan usage. Click Show details to audit arrivals."
             )
         else:
             self.rm_timeline_summary_var.set("No RM stock records for these filters.")

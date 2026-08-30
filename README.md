@@ -100,6 +100,9 @@ availability date and Domestic/Export use, then enter weight and average shrimp
 pieces/kg directly for any M, S, and SS classes. Existing stock receives an RM
 ID, can be edited or deleted, appears as **Existing in (kg)** on Stock Timeline,
 and is consumed by Plan only for an order with the same market and RM class.
+Stock Timeline shows the latest combined stock as one summary sentence by
+default. Click **Show details** to expand the dated RM-arrival table and inspect
+the individual RM IDs behind that balance.
 
 The **Assortment Predict** tab automatically loads `Data/RM/assortment.xlsx` as
 read-only shrimp assortment master data. Its columns are harvested base sizes,
