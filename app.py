@@ -3387,6 +3387,9 @@ class ProductionPlanApp(tk.Tk):
         self._close_order_filter_popup()
         popup = tk.Toplevel(self)
         self._order_filter_popup = popup
+        # A borderless Toplevel otherwise maps at (0, 0) on Windows before its
+        # requested size is known. Keep it hidden until final placement.
+        popup.withdraw()
         popup.transient(self)
         popup.overrideredirect(True)
         popup.resizable(False, False)
@@ -3568,12 +3571,22 @@ class ProductionPlanApp(tk.Tk):
             menu_button("Close", self._close_order_filter_popup)
 
         popup.update_idletasks()
-        x = min(self.winfo_pointerx(), popup.winfo_screenwidth() - popup.winfo_width() - 12)
-        y = min(
-            self.winfo_pointery() + 16,
-            popup.winfo_screenheight() - popup.winfo_height() - 40,
+        popup_width = popup.winfo_reqwidth()
+        popup_height = popup.winfo_reqheight()
+        window_left = self.winfo_rootx()
+        window_top = self.winfo_rooty()
+        window_right = window_left + self.winfo_width()
+        window_bottom = window_top + self.winfo_height()
+        x = max(
+            window_left,
+            min(self.winfo_pointerx() - 16, window_right - popup_width),
         )
-        popup.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        y = max(
+            window_top,
+            min(self.winfo_pointery() + 16, window_bottom - popup_height),
+        )
+        popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+        popup.deiconify()
         popup.lift()
 
     def _set_order_column_filter(self, filter_key: str, value: str) -> None:
