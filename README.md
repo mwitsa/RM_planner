@@ -112,8 +112,8 @@ can consume the shared `S+` stock pool without changing the Order or Plan displa
 
 **Stock** shows a plain overview for total weight, unused weight, estimated
 wontons, and the latest availability date. M and S+ have separate stock sections.
-Click **Show details** to expand the dated
-RM-arrival table and inspect the individual RM IDs behind the balances. Legacy
+The dated RM-arrival table is always visible so the individual RM IDs behind the
+balances can be inspected directly. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused
 Existing Stock entry page is no longer shown.
 

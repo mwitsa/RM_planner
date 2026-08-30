@@ -458,7 +458,6 @@ class ProductionPlanApp(tk.Tk):
             }
             for size_class in SIZE_CLASSES
         }
-        self.rm_timeline_detail_visible = False
         self.rm_timeline_status_var = tk.StringVar(
             value="Cumulative stock before generated Plan consumption."
         )
@@ -474,10 +473,7 @@ class ProductionPlanApp(tk.Tk):
         ).pack(anchor=tk.W)
         ttk.Label(
             header_text,
-            text=(
-                "Current incoming RM stock before generated Plan usage. "
-                "Use Show details to audit stock by availability date."
-            ),
+            text="Current incoming RM stock before generated Plan usage.",
         ).pack(anchor=tk.W, pady=(2, 0))
         ttk.Button(
             header,
@@ -501,12 +497,6 @@ class ProductionPlanApp(tk.Tk):
             text="Clear filters",
             command=self._clear_rm_timeline_filters,
         ).pack(side=tk.LEFT)
-        self.rm_timeline_detail_button = ttk.Button(
-            controls,
-            text="Show details",
-            command=self._toggle_rm_timeline_details,
-        )
-        self.rm_timeline_detail_button.pack(side=tk.RIGHT)
         market_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
 
         overview = ttk.LabelFrame(
@@ -572,7 +562,7 @@ class ProductionPlanApp(tk.Tk):
             text="RM stock arrival details",
             padding=8,
         )
-        self.rm_timeline_detail_frame = table_frame
+        table_frame.pack(fill=tk.BOTH, expand=True)
         table_frame.rowconfigure(0, weight=1)
         table_frame.columnconfigure(0, weight=1)
         columns = (
@@ -651,19 +641,6 @@ class ProductionPlanApp(tk.Tk):
         self._new_assortment_actual_form()
         self._show_rm_section("actual")
 
-    def _toggle_rm_timeline_details(self) -> None:
-        self.rm_timeline_detail_visible = not self.rm_timeline_detail_visible
-        if self.rm_timeline_detail_visible:
-            self.rm_timeline_detail_frame.pack(
-                fill=tk.BOTH,
-                expand=True,
-                before=self.rm_timeline_status_label,
-            )
-            self.rm_timeline_detail_button.configure(text="Hide details")
-        else:
-            self.rm_timeline_detail_frame.pack_forget()
-            self.rm_timeline_detail_button.configure(text="Show details")
-
     def _clear_rm_timeline_filters(self) -> None:
         self.rm_timeline_market_var.set("ALL")
         self._refresh_rm_timeline()
@@ -730,7 +707,7 @@ class ProductionPlanApp(tk.Tk):
                 )
             self.rm_timeline_status_var.set(
                 f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
-                "Stock is before Plan usage. Click Show details to audit arrivals."
+                "Stock is before Plan usage."
             )
         else:
             self.rm_stock_as_of_var.set("—")
