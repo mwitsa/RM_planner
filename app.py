@@ -1873,19 +1873,6 @@ class ProductionPlanApp(tk.Tk):
         self.class_status_var.set(f"Editing class {item.class_value}.")
 
     def _build_assortment_std_tab(self) -> None:
-        ttk.Label(
-            self.assortment_std_tab,
-            text="Assortment STD",
-            style="Summary.TLabel",
-        ).pack(anchor=tk.W)
-        ttk.Label(
-            self.assortment_std_tab,
-            text=(
-                "Maintain M/S+ output-size ranges and the finished wonton weight "
-                "used to estimate yield."
-            ),
-        ).pack(anchor=tk.W, pady=(2, 10))
-
         source_frame = ttk.Frame(self.assortment_std_tab)
         source_frame.pack(fill=tk.X, pady=(0, 10))
         ttk.Label(source_frame, text="Master file:", style="Summary.TLabel").pack(side=tk.LEFT)
