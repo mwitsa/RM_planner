@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from calendar import monthrange
 from collections.abc import Collection, Iterable, Mapping
+from datetime import date
 
 from extractor import OrderRecord
 
 
 ALL_FILTER = "All"
+SCHEDULE_DATE_COLUMN = "schedule_date"
 BLANK_FILTER = "(blank)"
 PRODUCTION_ENTERED = "Entered"
 PRODUCTION_MISSING = "Not entered"
@@ -149,6 +152,17 @@ def sort_orders(
     record_list = list(records)
     if column is None:
         return record_list
+    if column == SCHEDULE_DATE_COLUMN:
+        dated: list[tuple[date, OrderRecord]] = []
+        undated: list[OrderRecord] = []
+        for record in record_list:
+            effective_date = order_effective_date(record)
+            if effective_date is None:
+                undated.append(record)
+            else:
+                dated.append((effective_date, record))
+        dated.sort(key=lambda item: item[0], reverse=descending)
+        return [record for _value, record in dated] + undated
     attribute = ORDER_COLUMN_ATTRIBUTES.get(column, column)
     if not hasattr(OrderRecord, attribute) and attribute not in OrderRecord.__slots__:
         raise ValueError(f"Unknown order sort column: {column}")
@@ -167,6 +181,33 @@ def sort_orders(
         populated.append((sort_value, record))
     populated.sort(key=lambda item: item[0], reverse=descending)
     return [record for _value, record in populated] + blanks
+
+
+def order_effective_date(record: OrderRecord) -> date | None:
+    """Return an exact order date, or month-end for a month-only order."""
+
+    try:
+        year = int(str(record.year).strip())
+        month = int(str(record.month).strip())
+        day_text = str(record.date).strip()
+        day = int(day_text) if day_text else monthrange(year, month)[1]
+        return date(year, month, day)
+    except (TypeError, ValueError):
+        return None
+
+
+def current_and_future_orders(
+    records: Iterable[OrderRecord],
+    today: date,
+) -> list[OrderRecord]:
+    """Hide dated orders before today while retaining rows with invalid dates."""
+
+    return [
+        record
+        for record in records
+        if (effective_date := order_effective_date(record)) is None
+        or effective_date >= today
+    ]
 
 
 def filter_value(record: OrderRecord, key: str) -> str:

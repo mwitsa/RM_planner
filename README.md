@@ -72,6 +72,12 @@ each selection limits the available choices in every other header. A dot marks
 filtered columns, an arrow marks the active sort direction, and the summary
 recalculates from the visible orders.
 
+Orders are shown oldest-to-newest by their complete year, month, and date, with
+today first. Past orders are hidden by default; use **Show past orders** to
+include them and **Hide past orders** to return to the current view. Orders that
+only specify a month use the final day of that month for chronological sorting
+and the past-order check.
+
 The **Class Rule** tab stores text rules in waterfall priority. Add or update a
 rule, drag it up or down (or use the Move buttons), and click **Save rules**.
 The rule at the top is applied first. Saved rules reload when the app starts.

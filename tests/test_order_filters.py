@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from datetime import date
 
 from extractor import OrderRecord
 from order_filters import (
@@ -8,9 +9,12 @@ from order_filters import (
     BLANK_FILTER,
     PRODUCTION_ENTERED,
     PRODUCTION_MISSING,
+    SCHEDULE_DATE_COLUMN,
     cascading_filter_state,
+    current_and_future_orders,
     filter_options,
     filter_orders,
+    order_effective_date,
     sort_orders,
 )
 
@@ -172,6 +176,55 @@ class OrderFilterTests(unittest.TestCase):
 
         self.assertEqual([record.record_id for record in by_customer], ["2", "3", "1"])
         self.assertEqual([record.record_id for record in by_production], ["3", "2", "1"])
+
+    def test_effective_date_uses_month_end_when_day_is_blank(self) -> None:
+        self.records[0].year = "2026"
+        self.records[0].month = "02"
+        self.records[0].date = ""
+
+        self.assertEqual(order_effective_date(self.records[0]), date(2026, 2, 28))
+
+    def test_hides_past_orders_and_keeps_today_and_future(self) -> None:
+        self.records[0].year, self.records[0].month, self.records[0].date = (
+            "2026",
+            "08",
+            "29",
+        )
+        self.records[1].year, self.records[1].month, self.records[1].date = (
+            "2026",
+            "08",
+            "30",
+        )
+        self.records[2].year, self.records[2].month, self.records[2].date = (
+            "2026",
+            "09",
+            "",
+        )
+
+        visible = current_and_future_orders(self.records, date(2026, 8, 30))
+
+        self.assertEqual([record.record_id for record in visible], ["2", "3"])
+
+    def test_schedule_sort_is_chronological_across_year_month_and_day(self) -> None:
+        self.records[0].year, self.records[0].month, self.records[0].date = (
+            "2026",
+            "09",
+            "01",
+        )
+        self.records[1].year, self.records[1].month, self.records[1].date = (
+            "2025",
+            "12",
+            "31",
+        )
+        self.records[2].year, self.records[2].month, self.records[2].date = (
+            "2026",
+            "08",
+            "30",
+        )
+
+        sorted_records = sort_orders(self.records, SCHEDULE_DATE_COLUMN)
+
+        self.assertEqual([record.record_id for record in sorted_records], ["2", "3", "1"])
 
 
 if __name__ == "__main__":

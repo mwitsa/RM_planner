@@ -59,7 +59,9 @@ from order_filters import (
     ALL_FILTER,
     FILTER_SPECS,
     NUMERIC_ORDER_COLUMNS,
+    SCHEDULE_DATE_COLUMN,
     cascading_filter_state,
+    current_and_future_orders,
     filter_options,
     filter_orders,
     sort_orders,
@@ -135,8 +137,9 @@ class ProductionPlanApp(tk.Tk):
         self.result: ExtractionResult | None = None
         self.saved_order_records: dict[str, OrderRecord] = {}
         self.order_records_by_id: dict[str, OrderRecord] = {}
-        self.order_sort_column: str | None = None
+        self.order_sort_column: str | None = SCHEDULE_DATE_COLUMN
         self.order_sort_descending = False
+        self.hide_past_orders = True
         self.assortment_table: AssortmentTable | None = None
         self.rule_file_path = Path(__file__).resolve().parent / "plan_rules.json"
         self.assortment_file_path = Path(__file__).resolve().parent / "Data" / "RM" / "assortment.xlsx"
@@ -250,6 +253,12 @@ class ProductionPlanApp(tk.Tk):
             state=tk.DISABLED,
         )
         self.clear_order_filters_button.pack(side=tk.RIGHT, padx=(0, 8))
+        self.past_orders_button = ttk.Button(
+            controls,
+            text="Show past orders",
+            command=self._toggle_past_orders,
+        )
+        self.past_orders_button.pack(side=tk.RIGHT, padx=(0, 8))
         self.order_action_buttons = (self.save_orders_button,)
 
         table_frame = ttk.Frame(self.order_tab)
@@ -3293,8 +3302,11 @@ class ProductionPlanApp(tk.Tk):
         if not self.result:
             return
         filter_keys = tuple(key for key, _label in FILTER_SPECS)
+        base_records = self.result.records
+        if self.hide_past_orders:
+            base_records = current_and_future_orders(base_records, date.today())
         selections, available_options = cascading_filter_state(
-            self.result.records,
+            base_records,
             self.order_filter_selections,
             filter_keys,
             preferred_key=changed_key,
@@ -3303,7 +3315,7 @@ class ProductionPlanApp(tk.Tk):
             self.order_filter_selections[key] = selections[key]
             self.order_filter_options[key] = available_options[key]
         records = filter_orders(
-            self.result.records,
+            base_records,
             selections,
         )
         records = sort_orders(
@@ -3362,7 +3374,9 @@ class ProductionPlanApp(tk.Tk):
             )
             filter_marker = " ●" if filter_active else ""
             sort_marker = ""
-            if column == self.order_sort_column:
+            if column == self.order_sort_column or (
+                column == "date" and self.order_sort_column == SCHEDULE_DATE_COLUMN
+            ):
                 sort_marker = " ↓" if self.order_sort_descending else " ↑"
             self.tree.heading(
                 column,
@@ -3404,14 +3418,29 @@ class ProductionPlanApp(tk.Tk):
             button.pack(fill=tk.X)
             return button
 
+        sort_column = SCHEDULE_DATE_COLUMN if column == "date" else column
         numeric = column in NUMERIC_ORDER_COLUMNS
-        menu_button(
-            "↑  Sort Smallest to Largest" if numeric else "A  Z  Sort A to Z",
-            lambda: self._set_order_sort(column, False),
+        ascending_label = (
+            "↑  Sort Oldest to Newest"
+            if column == "date"
+            else "↑  Sort Smallest to Largest"
+            if numeric
+            else "A  Z  Sort A to Z"
+        )
+        descending_label = (
+            "↓  Sort Newest to Oldest"
+            if column == "date"
+            else "↓  Sort Largest to Smallest"
+            if numeric
+            else "Z  A  Sort Z to A"
         )
         menu_button(
-            "↓  Sort Largest to Smallest" if numeric else "Z  A  Sort Z to A",
-            lambda: self._set_order_sort(column, True),
+            ascending_label,
+            lambda: self._set_order_sort(sort_column, False),
+        )
+        menu_button(
+            descending_label,
+            lambda: self._set_order_sort(sort_column, True),
         )
 
         filter_key = ORDER_COLUMN_FILTER_KEYS.get(column)
@@ -3564,6 +3593,13 @@ class ProductionPlanApp(tk.Tk):
         self._close_order_filter_popup()
         for key in self.order_filter_selections:
             self.order_filter_selections[key] = ALL_FILTER
+        self._refresh_preview()
+
+    def _toggle_past_orders(self) -> None:
+        self.hide_past_orders = not self.hide_past_orders
+        self.past_orders_button.configure(
+            text="Show past orders" if self.hide_past_orders else "Hide past orders"
+        )
         self._refresh_preview()
 
     def _edit_production_cell(self, event: tk.Event) -> None:
