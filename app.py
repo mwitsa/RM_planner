@@ -1778,53 +1778,168 @@ class ProductionPlanApp(tk.Tk):
     def _build_capacity_tab(self) -> None:
         self.capacity_percentage_var = tk.DoubleVar(value=50)
         self.capacity_percentage_text_var = tk.StringVar(value="ดิบ 50% / สุก 50%")
+        self.raw_capacity_share_var = tk.StringVar(value="เกี๊ยวดิบ 50%")
+        self.cooked_capacity_share_var = tk.StringVar(value="เกี๊ยวสุก 50%")
         self.raw_wonton_capacity_var = tk.StringVar()
         self.cooked_wonton_capacity_var = tk.StringVar()
         self.raw_wonton_scaled_var = tk.StringVar(value="Set base capacity first")
         self.cooked_wonton_scaled_var = tk.StringVar(value="Set base capacity first")
 
+        ttk.Label(
+            self.capacity_tab,
+            text="Production Capacity Setup",
+            style="Summary.TLabel",
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.capacity_tab,
+            text=(
+                "Set the maximum output for a full day, then divide the shared "
+                "production time between raw and cooked wontons."
+            ),
+        ).pack(anchor=tk.W, pady=(2, 12))
+
+        maximum_frame = ttk.LabelFrame(
+            self.capacity_tab,
+            text="1. Maximum daily capacity (when 100% of production time is assigned)",
+            padding=12,
+        )
+        maximum_frame.pack(fill=tk.X, pady=(0, 12))
+        maximum_frame.columnconfigure(0, weight=1)
+        maximum_frame.columnconfigure(1, weight=1)
+
+        raw_maximum = tk.Frame(
+            maximum_frame,
+            background="#e8f2fb",
+            highlightbackground="#9fc5e8",
+            highlightthickness=1,
+        )
+        raw_maximum.grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        raw_maximum.columnconfigure(0, weight=1)
+        tk.Label(
+            raw_maximum,
+            text="เกี๊ยวดิบ",
+            background="#e8f2fb",
+            foreground="#174f78",
+            font=("Segoe UI", 11, "bold"),
+            anchor=tk.W,
+        ).grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 2))
+        tk.Label(
+            raw_maximum,
+            text="Maximum wontons per day",
+            background="#e8f2fb",
+            foreground="#476579",
+            anchor=tk.W,
+        ).grid(row=1, column=0, sticky="ew", padx=12)
+        raw_entry = ttk.Entry(
+            raw_maximum,
+            textvariable=self.raw_wonton_capacity_var,
+            font=("Segoe UI", 11),
+        )
+        raw_entry.grid(row=2, column=0, sticky="ew", padx=12, pady=(6, 12))
+
+        cooked_maximum = tk.Frame(
+            maximum_frame,
+            background="#fff1df",
+            highlightbackground="#efbd80",
+            highlightthickness=1,
+        )
+        cooked_maximum.grid(row=0, column=1, sticky="ew", padx=(6, 0))
+        cooked_maximum.columnconfigure(0, weight=1)
+        tk.Label(
+            cooked_maximum,
+            text="เกี๊ยวสุก",
+            background="#fff1df",
+            foreground="#8a4c08",
+            font=("Segoe UI", 11, "bold"),
+            anchor=tk.W,
+        ).grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 2))
+        tk.Label(
+            cooked_maximum,
+            text="Maximum wontons per day",
+            background="#fff1df",
+            foreground="#795b39",
+            anchor=tk.W,
+        ).grid(row=1, column=0, sticky="ew", padx=12)
+        cooked_entry = ttk.Entry(
+            cooked_maximum,
+            textvariable=self.cooked_wonton_capacity_var,
+            font=("Segoe UI", 11),
+        )
+        cooked_entry.grid(row=2, column=0, sticky="ew", padx=12, pady=(6, 12))
+        raw_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
+        cooked_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
+
         percentage_frame = ttk.LabelFrame(
             self.capacity_tab,
-            text="Capacity split between เกี๊ยวดิบ and เกี๊ยวสุก",
-            padding=14,
+            text="2. Allocate shared production time",
+            padding=12,
         )
-        percentage_frame.pack(fill=tk.X, pady=(0, 14))
+        percentage_frame.pack(fill=tk.X, pady=(0, 12))
         percentage_frame.columnconfigure(0, weight=1)
+        share_labels = ttk.Frame(percentage_frame)
+        share_labels.grid(row=0, column=0, sticky="ew")
+        share_labels.columnconfigure(0, weight=1)
+        share_labels.columnconfigure(1, weight=1)
+        ttk.Label(
+            share_labels,
+            textvariable=self.raw_capacity_share_var,
+            foreground="#174f78",
+            style="Summary.TLabel",
+        ).grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(
+            share_labels,
+            textvariable=self.cooked_capacity_share_var,
+            foreground="#8a4c08",
+            style="Summary.TLabel",
+        ).grid(row=0, column=1, sticky=tk.E)
+
+        self.capacity_split_canvas = tk.Canvas(
+            percentage_frame,
+            height=34,
+            highlightthickness=0,
+            background="#f2f2f2",
+        )
+        self.capacity_split_canvas.grid(row=1, column=0, sticky="ew", pady=(8, 4))
+        self.capacity_split_canvas.bind("<Configure>", self._draw_capacity_split_bar)
         ttk.Scale(
             percentage_frame,
             from_=0,
             to=100,
             variable=self.capacity_percentage_var,
             command=self._capacity_slider_changed,
-        ).grid(row=0, column=0, sticky="ew", padx=(0, 12))
+        ).grid(row=2, column=0, sticky="ew")
         ttk.Label(
             percentage_frame,
             textvariable=self.capacity_percentage_text_var,
             style="Summary.TLabel",
             width=20,
             anchor=tk.CENTER,
-        ).grid(row=0, column=1, padx=(0, 12))
-        ttk.Button(
-            percentage_frame,
-            text="Save split",
-            command=self._save_capacity_percentage,
-        ).grid(row=0, column=2)
-        ttk.Label(percentage_frame, text="ดิบ 0% / สุก 100%").grid(
-            row=1, column=0, sticky=tk.W
+        ).grid(row=3, column=0, pady=(4, 0))
+        split_ends = ttk.Frame(percentage_frame)
+        split_ends.grid(row=4, column=0, sticky="ew", pady=(2, 0))
+        split_ends.columnconfigure(0, weight=1)
+        split_ends.columnconfigure(1, weight=1)
+        ttk.Label(split_ends, text="All cooked").grid(
+            row=0, column=0, sticky=tk.W
         )
-        ttk.Label(percentage_frame, text="ดิบ 100% / สุก 0%").grid(
-            row=1, column=0, sticky=tk.E
+        ttk.Label(split_ends, text="All raw").grid(
+            row=0, column=1, sticky=tk.E
         )
 
         self.capacity_preview_frame = ttk.LabelFrame(
             self.capacity_tab,
-            text="Available capacity at ดิบ 50% / สุก 50%",
-            padding=14,
+            text="3. Available daily capacity for Plan",
+            padding=12,
         )
-        self.capacity_preview_frame.pack(fill=tk.X, pady=(0, 14))
+        self.capacity_preview_frame.pack(fill=tk.X, pady=(0, 12))
         self.capacity_preview_frame.columnconfigure(1, weight=1)
         self.capacity_preview_frame.columnconfigure(3, weight=1)
-        ttk.Label(self.capacity_preview_frame, text="เกี๊ยวดิบ", style="Summary.TLabel").grid(
+        ttk.Label(
+            self.capacity_preview_frame,
+            text="เกี๊ยวดิบ available",
+            foreground="#174f78",
+            style="Summary.TLabel",
+        ).grid(
             row=0, column=0, sticky=tk.W, padx=(0, 10)
         )
         ttk.Label(
@@ -1833,7 +1948,12 @@ class ProductionPlanApp(tk.Tk):
             style="Summary.TLabel",
             anchor=tk.E,
         ).grid(row=0, column=1, sticky="ew", padx=(0, 30))
-        ttk.Label(self.capacity_preview_frame, text="เกี๊ยวสุก", style="Summary.TLabel").grid(
+        ttk.Label(
+            self.capacity_preview_frame,
+            text="เกี๊ยวสุก available",
+            foreground="#8a4c08",
+            style="Summary.TLabel",
+        ).grid(
             row=0, column=2, sticky=tk.W, padx=(0, 10)
         )
         ttk.Label(
@@ -1843,30 +1963,11 @@ class ProductionPlanApp(tk.Tk):
             anchor=tk.E,
         ).grid(row=0, column=3, sticky="ew")
 
-        wonton_frame = ttk.LabelFrame(
-            self.capacity_tab,
-            text="Maximum wonton capacity when 100% assigned to that type",
-            padding=14,
-        )
-        wonton_frame.pack(fill=tk.X)
-        wonton_frame.columnconfigure(1, weight=1)
-        ttk.Label(wonton_frame, text="เกี๊ยวดิบ", style="Summary.TLabel").grid(
-            row=0, column=0, sticky=tk.W, padx=(0, 12), pady=(0, 10)
-        )
-        ttk.Entry(wonton_frame, textvariable=self.raw_wonton_capacity_var).grid(
-            row=0, column=1, sticky="ew", pady=(0, 10)
-        )
-        ttk.Label(wonton_frame, text="เกี๊ยวสุก", style="Summary.TLabel").grid(
-            row=1, column=0, sticky=tk.W, padx=(0, 12)
-        )
-        ttk.Entry(wonton_frame, textvariable=self.cooked_wonton_capacity_var).grid(
-            row=1, column=1, sticky="ew"
-        )
         ttk.Button(
-            wonton_frame,
-            text="Save capacity numbers",
-            command=self._save_capacity_numbers,
-        ).grid(row=0, column=2, rowspan=2, padx=(12, 0))
+            self.capacity_tab,
+            text="Save capacity settings",
+            command=self._save_all_capacity_settings,
+        ).pack(anchor=tk.E)
 
         ttk.Label(
             self.capacity_tab,
@@ -1878,31 +1979,81 @@ class ProductionPlanApp(tk.Tk):
 
     def _capacity_slider_changed(self, value: str) -> None:
         raw_share = round(float(value))
-        self.capacity_percentage_text_var.set(
-            f"ดิบ {raw_share}% / สุก {100 - raw_share}%"
-        )
+        cooked_share = 100 - raw_share
+        self.capacity_percentage_text_var.set(f"ดิบ {raw_share}% / สุก {cooked_share}%")
+        self.raw_capacity_share_var.set(f"เกี๊ยวดิบ {raw_share}%")
+        self.cooked_capacity_share_var.set(f"เกี๊ยวสุก {cooked_share}%")
         self._update_capacity_preview()
 
     def _update_capacity_preview(self) -> None:
         raw_share = round(self.capacity_percentage_var.get())
         cooked_share = 100 - raw_share
+        self.capacity_percentage_text_var.set(f"ดิบ {raw_share}% / สุก {cooked_share}%")
+        self.raw_capacity_share_var.set(f"เกี๊ยวดิบ {raw_share}%")
+        self.cooked_capacity_share_var.set(f"เกี๊ยวสุก {cooked_share}%")
+        raw_base = self._preview_capacity_number(self.raw_wonton_capacity_var.get())
+        cooked_base = self._preview_capacity_number(self.cooked_wonton_capacity_var.get())
         raw_wonton, cooked_wonton = capacities_at_percentage(
-            self.capacity_settings,
+            CapacitySettings(
+                percentage=raw_share,
+                raw_wonton=raw_base,
+                cooked_wonton=cooked_base,
+            ),
             raw_share,
         )
-        self.capacity_preview_frame.configure(
-            text=f"Available capacity at ดิบ {raw_share}% / สุก {cooked_share}%"
-        )
         self.raw_wonton_scaled_var.set(
-            "Set base capacity first"
+            "Enter a valid maximum"
             if raw_wonton is None
-            else self._format_optional_number(raw_wonton)
+            else f"{self._format_optional_number(raw_wonton)} wontons/day"
         )
         self.cooked_wonton_scaled_var.set(
-            "Set base capacity first"
+            "Enter a valid maximum"
             if cooked_wonton is None
-            else self._format_optional_number(cooked_wonton)
+            else f"{self._format_optional_number(cooked_wonton)} wontons/day"
         )
+        self._draw_capacity_split_bar()
+
+    def _draw_capacity_split_bar(self, _event: tk.Event | None = None) -> None:
+        if not hasattr(self, "capacity_split_canvas"):
+            return
+        canvas = self.capacity_split_canvas
+        width = max(canvas.winfo_width(), 240)
+        height = max(canvas.winfo_height(), 34)
+        raw_share = round(self.capacity_percentage_var.get())
+        raw_width = width * raw_share / 100
+        canvas.delete("all")
+        canvas.create_rectangle(0, 0, raw_width, height, fill="#4d94c6", outline="")
+        canvas.create_rectangle(raw_width, 0, width, height, fill="#e6a85c", outline="")
+        if raw_width >= 70:
+            canvas.create_text(
+                raw_width / 2,
+                height / 2,
+                text=f"ดิบ {raw_share}%",
+                fill="white",
+                font=("Segoe UI", 9, "bold"),
+            )
+        cooked_width = width - raw_width
+        if cooked_width >= 70:
+            canvas.create_text(
+                raw_width + cooked_width / 2,
+                height / 2,
+                text=f"สุก {100 - raw_share}%",
+                fill="#4d2b04",
+                font=("Segoe UI", 9, "bold"),
+            )
+
+    @staticmethod
+    def _preview_capacity_number(value: str) -> int | float | None:
+        cleaned = value.strip().replace(",", "")
+        if not cleaned:
+            return None
+        try:
+            numeric = float(cleaned)
+        except ValueError:
+            return None
+        if not math.isfinite(numeric) or numeric < 0:
+            return None
+        return int(numeric) if numeric.is_integer() else numeric
 
     def _load_capacity_settings(self) -> None:
         try:
@@ -1921,29 +2072,7 @@ class ProductionPlanApp(tk.Tk):
         if self.capacity_file_path.exists():
             self.capacity_status_var.set("Loaded saved capacity settings.")
 
-    def _save_capacity_percentage(self) -> None:
-        settings = CapacitySettings(
-            percentage=round(self.capacity_percentage_var.get()),
-            raw_wonton=self.capacity_settings.raw_wonton,
-            cooked_wonton=self.capacity_settings.cooked_wonton,
-        )
-        try:
-            self.capacity_settings = save_capacity_settings(self.capacity_file_path, settings)
-        except ValueError as exc:
-            messagebox.showerror("Save capacity", str(exc))
-            return
-        self.capacity_percentage_var.set(self.capacity_settings.percentage)
-        self.capacity_percentage_text_var.set(
-            f"ดิบ {self.capacity_settings.percentage}% / "
-            f"สุก {100 - self.capacity_settings.percentage}%"
-        )
-        self._update_capacity_preview()
-        self.capacity_status_var.set(
-            f"Saved capacity split: ดิบ {self.capacity_settings.percentage}% and "
-            f"สุก {100 - self.capacity_settings.percentage}%."
-        )
-
-    def _save_capacity_numbers(self) -> None:
+    def _save_all_capacity_settings(self) -> None:
         try:
             raw_wonton = self._parse_capacity_number(
                 self.raw_wonton_capacity_var.get(),
@@ -1954,7 +2083,7 @@ class ProductionPlanApp(tk.Tk):
                 "เกี๊ยวสุก",
             )
             settings = CapacitySettings(
-                percentage=self.capacity_settings.percentage,
+                percentage=round(self.capacity_percentage_var.get()),
                 raw_wonton=raw_wonton,
                 cooked_wonton=cooked_wonton,
             )
@@ -1964,10 +2093,13 @@ class ProductionPlanApp(tk.Tk):
             return
         self.raw_wonton_capacity_var.set(self._format_optional_number(raw_wonton))
         self.cooked_wonton_capacity_var.set(self._format_optional_number(cooked_wonton))
+        self.capacity_percentage_var.set(self.capacity_settings.percentage)
         self._update_capacity_preview()
         self.capacity_status_var.set(
-            f"Saved เกี๊ยวดิบ {self._format_optional_number(raw_wonton)} and "
-            f"เกี๊ยวสุก {self._format_optional_number(cooked_wonton)}."
+            f"Saved maximums: ดิบ {self._format_optional_number(raw_wonton)}, "
+            f"สุก {self._format_optional_number(cooked_wonton)}; split: "
+            f"ดิบ {self.capacity_settings.percentage}% / "
+            f"สุก {100 - self.capacity_settings.percentage}%."
         )
 
     @staticmethod
