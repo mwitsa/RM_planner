@@ -2155,11 +2155,6 @@ class ProductionPlanApp(tk.Tk):
             box_header,
             textvariable=self.assortment_entry_summary_var,
         ).pack(side=tk.LEFT, padx=(12, 0))
-        ttk.Button(
-            box_header,
-            text="+ Add row",
-            command=self._add_assortment_actual_box,
-        ).pack(side=tk.RIGHT)
 
         ttk.Label(
             form_panel,
@@ -2215,6 +2210,17 @@ class ProductionPlanApp(tk.Tk):
                 width=event.width,
             ),
         )
+
+        self.assortment_actual_add_row_footer = ttk.Frame(
+            self.assortment_actual_list,
+            padding=(6, 6, 6, 2),
+        )
+        self.assortment_actual_add_row_footer.pack(fill=tk.X)
+        ttk.Button(
+            self.assortment_actual_add_row_footer,
+            text="+ Add row",
+            command=self._add_assortment_actual_box,
+        ).pack(fill=tk.X)
 
         self.assortment_actual_boxes: list[dict[str, object]] = []
         self._add_assortment_actual_box()
@@ -2309,7 +2315,9 @@ class ProductionPlanApp(tk.Tk):
         weight_var = tk.StringVar(value=weight)
         row_number_var = tk.StringVar()
         box = ttk.Frame(self.assortment_actual_list, padding=(6, 5))
+        self.assortment_actual_add_row_footer.pack_forget()
         box.pack(fill=tk.X, pady=(0, 2))
+        self.assortment_actual_add_row_footer.pack(fill=tk.X)
         box.columnconfigure(1, weight=1)
         box.columnconfigure(3, weight=1)
         box.columnconfigure(5, weight=1)
