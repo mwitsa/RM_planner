@@ -62,13 +62,13 @@ actual output-size column. Drag a colored box to move its complete range, or
 drag its top or bottom handle to expand or contract it vertically. Click
 **Save ranges** to keep the selections in
 `Data/RM/assortment_size_ranges.json` for the next app session.
-The filter panel supports combined filtering by year, month, date, country,
-customer, Group 1, Group 2, packaging, RM Size, soup, ถ้วย/Unit, and production
-status. Filter dropdowns cascade, so each selection limits the available choices
-in every other filter. The summary above the filters recalculates from the
-visible orders. Click any Order-table column header to sort it; numeric columns
-start largest-to-lowest, text columns start A-to-Z, and a second click reverses
-the direction.
+The Order table uses compact Excel-style filters directly in its column
+headers, so no separate filter panel takes up space. Click a header to sort,
+search its available values, apply a filter, or clear filters. Year, month,
+date, country, customer, Group 1, Group 2, packaging, RM Size, soup, ถ้วย/Unit,
+and production status filters cascade, so each selection limits the available
+choices in every other header. A dot marks filtered columns, an arrow marks the
+active sort direction, and the summary recalculates from the visible orders.
 
 The **Class Rule** tab stores text rules in waterfall priority. Add or update a
 rule, drag it up or down (or use the Move buttons), and click **Save rules**.

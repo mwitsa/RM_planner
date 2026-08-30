@@ -78,6 +78,20 @@ ASSORTMENT_CLASS_COLORS = {
     "S": ("#dcf5df", "#338a3e"),
     "SS": ("#ffe5cc", "#c66a16"),
 }
+ORDER_COLUMN_FILTER_KEYS = {
+    "year": "year",
+    "month": "month",
+    "date": "date",
+    "country": "country",
+    "customer": "customer",
+    "group_1": "group_1",
+    "group_2": "group_2",
+    "packaging": "packaging",
+    "rm_size": "rm_size",
+    "soup": "soup",
+    "cups_per_unit": "cups_per_unit",
+    "production": "production_status",
+}
 DEFAULT_EXISTING_STOCK_PIECES_PER_KG = {
     "M": "53",
     "S": "65.5",
@@ -97,7 +111,10 @@ class ProductionPlanApp(tk.Tk):
         self.order_filter_vars = {
             key: tk.StringVar(value=ALL_FILTER) for key, _label in FILTER_SPECS
         }
-        self.filter_count_var = tk.StringVar(value="Showing 0 orders")
+        self.order_filter_options: dict[str, list[str]] = {
+            key: [] for key, _label in FILTER_SPECS
+        }
+        self._order_filter_popup: tk.Toplevel | None = None
         self.summary_var = tk.StringVar(value="Select a workbook to begin.")
         self.status_var = tk.StringVar(value="Ready")
         self.rule_status_var = tk.StringVar(value="Rules apply from top to bottom.")
@@ -225,43 +242,14 @@ class ProductionPlanApp(tk.Tk):
             state=tk.DISABLED,
         )
         self.save_orders_button.pack(side=tk.RIGHT, padx=(0, 8))
+        self.clear_order_filters_button = ttk.Button(
+            controls,
+            text="Clear column filters",
+            command=self._clear_order_filters,
+            state=tk.DISABLED,
+        )
+        self.clear_order_filters_button.pack(side=tk.RIGHT, padx=(0, 8))
         self.order_action_buttons = (self.save_orders_button,)
-
-        filter_frame = ttk.LabelFrame(self.order_tab, text="Filters", padding=8)
-        filter_frame.pack(fill=tk.X, pady=(0, 8))
-        self.order_filter_combos: dict[str, ttk.Combobox] = {}
-        for index, (key, label) in enumerate(FILTER_SPECS):
-            row = index // 4
-            column = index % 4
-            field = ttk.Frame(filter_frame)
-            field.grid(row=row, column=column, sticky="ew", padx=(0, 8), pady=(0, 6))
-            field.columnconfigure(1, weight=1)
-            ttk.Label(field, text=f"{label}:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
-            width = 22 if key in ("customer", "group_1", "group_2") else 15
-            combo = ttk.Combobox(
-                field,
-                textvariable=self.order_filter_vars[key],
-                state="readonly",
-                width=width,
-                values=[ALL_FILTER],
-            )
-            combo.grid(row=0, column=1, sticky="ew")
-            combo.bind(
-                "<<ComboboxSelected>>",
-                lambda _event, changed_key=key: self._refresh_preview(changed_key),
-            )
-            self.order_filter_combos[key] = combo
-            filter_frame.columnconfigure(column, weight=1)
-
-        filter_footer = ttk.Frame(filter_frame)
-        filter_footer.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(2, 0))
-        ttk.Button(filter_footer, text="Clear filters", command=self._clear_order_filters).pack(
-            side=tk.LEFT
-        )
-        ttk.Label(filter_footer, textvariable=self.filter_count_var, style="Summary.TLabel").pack(
-            side=tk.LEFT, padx=(12, 0)
-        )
-        ttk.Label(filter_footer, text="Double-click Production to edit.").pack(side=tk.RIGHT)
 
         table_frame = ttk.Frame(self.order_tab)
         table_frame.pack(fill=tk.BOTH, expand=True)
@@ -327,7 +315,9 @@ class ProductionPlanApp(tk.Tk):
             self.tree.heading(
                 column,
                 text=self.order_headings[column],
-                command=lambda selected_column=column: self._sort_order_table(selected_column),
+                command=lambda selected_column=column: self._open_order_column_filter(
+                    selected_column
+                ),
             )
             anchor = tk.E if column in (
                 "order_unit",
@@ -3277,10 +3267,8 @@ class ProductionPlanApp(tk.Tk):
         self.result = result
         self.order_records_by_id = {record.record_id: record for record in result.records}
         for key, _label in FILTER_SPECS:
-            self.order_filter_combos[key].configure(
-                values=[ALL_FILTER, *filter_options(result.records, key)]
-            )
             self.order_filter_vars[key].set(ALL_FILTER)
+            self.order_filter_options[key] = filter_options(result.records, key)
         for button in self.order_action_buttons:
             button.configure(state=tk.NORMAL)
         self.extract_button.configure(state=tk.NORMAL)
@@ -3313,9 +3301,7 @@ class ProductionPlanApp(tk.Tk):
         for key in filter_keys:
             if self.order_filter_vars[key].get() != selections[key]:
                 self.order_filter_vars[key].set(selections[key])
-            self.order_filter_combos[key].configure(
-                values=[ALL_FILTER, *available_options[key]]
-            )
+            self.order_filter_options[key] = available_options[key]
         records = filter_orders(
             self.result.records,
             selections,
@@ -3352,24 +3338,153 @@ class ProductionPlanApp(tk.Tk):
                     self._format_optional_number(record.production),
                 ),
             )
-        self.filter_count_var.set(
-            f"Showing {len(records):,} of {len(self.result.records):,} orders"
+        filters_active = any(
+            variable.get() != ALL_FILTER for variable in self.order_filter_vars.values()
         )
+        self.clear_order_filters_button.configure(
+            state=tk.NORMAL if filters_active else tk.DISABLED
+        )
+        self._update_order_column_headings()
 
-    def _sort_order_table(self, column: str) -> None:
-        if self.order_sort_column == column:
-            self.order_sort_descending = not self.order_sort_descending
-        else:
-            self.order_sort_column = column
-            self.order_sort_descending = column in NUMERIC_ORDER_COLUMNS
-        for current_column, heading in self.order_headings.items():
-            marker = ""
-            if current_column == self.order_sort_column:
-                marker = " ▼" if self.order_sort_descending else " ▲"
-            self.tree.heading(current_column, text=f"{heading}{marker}")
+    def _set_order_sort(self, column: str, descending: bool) -> None:
+        self.order_sort_column = column
+        self.order_sort_descending = descending
+        self._close_order_filter_popup()
         self._refresh_preview()
 
+    def _update_order_column_headings(self) -> None:
+        for column, heading in self.order_headings.items():
+            filter_key = ORDER_COLUMN_FILTER_KEYS.get(column)
+            filter_active = bool(
+                filter_key
+                and self.order_filter_vars[filter_key].get() != ALL_FILTER
+            )
+            filter_marker = " ●" if filter_active else ""
+            sort_marker = ""
+            if column == self.order_sort_column:
+                sort_marker = " ↓" if self.order_sort_descending else " ↑"
+            self.tree.heading(
+                column,
+                text=f"{heading}{filter_marker}{sort_marker} ▾",
+            )
+
+    def _open_order_column_filter(self, column: str) -> None:
+        self._close_order_filter_popup()
+        popup = tk.Toplevel(self)
+        self._order_filter_popup = popup
+        popup.title(self.order_headings[column])
+        popup.transient(self)
+        popup.resizable(False, True)
+        popup.protocol("WM_DELETE_WINDOW", self._close_order_filter_popup)
+        popup.bind("<Escape>", lambda _event: self._close_order_filter_popup())
+
+        body = ttk.Frame(popup, padding=10)
+        body.pack(fill=tk.BOTH, expand=True)
+        numeric = column in NUMERIC_ORDER_COLUMNS
+        ttk.Button(
+            body,
+            text="Sort Smallest to Largest" if numeric else "Sort A to Z",
+            command=lambda: self._set_order_sort(column, False),
+        ).pack(fill=tk.X)
+        ttk.Button(
+            body,
+            text="Sort Largest to Smallest" if numeric else "Sort Z to A",
+            command=lambda: self._set_order_sort(column, True),
+        ).pack(fill=tk.X, pady=(4, 0))
+
+        filter_key = ORDER_COLUMN_FILTER_KEYS.get(column)
+        if filter_key:
+            ttk.Separator(body).pack(fill=tk.X, pady=8)
+            ttk.Label(body, text="Filter values", style="Summary.TLabel").pack(anchor=tk.W)
+            search_var = tk.StringVar()
+            search_entry = ttk.Entry(body, textvariable=search_var, width=36)
+            search_entry.pack(fill=tk.X, pady=(5, 6))
+
+            list_frame = ttk.Frame(body)
+            list_frame.pack(fill=tk.BOTH, expand=True)
+            values_list = tk.Listbox(
+                list_frame,
+                height=12,
+                width=40,
+                exportselection=False,
+                selectmode=tk.SINGLE,
+            )
+            scrollbar = ttk.Scrollbar(
+                list_frame,
+                orient=tk.VERTICAL,
+                command=values_list.yview,
+            )
+            values_list.configure(yscrollcommand=scrollbar.set)
+            values_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            displayed_values: list[str] = []
+
+            def refresh_values(*_args: object) -> None:
+                query = search_var.get().strip().casefold()
+                available = self.order_filter_options.get(filter_key, [])
+                displayed_values[:] = [
+                    value for value in available if not query or query in value.casefold()
+                ]
+                values_list.delete(0, tk.END)
+                values_list.insert(tk.END, "(All values)")
+                for value in displayed_values:
+                    values_list.insert(tk.END, value)
+                selected = self.order_filter_vars[filter_key].get()
+                selection_index = 0
+                if selected in displayed_values:
+                    selection_index = displayed_values.index(selected) + 1
+                values_list.selection_set(selection_index)
+                values_list.see(selection_index)
+
+            def apply_selected() -> None:
+                selected = values_list.curselection()
+                if not selected:
+                    return
+                index = selected[0]
+                value = ALL_FILTER if index == 0 else displayed_values[index - 1]
+                self.order_filter_vars[filter_key].set(value)
+                self._close_order_filter_popup()
+                self._refresh_preview(filter_key)
+
+            search_var.trace_add("write", refresh_values)
+            refresh_values()
+            values_list.bind("<Double-1>", lambda _event: apply_selected())
+            values_list.bind("<Return>", lambda _event: apply_selected())
+            actions = ttk.Frame(body)
+            actions.pack(fill=tk.X, pady=(8, 0))
+            ttk.Button(actions, text="Apply", command=apply_selected).pack(side=tk.RIGHT)
+            ttk.Button(
+                actions,
+                text="Clear this column",
+                command=lambda: self._set_order_column_filter(filter_key, ALL_FILTER),
+            ).pack(side=tk.RIGHT, padx=(0, 6))
+            ttk.Button(
+                actions,
+                text="Clear all",
+                command=self._clear_order_filters,
+            ).pack(side=tk.LEFT)
+            search_entry.focus_set()
+
+        popup.update_idletasks()
+        x = min(self.winfo_pointerx(), popup.winfo_screenwidth() - popup.winfo_width() - 12)
+        y = min(self.winfo_pointery() + 10, popup.winfo_screenheight() - popup.winfo_height() - 40)
+        popup.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+
+    def _set_order_column_filter(self, filter_key: str, value: str) -> None:
+        self.order_filter_vars[filter_key].set(value)
+        self._close_order_filter_popup()
+        self._refresh_preview(filter_key)
+
+    def _close_order_filter_popup(self) -> None:
+        if self._order_filter_popup is not None:
+            try:
+                self._order_filter_popup.destroy()
+            except tk.TclError:
+                pass
+            self._order_filter_popup = None
+
     def _clear_order_filters(self) -> None:
+        self._close_order_filter_popup()
         for variable in self.order_filter_vars.values():
             variable.set(ALL_FILTER)
         self._refresh_preview()
