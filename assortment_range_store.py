@@ -25,7 +25,6 @@ class AssortmentSizeRange:
 @dataclass(frozen=True, slots=True)
 class SizeClassWeightSummary:
     total: int | float
-    overlap: int | float
 
 
 def normalize_size_class(value: object) -> str:
@@ -40,7 +39,7 @@ def classify_size_range(
     size_end: str | int | float,
     ranges: Iterable[AssortmentSizeRange],
 ) -> tuple[str, ...]:
-    """Return every M/S+ range intersected by an actual numeric size range."""
+    """Return one matching M/S+ class, or Unused when none/ambiguous."""
 
     actual_start = _parse_size_number(size_start)
     actual_end = _parse_size_number(size_end)
@@ -55,14 +54,14 @@ def classify_size_range(
         _unused, class_end = _parse_output_range(size_range.end_size)
         if actual_start <= class_end and actual_end >= class_start:
             matches.append(size_range.size_class)
-    return tuple(matches) if matches else ("Unused",)
+    return (matches[0],) if len(matches) == 1 else ("Unused",)
 
 
 def summarize_size_class_weights(
     entries: Iterable[tuple[str | int | float, str | int | float, int | float]],
     ranges: Iterable[AssortmentSizeRange],
 ) -> dict[str, int | float]:
-    """Sum weights for every intersecting class; overlaps count in each class."""
+    """Sum weights into one class per entry."""
 
     return {
         size_class: summary.total
@@ -74,14 +73,10 @@ def summarize_size_class_weight_details(
     entries: Iterable[tuple[str | int | float, str | int | float, int | float]],
     ranges: Iterable[AssortmentSizeRange],
 ) -> dict[str, SizeClassWeightSummary]:
-    """Return per-class total and the portion shared with another size class."""
+    """Return per-class totals without sharing weight between classes."""
 
     range_list = tuple(ranges)
     totals: dict[str, float] = {**{size_class: 0.0 for size_class in SIZE_CLASSES}, "Unused": 0.0}
-    overlaps: dict[str, float] = {
-        **{size_class: 0.0 for size_class in SIZE_CLASSES},
-        "Unused": 0.0,
-    }
     for size_start, size_end, weight in entries:
         if isinstance(weight, bool):
             raise ValueError("Assortment weight must be numeric.")
@@ -95,19 +90,11 @@ def summarize_size_class_weight_details(
             classes = classify_size_range(size_start, size_end, range_list)
         except ValueError:
             classes = ("Unused",)
-        is_overlap = len(classes) > 1
         for size_class in classes:
             totals[size_class] += numeric_weight
-            if is_overlap:
-                overlaps[size_class] += numeric_weight
     return {
         size_class: SizeClassWeightSummary(
             total=int(total) if total.is_integer() else total,
-            overlap=(
-                int(overlaps[size_class])
-                if overlaps[size_class].is_integer()
-                else overlaps[size_class]
-            ),
         )
         for size_class, total in totals.items()
     }
@@ -177,7 +164,9 @@ def load_size_ranges(
         raise ValueError("Assortment size ranges must contain M and S+.")
     for size_range in parsed.values():
         _validate_range(size_range, sizes)
-    return tuple(parsed[size_class] for size_class in SIZE_CLASSES)
+    ordered = tuple(parsed[size_class] for size_class in SIZE_CLASSES)
+    _validate_non_overlapping_ranges(ordered, sizes)
+    return ordered
 
 
 def save_size_ranges(
@@ -192,6 +181,7 @@ def save_size_ranges(
         _validate_range(size_range, sizes)
     if tuple(size_range.size_class for size_range in range_list) != SIZE_CLASSES:
         raise ValueError("Assortment size ranges must be ordered M and S+.")
+    _validate_non_overlapping_ranges(range_list, sizes)
 
     payload = {
         "version": STORE_VERSION,
@@ -235,6 +225,20 @@ def _validate_range_bounds(
         ) from exc
     if start_index > end_index:
         raise ValueError(f"{size_range.size_class} range start must not be after its end.")
+
+
+def _validate_non_overlapping_ranges(
+    ranges: tuple[AssortmentSizeRange, ...],
+    output_sizes: tuple[str, ...],
+) -> None:
+    occupied_rows: set[int] = set()
+    for size_range in ranges:
+        start_index = output_sizes.index(size_range.start_size)
+        end_index = output_sizes.index(size_range.end_size)
+        rows = set(range(start_index, end_index + 1))
+        if occupied_rows.intersection(rows):
+            raise ValueError("M and S+ assortment ranges must not overlap.")
+        occupied_rows.update(rows)
 
 
 def _parse_size_number(value: str | int | float) -> float:

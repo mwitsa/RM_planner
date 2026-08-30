@@ -385,8 +385,8 @@ class ProductionPlanApp(tk.Tk):
         self.rm_navigation_buttons: dict[str, tk.Button] = {}
         for key, label in (
             ("timeline", "Stock"),
-            ("predict", "Assortment STD"),
             ("actual", "Update Stock"),
+            ("predict", "Assortment STD"),
         ):
             button = tk.Button(
                 sidebar,
@@ -447,7 +447,6 @@ class ProductionPlanApp(tk.Tk):
         self.rm_stock_size_vars = {
             size_class: {
                 "stock": tk.StringVar(value="0 kg"),
-                "overlap": tk.StringVar(value="Overlap: 0 kg"),
             }
             for size_class in SIZE_CLASSES
         }
@@ -559,11 +558,7 @@ class ProductionPlanApp(tk.Tk):
                 section,
                 textvariable=self.rm_stock_size_vars[size_class]["stock"],
                 style="Summary.TLabel",
-            ).pack(anchor=tk.W, pady=(3, 8))
-            ttk.Label(
-                section,
-                textvariable=self.rm_stock_size_vars[size_class]["overlap"],
-            ).pack(anchor=tk.W)
+            ).pack(anchor=tk.W, pady=(3, 0))
 
         table_frame = ttk.LabelFrame(
             self.rm_timeline_tab,
@@ -690,7 +685,6 @@ class ProductionPlanApp(tk.Tk):
             self.rm_stock_wontons_var.set("—")
             for variables in self.rm_stock_size_vars.values():
                 variables["stock"].set("—")
-                variables["overlap"].set("Overlap: —")
             self.rm_timeline_status_var.set(str(exc))
             return
 
@@ -737,9 +731,6 @@ class ProductionPlanApp(tk.Tk):
                 variables["stock"].set(
                     f"{self._format_optional_number(summary.total)} kg"
                 )
-                variables["overlap"].set(
-                    f"Overlap: {self._format_optional_number(summary.overlap)} kg"
-                )
             self.rm_timeline_status_var.set(
                 f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
                 "Stock is before Plan usage. Click Show details to audit arrivals."
@@ -751,7 +742,6 @@ class ProductionPlanApp(tk.Tk):
             self.rm_stock_wontons_var.set("0")
             for variables in self.rm_stock_size_vars.values():
                 variables["stock"].set("0 kg")
-                variables["overlap"].set("Overlap: 0 kg")
             self.rm_timeline_status_var.set(
                 "No RM stock records for these filters."
             )
@@ -2671,9 +2661,9 @@ class ProductionPlanApp(tk.Tk):
         ranges = self._current_assortment_size_range_definitions()
         if not ranges:
             return {
-                "M": SizeClassWeightSummary(0, 0),
-                "S+": SizeClassWeightSummary(0, 0),
-                "Unused": SizeClassWeightSummary(record.total_weight, 0),
+                "M": SizeClassWeightSummary(0),
+                "S+": SizeClassWeightSummary(0),
+                "Unused": SizeClassWeightSummary(record.total_weight),
             }
         entries: list[tuple[str, str, float]] = []
         for entry in record.entries:
@@ -2682,10 +2672,7 @@ class ProductionPlanApp(tk.Tk):
         return summarize_size_class_weight_details(entries, ranges)
 
     def _format_size_class_summary(self, summary: SizeClassWeightSummary) -> str:
-        total = self._format_weight(summary.total)
-        if summary.overlap:
-            return f"{total} ({self._format_weight(summary.overlap)})"
-        return total
+        return self._format_weight(summary.total)
 
     def _edit_selected_assortment_actual(self) -> None:
         selected = self.assortment_actual_history_tree.selection()

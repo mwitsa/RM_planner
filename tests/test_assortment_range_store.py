@@ -58,7 +58,7 @@ class AssortmentRangeStoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             load_size_ranges(self.store_path, self.sizes)
 
-    def test_classifies_every_intersecting_size_letter(self) -> None:
+    def test_classifies_one_size_class_and_marks_crossing_range_unused(self) -> None:
         ranges = (
             AssortmentSizeRange("M", "46-50", "56-60"),
             AssortmentSizeRange("S+", "61-65", "81-85"),
@@ -66,7 +66,7 @@ class AssortmentRangeStoreTests(unittest.TestCase):
 
         self.assertEqual(classify_size_range("51", "55", ranges), ("M",))
         self.assertEqual(classify_size_range("61", "65", ranges), ("S+",))
-        self.assertEqual(classify_size_range("58", "62", ranges), ("M", "S+"))
+        self.assertEqual(classify_size_range("58", "62", ranges), ("Unused",))
         self.assertEqual(classify_size_range("86", "90", ranges), ("Unused",))
 
     def test_rejects_reversed_or_nonnumeric_actual_size_range(self) -> None:
@@ -76,7 +76,7 @@ class AssortmentRangeStoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             classify_size_range("large", "60", ranges)
 
-    def test_summarizes_weights_into_each_intersecting_class(self) -> None:
+    def test_summarizes_each_weight_into_only_one_class(self) -> None:
         ranges = (
             AssortmentSizeRange("M", "46-50", "56-60"),
             AssortmentSizeRange("S+", "61-65", "81-85"),
@@ -98,10 +98,20 @@ class AssortmentRangeStoreTests(unittest.TestCase):
             ),
             ranges,
         )
-        self.assertEqual(details["M"].total, 536)
-        self.assertEqual(details["M"].overlap, 50)
-        self.assertEqual(details["S+"].total, 994)
-        self.assertEqual(details["S+"].overlap, 50)
+        self.assertEqual(details["M"].total, 486)
+        self.assertEqual(details["S+"].total, 944)
+        self.assertEqual(details["Unused"].total, 50)
+
+    def test_rejects_overlapping_saved_ranges(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must not overlap"):
+            save_size_ranges(
+                self.store_path,
+                (
+                    AssortmentSizeRange("M", "11-15", "26-30"),
+                    AssortmentSizeRange("S+", "26-30", "36-40"),
+                ),
+                self.sizes,
+            )
 
     def test_loads_legacy_s_and_ss_as_one_s_plus_range(self) -> None:
         payload = {

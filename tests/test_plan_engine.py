@@ -132,7 +132,7 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual([row.expected_wontons for row in result.allocations], [150, 50, 0])
         self.assertEqual([row.plan_date for row in result.allocations], ["2026-08-28", "2026-08-29", "2026-08-30"])
 
-    def test_overlapping_stock_is_not_counted_twice(self) -> None:
+    def test_shared_s_plus_stock_is_not_counted_twice(self) -> None:
         result = generate_plan(
             [
                 order("s", rm_size="S", order_cups=650, wontons_per_cup=1, order_unit=650),

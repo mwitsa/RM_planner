@@ -108,8 +108,8 @@ orders. Unassigned orders and RM only match each other. The generated and
 unplanned tables show **Use for** so this decision is visible.
 
 **Stock** shows a plain overview for total weight, unused weight, estimated
-wontons, and the latest availability date. M and S+ have separate sections
-showing stock and overlap weight. Click **Show details** to expand the dated
+wontons, and the latest availability date. M and S+ have separate stock sections.
+Click **Show details** to expand the dated
 RM-arrival table and inspect the individual RM IDs behind the balances. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused
 Existing Stock entry page is no longer shown.
@@ -135,9 +135,6 @@ Size (start), Size (end), and Weight fields; use **Add another box** to record a
 assortment entries. Choose Date, Month, and Year before saving. Saved records
 appear in the history panel on the right and can be loaded, edited, and updated.
 Each completed size range is automatically classified against the current M/S+
-ranges. Intersections show every matching class, and a
-range outside both classifications shows `Unused`.
+ranges. A range crossing both classes or outside both classifications shows
+`Unused`.
 Saved history summarizes the weight for M, S+, and Unused in separate columns.
-An overlapping row contributes its full weight to every matching class. The
-overlap portion appears in parentheses after that class total, such as
-`S+ 4,244 (2,145)`.

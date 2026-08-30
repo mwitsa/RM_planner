@@ -60,7 +60,6 @@ def build_rm_timeline(
     cumulative_wontons = 0.0
     summary_classes = (*SIZE_CLASSES, "Unused")
     cumulative_totals = {key: 0.0 for key in summary_classes}
-    cumulative_overlaps = {key: 0.0 for key in summary_classes}
     rows: list[RmTimelineRow] = []
     for record_date in sorted(by_date):
         dated_records = sorted(by_date[record_date], key=lambda item: item.rm_id)
@@ -86,7 +85,6 @@ def build_rm_timeline(
         cumulative_wontons += incoming_wontons
         for size_class, summary in daily_summaries.items():
             cumulative_totals[size_class] += float(summary.total)
-            cumulative_overlaps[size_class] += float(summary.overlap)
 
         rows.append(
             RmTimelineRow(
@@ -97,13 +95,9 @@ def build_rm_timeline(
                 existing_in_kg=existing_in,
                 incoming_kg=incoming_kg,
                 cumulative_kg=cumulative_kg,
-                m_stock=_summary(cumulative_totals["M"], cumulative_overlaps["M"]),
-                s_plus_stock=_summary(
-                    cumulative_totals["S+"], cumulative_overlaps["S+"]
-                ),
-                unused_stock=_summary(
-                    cumulative_totals["Unused"], cumulative_overlaps["Unused"]
-                ),
+                m_stock=_summary(cumulative_totals["M"]),
+                s_plus_stock=_summary(cumulative_totals["S+"]),
+                unused_stock=_summary(cumulative_totals["Unused"]),
                 incoming_wontons=incoming_wontons,
                 cumulative_wontons=cumulative_wontons,
             )
@@ -118,9 +112,9 @@ def _summarize_records(
     if not ranges:
         total = sum(record.total_weight for record in records)
         return {
-            "M": SizeClassWeightSummary(0, 0),
-            "S+": SizeClassWeightSummary(0, 0),
-            "Unused": SizeClassWeightSummary(total, 0),
+            "M": SizeClassWeightSummary(0),
+            "S+": SizeClassWeightSummary(0),
+            "Unused": SizeClassWeightSummary(total),
         }
     entries: list[tuple[str, str, float]] = []
     direct_totals = {key: 0.0 for key in SIZE_CLASSES}
@@ -136,16 +130,14 @@ def _summarize_records(
     return {
         size_class: SizeClassWeightSummary(
             summarized[size_class].total + direct_totals.get(size_class, 0),
-            summarized[size_class].overlap,
         )
         for size_class in (*SIZE_CLASSES, "Unused")
     }
 
 
-def _summary(total: float, overlap: float) -> SizeClassWeightSummary:
+def _summary(total: float) -> SizeClassWeightSummary:
     return SizeClassWeightSummary(
         int(total) if total.is_integer() else total,
-        int(overlap) if overlap.is_integer() else overlap,
     )
 
 

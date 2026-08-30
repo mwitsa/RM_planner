@@ -50,7 +50,6 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].cumulative_kg, 30)
         self.assertEqual(rows[1].cumulative_kg, 60)
         self.assertEqual(rows[0].s_plus_stock.total, 20)
-        self.assertEqual(rows[0].s_plus_stock.overlap, 0)
         self.assertEqual(rows[1].s_plus_stock.total, 50)
         self.assertEqual(rows[0].cumulative_wontons, 1790)
         self.assertEqual(rows[1].cumulative_wontons, 3980)
@@ -71,7 +70,7 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].rm_ids, ("RM-000001",))
         self.assertEqual(rows[0].cumulative_kg, 10)
 
-    def test_existing_stock_adds_direct_class_without_assortment_overlap(self) -> None:
+    def test_existing_stock_adds_direct_class(self) -> None:
         existing = ActualAssortmentRecord(
             record_id="existing-1",
             rm_id="RM-OPENING",
@@ -100,7 +99,6 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].existing_in_kg, 100)
         self.assertEqual(rows[0].s_plus_stock.total, 100)
-        self.assertEqual(rows[0].s_plus_stock.overlap, 0)
         self.assertEqual(rows[0].cumulative_wontons, 6500)
 
 
