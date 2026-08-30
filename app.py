@@ -387,7 +387,7 @@ class ProductionPlanApp(tk.Tk):
         self.rm_navigation_buttons: dict[str, tk.Button] = {}
         for key, label in (
             ("timeline", "Stock"),
-            ("predict", "Assortment Predict"),
+            ("predict", "Assortment STD"),
             ("actual", "Update Stock"),
         ):
             button = tk.Button(

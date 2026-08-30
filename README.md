@@ -57,7 +57,7 @@ preserved. The accumulated dataset reloads when the app starts. Double-click a
 Production cell to enter the quantity produced, then click **Save orders** to
 keep that manual Production change.
 
-The **Assortment Predict** tab places three range columns—M, S, and SS—before the
+The **Assortment STD** page places three range columns—M, S, and SS—before the
 actual output-size column. Drag a colored box to move its complete range, or
 drag its top or bottom handle to expand or contract it vertically. Click
 **Save ranges** to keep the selections in
@@ -114,7 +114,7 @@ RM-arrival table and inspect the individual RM IDs behind the balances. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused
 Existing Stock entry page is no longer shown.
 
-The **Assortment Predict** tab automatically loads `Data/RM/assortment.xlsx` as
+The **Assortment STD** page automatically loads `Data/RM/assortment.xlsx` as
 read-only shrimp assortment master data. Its columns are harvested base sizes,
 its rows are actual output-size ranges, and every matrix cell is the expected
 output yield percentage. Each base-size column is checked to ensure its output
