@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import threading
 import tkinter as tk
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import date
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
@@ -17,6 +17,7 @@ from assortment_range_store import (
     classify_size_range,
     default_size_ranges,
     load_size_ranges,
+    normalize_size_class,
     save_size_ranges,
     SizeClassWeightSummary,
     summarize_size_class_weight_details,
@@ -2566,9 +2567,7 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_records = {record.record_id: record for record in records}
         self._refresh_assortment_actual_history_table()
         self._refresh_rm_timeline()
-        assortment_count = sum(
-            record.record_type in {"actual", "prediction"} for record in records
-        )
+        assortment_count = len(records)
         if assortment_count:
             self.assortment_actual_status_var.set(
                 f"Loaded {assortment_count} saved stock records."
@@ -2579,14 +2578,8 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_history_tree.delete(
             *self.assortment_actual_history_tree.get_children()
         )
-        for record in sorted(
-            (
-                item
-                for item in self.assortment_actual_records.values()
-                if item.record_type in {"actual", "prediction"}
-            ),
-            key=lambda item: (item.record_date, item.updated_at),
-            reverse=True,
+        for record in self._sorted_saved_stock_records(
+            self.assortment_actual_records.values()
         ):
             class_summaries = self._assortment_record_class_summaries(record)
             try:
@@ -2614,22 +2607,48 @@ class ProductionPlanApp(tk.Tk):
             if self.assortment_actual_history_tree.exists(record_id):
                 self.assortment_actual_history_tree.selection_add(record_id)
 
+    @staticmethod
+    def _sorted_saved_stock_records(
+        records: Iterable[ActualAssortmentRecord],
+    ) -> tuple[ActualAssortmentRecord, ...]:
+        """Return every saved stock record, including legacy class-only stock."""
+
+        return tuple(
+            sorted(
+                records,
+                key=lambda item: (item.record_date, item.updated_at),
+                reverse=True,
+            )
+        )
+
     def _assortment_record_class_summaries(
         self,
         record: ActualAssortmentRecord,
     ) -> dict[str, SizeClassWeightSummary]:
         ranges = self._current_assortment_size_range_definitions()
-        if not ranges:
-            return {
-                "M": SizeClassWeightSummary(0),
-                "S+": SizeClassWeightSummary(0),
-                "Unused": SizeClassWeightSummary(record.total_weight),
-            }
+        direct_totals = {size_class: 0.0 for size_class in SIZE_CLASSES}
         entries: list[tuple[str, str, float]] = []
         for entry in record.entries:
+            size_class = normalize_size_class(entry.size_class)
+            if size_class in direct_totals:
+                direct_totals[size_class] += float(entry.weight)
+                continue
             size_start, size_end = split_size_range(entry.size)
             entries.append((size_start, size_end, entry.weight))
-        return summarize_size_class_weight_details(entries, ranges)
+        if ranges:
+            summarized = summarize_size_class_weight_details(entries, ranges)
+        else:
+            summarized = {
+                "M": SizeClassWeightSummary(0),
+                "S+": SizeClassWeightSummary(0),
+                "Unused": SizeClassWeightSummary(sum(weight for _, _, weight in entries)),
+            }
+        return {
+            size_class: SizeClassWeightSummary(
+                summarized[size_class].total + direct_totals.get(size_class, 0)
+            )
+            for size_class in (*SIZE_CLASSES, "Unused")
+        }
 
     def _format_size_class_summary(self, summary: SizeClassWeightSummary) -> str:
         return self._format_weight(summary.total)
@@ -2642,6 +2661,13 @@ class ProductionPlanApp(tk.Tk):
         record = self.assortment_actual_records.get(selected[0])
         if not record:
             messagebox.showerror("Stock error", "The selected stock record could not be found.")
+            return
+        if any(entry.size_class for entry in record.entries):
+            messagebox.showinfo(
+                "Legacy stock record",
+                "This older class-only stock record cannot be edited in the size-range form. "
+                "You can delete it with Delete selected stock, then enter a replacement if needed.",
+            )
             return
         year, month, day = record.record_date.split("-")
         self.actual_day_var.set(day)

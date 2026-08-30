@@ -133,6 +133,9 @@ details and actions are grouped at the top, while each size and weight entry use
 one compact row. Use **Add row** for additional entries. The page shows completed
 row count and total weight while entering data. Saved stock appears in the panel
 on the right and can be loaded, edited, and updated.
+Legacy class-only stock from the removed Existing Stock page is also listed in
+Saved stock so it can be deleted. Because it has no original size range, it must
+be deleted and re-entered rather than edited in the size-range form.
 Each completed size range is automatically classified against the current M/S+
 ranges. A range crossing both classes or outside both classifications shows
 `Unused`.
