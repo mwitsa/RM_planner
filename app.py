@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
@@ -108,8 +109,8 @@ class ProductionPlanApp(tk.Tk):
 
         self.file_var = tk.StringVar()
         self.sheet_var = tk.StringVar()
-        self.order_filter_vars = {
-            key: tk.StringVar(value=ALL_FILTER) for key, _label in FILTER_SPECS
+        self.order_filter_selections: dict[str, str | frozenset[str]] = {
+            key: ALL_FILTER for key, _label in FILTER_SPECS
         }
         self.order_filter_options: dict[str, list[str]] = {
             key: [] for key, _label in FILTER_SPECS
@@ -3267,7 +3268,7 @@ class ProductionPlanApp(tk.Tk):
         self.result = result
         self.order_records_by_id = {record.record_id: record for record in result.records}
         for key, _label in FILTER_SPECS:
-            self.order_filter_vars[key].set(ALL_FILTER)
+            self.order_filter_selections[key] = ALL_FILTER
             self.order_filter_options[key] = filter_options(result.records, key)
         for button in self.order_action_buttons:
             button.configure(state=tk.NORMAL)
@@ -3294,13 +3295,12 @@ class ProductionPlanApp(tk.Tk):
         filter_keys = tuple(key for key, _label in FILTER_SPECS)
         selections, available_options = cascading_filter_state(
             self.result.records,
-            {key: variable.get() for key, variable in self.order_filter_vars.items()},
+            self.order_filter_selections,
             filter_keys,
             preferred_key=changed_key,
         )
         for key in filter_keys:
-            if self.order_filter_vars[key].get() != selections[key]:
-                self.order_filter_vars[key].set(selections[key])
+            self.order_filter_selections[key] = selections[key]
             self.order_filter_options[key] = available_options[key]
         records = filter_orders(
             self.result.records,
@@ -3339,7 +3339,8 @@ class ProductionPlanApp(tk.Tk):
                 ),
             )
         filters_active = any(
-            variable.get() != ALL_FILTER for variable in self.order_filter_vars.values()
+            selection != ALL_FILTER
+            for selection in self.order_filter_selections.values()
         )
         self.clear_order_filters_button.configure(
             state=tk.NORMAL if filters_active else tk.DISABLED
@@ -3357,7 +3358,7 @@ class ProductionPlanApp(tk.Tk):
             filter_key = ORDER_COLUMN_FILTER_KEYS.get(column)
             filter_active = bool(
                 filter_key
-                and self.order_filter_vars[filter_key].get() != ALL_FILTER
+                and self.order_filter_selections[filter_key] != ALL_FILTER
             )
             filter_marker = " ●" if filter_active else ""
             sort_marker = ""
@@ -3372,42 +3373,87 @@ class ProductionPlanApp(tk.Tk):
         self._close_order_filter_popup()
         popup = tk.Toplevel(self)
         self._order_filter_popup = popup
-        popup.title(self.order_headings[column])
         popup.transient(self)
-        popup.resizable(False, True)
-        popup.protocol("WM_DELETE_WINDOW", self._close_order_filter_popup)
+        popup.overrideredirect(True)
+        popup.resizable(False, False)
         popup.bind("<Escape>", lambda _event: self._close_order_filter_popup())
 
-        body = ttk.Frame(popup, padding=10)
+        border = tk.Frame(popup, background="#7a7a7a", padx=1, pady=1)
+        border.pack(fill=tk.BOTH, expand=True)
+        body = tk.Frame(border, background="white", padx=8, pady=8)
         body.pack(fill=tk.BOTH, expand=True)
+
+        def menu_button(
+            text: str,
+            command: Callable[[], object],
+            state: str = tk.NORMAL,
+        ) -> tk.Button:
+            button = tk.Button(
+                body,
+                text=text,
+                command=command,
+                state=state,
+                anchor=tk.W,
+                background="white",
+                activebackground="#e5f1fb",
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=6,
+                pady=4,
+            )
+            button.pack(fill=tk.X)
+            return button
+
         numeric = column in NUMERIC_ORDER_COLUMNS
-        ttk.Button(
-            body,
-            text="Sort Smallest to Largest" if numeric else "Sort A to Z",
-            command=lambda: self._set_order_sort(column, False),
-        ).pack(fill=tk.X)
-        ttk.Button(
-            body,
-            text="Sort Largest to Smallest" if numeric else "Sort Z to A",
-            command=lambda: self._set_order_sort(column, True),
-        ).pack(fill=tk.X, pady=(4, 0))
+        menu_button(
+            "↑  Sort Smallest to Largest" if numeric else "A  Z  Sort A to Z",
+            lambda: self._set_order_sort(column, False),
+        )
+        menu_button(
+            "↓  Sort Largest to Smallest" if numeric else "Z  A  Sort Z to A",
+            lambda: self._set_order_sort(column, True),
+        )
 
         filter_key = ORDER_COLUMN_FILTER_KEYS.get(column)
         if filter_key:
-            ttk.Separator(body).pack(fill=tk.X, pady=8)
-            ttk.Label(body, text="Filter values", style="Summary.TLabel").pack(anchor=tk.W)
-            search_var = tk.StringVar()
-            search_entry = ttk.Entry(body, textvariable=search_var, width=36)
-            search_entry.pack(fill=tk.X, pady=(5, 6))
+            current_selection = self.order_filter_selections[filter_key]
+            filter_active = current_selection != ALL_FILTER
+            tk.Frame(body, height=1, background="#d0d0d0").pack(fill=tk.X, pady=5)
+            menu_button(
+                f'Clear Filter From "{self.order_headings[column]}"',
+                lambda: self._set_order_column_filter(filter_key, ALL_FILTER),
+                state=tk.NORMAL if filter_active else tk.DISABLED,
+            )
 
-            list_frame = ttk.Frame(body)
+            available_values = list(self.order_filter_options.get(filter_key, []))
+            if current_selection == ALL_FILTER:
+                checked_values = set(available_values)
+            elif isinstance(current_selection, str):
+                checked_values = {current_selection}
+            else:
+                checked_values = set(current_selection)
+
+            search_var = tk.StringVar()
+            search_entry = tk.Entry(
+                body,
+                textvariable=search_var,
+                width=38,
+                relief=tk.SOLID,
+                borderwidth=1,
+            )
+            search_entry.pack(fill=tk.X, pady=(8, 5))
+
+            list_frame = tk.Frame(body, background="white")
             list_frame.pack(fill=tk.BOTH, expand=True)
             values_list = tk.Listbox(
                 list_frame,
-                height=12,
-                width=40,
+                height=11,
+                width=42,
                 exportselection=False,
-                selectmode=tk.SINGLE,
+                selectmode=tk.BROWSE,
+                activestyle="none",
+                relief=tk.SOLID,
+                borderwidth=1,
             )
             scrollbar = ttk.Scrollbar(
                 list_frame,
@@ -3418,60 +3464,91 @@ class ProductionPlanApp(tk.Tk):
             values_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             displayed_values: list[str] = []
+            ok_button: ttk.Button | None = None
 
             def refresh_values(*_args: object) -> None:
                 query = search_var.get().strip().casefold()
-                available = self.order_filter_options.get(filter_key, [])
                 displayed_values[:] = [
-                    value for value in available if not query or query in value.casefold()
+                    value
+                    for value in available_values
+                    if not query or query in value.casefold()
                 ]
                 values_list.delete(0, tk.END)
-                values_list.insert(tk.END, "(All values)")
+                displayed_set = set(displayed_values)
+                selected_displayed = checked_values & displayed_set
+                if displayed_values and selected_displayed == displayed_set:
+                    select_all_mark = "☑"
+                elif selected_displayed:
+                    select_all_mark = "▣"
+                else:
+                    select_all_mark = "☐"
+                values_list.insert(tk.END, f"{select_all_mark}  (Select All)")
                 for value in displayed_values:
-                    values_list.insert(tk.END, value)
-                selected = self.order_filter_vars[filter_key].get()
-                selection_index = 0
-                if selected in displayed_values:
-                    selection_index = displayed_values.index(selected) + 1
-                values_list.selection_set(selection_index)
-                values_list.see(selection_index)
+                    mark = "☑" if value in checked_values else "☐"
+                    values_list.insert(tk.END, f"{mark}  {value}")
+                if ok_button is not None:
+                    ok_button.configure(
+                        state=tk.NORMAL if checked_values else tk.DISABLED
+                    )
+
+            def toggle_value(event: tk.Event) -> str:
+                index = values_list.nearest(event.y)
+                if index == 0:
+                    visible = set(displayed_values)
+                    if visible and visible.issubset(checked_values):
+                        checked_values.difference_update(visible)
+                    else:
+                        checked_values.update(visible)
+                elif 0 < index <= len(displayed_values):
+                    value = displayed_values[index - 1]
+                    if value in checked_values:
+                        checked_values.remove(value)
+                    else:
+                        checked_values.add(value)
+                refresh_values()
+                values_list.selection_clear(0, tk.END)
+                return "break"
 
             def apply_selected() -> None:
-                selected = values_list.curselection()
-                if not selected:
+                if not checked_values:
                     return
-                index = selected[0]
-                value = ALL_FILTER if index == 0 else displayed_values[index - 1]
-                self.order_filter_vars[filter_key].set(value)
+                if checked_values == set(available_values):
+                    selection: str | frozenset[str] = ALL_FILTER
+                else:
+                    selection = frozenset(checked_values)
+                self.order_filter_selections[filter_key] = selection
                 self._close_order_filter_popup()
                 self._refresh_preview(filter_key)
 
             search_var.trace_add("write", refresh_values)
-            refresh_values()
-            values_list.bind("<Double-1>", lambda _event: apply_selected())
-            values_list.bind("<Return>", lambda _event: apply_selected())
+            popup.bind("<Return>", lambda _event: apply_selected())
             actions = ttk.Frame(body)
             actions.pack(fill=tk.X, pady=(8, 0))
-            ttk.Button(actions, text="Apply", command=apply_selected).pack(side=tk.RIGHT)
             ttk.Button(
                 actions,
-                text="Clear this column",
-                command=lambda: self._set_order_column_filter(filter_key, ALL_FILTER),
-            ).pack(side=tk.RIGHT, padx=(0, 6))
-            ttk.Button(
-                actions,
-                text="Clear all",
-                command=self._clear_order_filters,
-            ).pack(side=tk.LEFT)
+                text="Cancel",
+                command=self._close_order_filter_popup,
+            ).pack(side=tk.RIGHT)
+            ok_button = ttk.Button(actions, text="OK", command=apply_selected)
+            ok_button.pack(side=tk.RIGHT, padx=(0, 6))
+            refresh_values()
+            values_list.bind("<Button-1>", toggle_value)
             search_entry.focus_set()
+        else:
+            tk.Frame(body, height=1, background="#d0d0d0").pack(fill=tk.X, pady=5)
+            menu_button("Close", self._close_order_filter_popup)
 
         popup.update_idletasks()
         x = min(self.winfo_pointerx(), popup.winfo_screenwidth() - popup.winfo_width() - 12)
-        y = min(self.winfo_pointery() + 10, popup.winfo_screenheight() - popup.winfo_height() - 40)
+        y = min(
+            self.winfo_pointery() + 16,
+            popup.winfo_screenheight() - popup.winfo_height() - 40,
+        )
         popup.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        popup.lift()
 
     def _set_order_column_filter(self, filter_key: str, value: str) -> None:
-        self.order_filter_vars[filter_key].set(value)
+        self.order_filter_selections[filter_key] = value
         self._close_order_filter_popup()
         self._refresh_preview(filter_key)
 
@@ -3485,8 +3562,8 @@ class ProductionPlanApp(tk.Tk):
 
     def _clear_order_filters(self) -> None:
         self._close_order_filter_popup()
-        for variable in self.order_filter_vars.values():
-            variable.set(ALL_FILTER)
+        for key in self.order_filter_selections:
+            self.order_filter_selections[key] = ALL_FILTER
         self._refresh_preview()
 
     def _edit_production_cell(self, event: tk.Event) -> None:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 
 from extractor import OrderRecord
 
@@ -41,18 +41,42 @@ FILTER_SPECS = (
     ("production_status", "Production status"),
 )
 
+FilterSelection = str | frozenset[str]
+
+
+def _matches_selection(value: str, selected: str | Collection[str]) -> bool:
+    if selected == ALL_FILTER:
+        return True
+    if isinstance(selected, str):
+        return value == selected
+    return value in selected
+
+
+def _normalize_selection(
+    selected: str | Collection[str],
+    available: Collection[str],
+) -> FilterSelection:
+    if selected == ALL_FILTER:
+        return ALL_FILTER
+    if isinstance(selected, str):
+        return selected if selected in available else ALL_FILTER
+    retained = frozenset(value for value in selected if value in available)
+    if not retained or retained == frozenset(available):
+        return ALL_FILTER
+    return retained
+
 
 def filter_orders(
     records: Iterable[OrderRecord],
-    selections: Mapping[str, str],
+    selections: Mapping[str, str | Collection[str]],
 ) -> list[OrderRecord]:
-    """Apply every non-All selection using AND logic."""
+    """Apply single- or multi-value selections using AND logic between columns."""
 
     return [
         record
         for record in records
         if all(
-            selected == ALL_FILTER or filter_value(record, key) == selected
+            _matches_selection(filter_value(record, key), selected)
             for key, selected in selections.items()
         )
     ]
@@ -77,10 +101,10 @@ def filter_options(records: Iterable[OrderRecord], key: str) -> list[str]:
 
 def cascading_filter_state(
     records: Iterable[OrderRecord],
-    selections: Mapping[str, str],
+    selections: Mapping[str, str | Collection[str]],
     keys: Iterable[str],
     preferred_key: str | None = None,
-) -> tuple[dict[str, str], dict[str, list[str]]]:
+) -> tuple[dict[str, FilterSelection], dict[str, list[str]]]:
     """Normalize selections and calculate each filter's context-aware options."""
 
     record_list = list(records)
@@ -98,8 +122,9 @@ def cascading_filter_state(
                 {other: current[other] for other in filter_keys if other != key},
             )
             available = filter_options(candidates, key)
-            if current[key] != ALL_FILTER and current[key] not in available:
-                current[key] = ALL_FILTER
+            normalized = _normalize_selection(current[key], available)
+            if current[key] != normalized:
+                current[key] = normalized
                 changed = True
         if not changed:
             break

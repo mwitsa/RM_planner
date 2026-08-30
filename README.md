@@ -64,11 +64,13 @@ drag its top or bottom handle to expand or contract it vertically. Click
 `Data/RM/assortment_size_ranges.json` for the next app session.
 The Order table uses compact Excel-style filters directly in its column
 headers, so no separate filter panel takes up space. Click a header to sort,
-search its available values, apply a filter, or clear filters. Year, month,
-date, country, customer, Group 1, Group 2, packaging, RM Size, soup, ถ้วย/Unit,
-and production status filters cascade, so each selection limits the available
-choices in every other header. A dot marks filtered columns, an arrow marks the
-active sort direction, and the summary recalculates from the visible orders.
+search its available values, select one or several values with checkboxes, or
+clear its filter. The menu includes Excel-style **Select All**, **OK**, and
+**Cancel** controls. Year, month, date, country, customer, Group 1, Group 2,
+packaging, RM Size, soup, ถ้วย/Unit, and production status filters cascade, so
+each selection limits the available choices in every other header. A dot marks
+filtered columns, an arrow marks the active sort direction, and the summary
+recalculates from the visible orders.
 
 The **Class Rule** tab stores text rules in waterfall priority. Add or update a
 rule, drag it up or down (or use the Move buttons), and click **Save rules**.
