@@ -3538,16 +3538,12 @@ class ProductionPlanApp(tk.Tk):
             return
         customers = {record.customer_name for record in records}
         months = {record.month_key for record in records}
-        total_units = sum(record.order_unit for record in records)
         total_cups = sum(record.order_cups or 0 for record in records)
         total_wontons = sum(record.total_wontons or 0 for record in records)
-        total_production = sum(record.production or 0 for record in records)
         self.summary_var.set(
             f"{len(records):,} orders  |  {len(customers):,} customers  |  "
-            f"{len(months):,} months  |  units {total_units:,.2f}  |  "
-            f"cups {total_cups:,.2f}  |  "
-            f"wontons (จำนวนเกี๊ยว) {total_wontons:,.2f}  |  "
-            f"production {total_production:,.2f}"
+            f"{len(months):,} months  |  cups {total_cups:,.0f}  |  "
+            f"wontons (จำนวนเกี๊ยว) {total_wontons:,.0f}"
         )
 
     def _save_orders(self) -> None:
