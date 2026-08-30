@@ -50,6 +50,9 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[1].cumulative_kg, 60)
         self.assertEqual(rows[0].s_plus_stock.total, 20)
         self.assertEqual(rows[1].s_plus_stock.total, 50)
+        self.assertEqual(rows[0].m_wontons, 530)
+        self.assertEqual(rows[0].s_plus_wontons, 1260)
+        self.assertEqual(rows[1].s_plus_wontons, 3450)
         self.assertEqual(rows[0].cumulative_wontons, 1790)
         self.assertEqual(rows[1].cumulative_wontons, 3980)
 
@@ -97,6 +100,7 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].incoming_kg, 100)
         self.assertEqual(rows[0].s_plus_stock.total, 100)
+        self.assertEqual(rows[0].s_plus_wontons, 6500)
         self.assertEqual(rows[0].cumulative_wontons, 6500)
 
 

@@ -457,6 +457,8 @@ class ProductionPlanApp(tk.Tk):
                 "stock": tk.StringVar(value="0 kg"),
                 "domestic": tk.StringVar(value="0 kg"),
                 "export": tk.StringVar(value="0 kg"),
+                "domestic_wontons": tk.StringVar(value="0"),
+                "export_wontons": tk.StringVar(value="0"),
             }
             for size_class in SIZE_CLASSES
         }
@@ -561,47 +563,87 @@ class ProductionPlanApp(tk.Tk):
                     0 if column == len(SIZE_CLASSES) - 1 else 4,
                 ),
             )
+            card_header = tk.Frame(section, background=background)
+            card_header.pack(fill=tk.X, pady=(0, 10))
             tk.Label(
-                section,
+                card_header,
                 text=size_class,
                 background=background,
                 foreground=foreground,
-                font=("Segoe UI", 11, "bold"),
-            ).pack(anchor=tk.W)
+                font=("Segoe UI", 12, "bold"),
+            ).pack(side=tk.LEFT)
             tk.Label(
-                section,
-                text="Stock",
+                card_header,
+                text="Total stock",
                 background=background,
-                foreground="#333333",
-            ).pack(anchor=tk.W, pady=(8, 0))
+                foreground="#555555",
+            ).pack(side=tk.LEFT, padx=(14, 6))
             tk.Label(
-                section,
+                card_header,
                 textvariable=self.rm_stock_size_vars[size_class]["stock"],
                 background=background,
                 foreground=foreground,
                 font=("Segoe UI", 12, "bold"),
-            ).pack(anchor=tk.W, pady=(3, 0))
+            ).pack(side=tk.LEFT)
 
-            divider = tk.Frame(section, background=border, height=1)
-            divider.pack(fill=tk.X, pady=(10, 8))
             market_breakdown = tk.Frame(section, background=background)
             market_breakdown.pack(fill=tk.X)
             for market_column, market_name in enumerate(("DOMESTIC", "EXPORT")):
                 market_breakdown.columnconfigure(market_column, weight=1)
-                tk.Label(
+                market_panel = tk.Frame(
                     market_breakdown,
+                    background="#ffffff",
+                    highlightbackground=border,
+                    highlightcolor=border,
+                    highlightthickness=1,
+                    padx=12,
+                    pady=10,
+                )
+                market_panel.grid(
+                    row=0,
+                    column=market_column,
+                    sticky="nsew",
+                    padx=(0, 5) if market_column == 0 else (5, 0),
+                )
+                tk.Label(
+                    market_panel,
                     text=market_name,
-                    background=background,
-                    foreground="#555555",
-                    font=("Segoe UI", 8, "bold"),
-                ).grid(row=0, column=market_column, sticky=tk.W)
-                tk.Label(
-                    market_breakdown,
-                    textvariable=self.rm_stock_size_vars[size_class][market_name.casefold()],
-                    background=background,
+                    background="#ffffff",
                     foreground=foreground,
                     font=("Segoe UI", 10, "bold"),
-                ).grid(row=1, column=market_column, sticky=tk.W, pady=(2, 0))
+                ).pack(anchor=tk.W, pady=(0, 8))
+                market_details = tk.Frame(market_panel, background="#ffffff")
+                market_details.pack(fill=tk.X)
+                market_details.columnconfigure(0, weight=1)
+                market_details.columnconfigure(1, weight=1)
+                tk.Label(
+                    market_details,
+                    text="Weight",
+                    background="#ffffff",
+                    foreground="#555555",
+                ).grid(row=0, column=0, sticky=tk.W)
+                tk.Label(
+                    market_details,
+                    text="Est. wonton",
+                    background="#ffffff",
+                    foreground="#555555",
+                ).grid(row=0, column=1, sticky=tk.E)
+                tk.Label(
+                    market_details,
+                    textvariable=self.rm_stock_size_vars[size_class][market_name.casefold()],
+                    background="#ffffff",
+                    foreground=foreground,
+                    font=("Segoe UI", 12, "bold"),
+                ).grid(row=1, column=0, sticky=tk.W, pady=(3, 0))
+                tk.Label(
+                    market_details,
+                    textvariable=self.rm_stock_size_vars[size_class][
+                        f"{market_name.casefold()}_wontons"
+                    ],
+                    background="#ffffff",
+                    foreground=foreground,
+                    font=("Segoe UI", 11, "bold"),
+                ).grid(row=1, column=1, sticky=tk.E, pady=(3, 0))
 
         table_frame = ttk.LabelFrame(
             self.rm_timeline_tab,
@@ -777,8 +819,18 @@ class ProductionPlanApp(tk.Tk):
                             else market_final.s_plus_stock
                         )
                         market_total = market_summary.total
+                        market_wontons = (
+                            market_final.m_wontons
+                            if size_class == "M"
+                            else market_final.s_plus_wontons
+                        )
+                    else:
+                        market_wontons = 0
                     variables[market].set(
                         f"{self._format_optional_number(market_total)} kg"
+                    )
+                    variables[f"{market}_wontons"].set(
+                        self._format_optional_number(market_wontons)
                     )
             self.rm_timeline_status_var.set(
                 f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
@@ -790,8 +842,10 @@ class ProductionPlanApp(tk.Tk):
             self.rm_stock_unused_var.set("0 kg")
             self.rm_stock_wontons_var.set("0")
             for variables in self.rm_stock_size_vars.values():
-                for variable in variables.values():
-                    variable.set("0 kg")
+                variables["stock"].set("0 kg")
+                for market in ("domestic", "export"):
+                    variables[market].set("0 kg")
+                    variables[f"{market}_wontons"].set("0")
             self.rm_timeline_status_var.set(
                 "No RM stock records for these filters."
             )
