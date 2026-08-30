@@ -455,6 +455,8 @@ class ProductionPlanApp(tk.Tk):
         self.rm_stock_size_vars = {
             size_class: {
                 "stock": tk.StringVar(value="0 kg"),
+                "domestic": tk.StringVar(value="0 kg"),
+                "export": tk.StringVar(value="0 kg"),
             }
             for size_class in SIZE_CLASSES
         }
@@ -580,6 +582,27 @@ class ProductionPlanApp(tk.Tk):
                 font=("Segoe UI", 12, "bold"),
             ).pack(anchor=tk.W, pady=(3, 0))
 
+            divider = tk.Frame(section, background=border, height=1)
+            divider.pack(fill=tk.X, pady=(10, 8))
+            market_breakdown = tk.Frame(section, background=background)
+            market_breakdown.pack(fill=tk.X)
+            for market_column, market_name in enumerate(("DOMESTIC", "EXPORT")):
+                market_breakdown.columnconfigure(market_column, weight=1)
+                tk.Label(
+                    market_breakdown,
+                    text=market_name,
+                    background=background,
+                    foreground="#555555",
+                    font=("Segoe UI", 8, "bold"),
+                ).grid(row=0, column=market_column, sticky=tk.W)
+                tk.Label(
+                    market_breakdown,
+                    textvariable=self.rm_stock_size_vars[size_class][market_name.casefold()],
+                    background=background,
+                    foreground=foreground,
+                    font=("Segoe UI", 10, "bold"),
+                ).grid(row=1, column=market_column, sticky=tk.W, pady=(2, 0))
+
         table_frame = ttk.LabelFrame(
             self.rm_timeline_tab,
             text="RM stock arrival details",
@@ -672,11 +695,26 @@ class ProductionPlanApp(tk.Tk):
         if not hasattr(self, "rm_timeline_tree"):
             return
         try:
+            records = tuple(self.assortment_actual_records.values())
+            ranges = self._current_assortment_size_range_definitions()
+            selected_market = self.rm_timeline_market_var.get().strip().casefold()
             rows = build_rm_timeline(
-                self.assortment_actual_records.values(),
-                self._current_assortment_size_range_definitions(),
-                market_type=self.rm_timeline_market_var.get(),
+                records,
+                ranges,
+                market_type=selected_market,
             )
+            market_rows = {}
+            for market in ("domestic", "export"):
+                if selected_market == market:
+                    market_rows[market] = rows
+                elif selected_market == "all":
+                    market_rows[market] = build_rm_timeline(
+                        records,
+                        ranges,
+                        market_type=market,
+                    )
+                else:
+                    market_rows[market] = ()
         except ValueError as exc:
             self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
             self.rm_stock_as_of_var.set("Unavailable")
@@ -684,7 +722,8 @@ class ProductionPlanApp(tk.Tk):
             self.rm_stock_unused_var.set("—")
             self.rm_stock_wontons_var.set("—")
             for variables in self.rm_stock_size_vars.values():
-                variables["stock"].set("—")
+                for variable in variables.values():
+                    variable.set("—")
             self.rm_timeline_status_var.set(str(exc))
             return
 
@@ -728,6 +767,19 @@ class ProductionPlanApp(tk.Tk):
                 variables["stock"].set(
                     f"{self._format_optional_number(summary.total)} kg"
                 )
+                for market, filtered_rows in market_rows.items():
+                    market_total = 0.0
+                    if filtered_rows:
+                        market_final = filtered_rows[-1]
+                        market_summary = (
+                            market_final.m_stock
+                            if size_class == "M"
+                            else market_final.s_plus_stock
+                        )
+                        market_total = market_summary.total
+                    variables[market].set(
+                        f"{self._format_optional_number(market_total)} kg"
+                    )
             self.rm_timeline_status_var.set(
                 f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
                 "Stock is before Plan usage."
@@ -738,7 +790,8 @@ class ProductionPlanApp(tk.Tk):
             self.rm_stock_unused_var.set("0 kg")
             self.rm_stock_wontons_var.set("0")
             for variables in self.rm_stock_size_vars.values():
-                variables["stock"].set("0 kg")
+                for variable in variables.values():
+                    variable.set("0 kg")
             self.rm_timeline_status_var.set(
                 "No RM stock records for these filters."
             )

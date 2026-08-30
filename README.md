@@ -111,7 +111,8 @@ values. Plan normalizes both only while matching material, so either order size
 can consume the shared `S+` stock pool without changing the Order or Plan display.
 
 **Stock** shows a plain overview for total weight, unused weight, estimated
-wontons, and the latest availability date. M and S+ have separate stock sections.
+wontons, and the latest availability date. M and S+ have separate stock sections,
+each with DOMESTIC and EXPORT weight details that follow the active Use for filter.
 The dated RM-arrival table is always visible so the individual RM IDs behind the
 balances can be inspected directly. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused
