@@ -474,25 +474,6 @@ class ProductionPlanApp(tk.Tk):
             value="Cumulative stock before generated Plan consumption."
         )
 
-        header = ttk.Frame(self.rm_timeline_tab)
-        header.pack(fill=tk.X, pady=(0, 10))
-        header_text = ttk.Frame(header)
-        header_text.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Label(
-            header_text,
-            text="RM Stock",
-            style="Summary.TLabel",
-        ).pack(anchor=tk.W)
-        ttk.Label(
-            header_text,
-            text="Current incoming RM stock before generated Plan usage.",
-        ).pack(anchor=tk.W, pady=(2, 0))
-        ttk.Button(
-            header,
-            text="+ Add stock",
-            command=self._open_stock_editor,
-        ).pack(side=tk.RIGHT, anchor=tk.N)
-
         overview = ttk.LabelFrame(
             self.rm_timeline_tab,
             text="Stock overview",
@@ -524,6 +505,11 @@ class ProductionPlanApp(tk.Tk):
                 padx=(0, 20),
                 pady=(3, 0),
             )
+        ttk.Button(
+            overview,
+            text="+ Add stock",
+            command=self._open_stock_editor,
+        ).grid(row=0, column=3, rowspan=2, sticky=tk.E)
 
         self.rm_stock_distribution_canvas = tk.Canvas(
             overview,
@@ -535,7 +521,7 @@ class ProductionPlanApp(tk.Tk):
         self.rm_stock_distribution_canvas.grid(
             row=2,
             column=0,
-            columnspan=3,
+            columnspan=4,
             sticky="ew",
             pady=(12, 8),
         )
@@ -545,7 +531,7 @@ class ProductionPlanApp(tk.Tk):
         )
 
         distribution_legend = ttk.Frame(overview)
-        distribution_legend.grid(row=3, column=0, columnspan=3, sticky="ew")
+        distribution_legend.grid(row=3, column=0, columnspan=4, sticky="ew")
         for column, size_class in enumerate(("M", "S+", "Unused")):
             distribution_legend.columnconfigure(column, weight=1)
             legend_item = ttk.Frame(distribution_legend)
