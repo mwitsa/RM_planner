@@ -83,6 +83,42 @@ class OrderFilterTests(unittest.TestCase):
         self.assertEqual([record.record_id for record in filtered], ["2"])
         self.assertEqual([record.record_id for record in blank], ["3"])
 
+    def test_numeric_order_columns_have_sorted_filter_values(self) -> None:
+        self.records[0].order_cups = 1200
+        self.records[1].order_cups = 80
+        self.records[2].order_cups = None
+
+        self.assertEqual(
+            filter_options(self.records, "order_cups"),
+            ["80", "1200", BLANK_FILTER],
+        )
+        self.assertEqual(
+            [
+                record.record_id
+                for record in filter_orders(self.records, {"order_cups": "80"})
+            ],
+            ["2"],
+        )
+
+    def test_order_number_and_production_columns_are_filterable(self) -> None:
+        for index, record in enumerate(self.records, start=1):
+            record.order_no = f"ORD-{index:03d}"
+
+        self.assertEqual(
+            [
+                record.record_id
+                for record in filter_orders(
+                    self.records,
+                    {"order_no": "ORD-002", "production": "80"},
+                )
+            ],
+            ["2"],
+        )
+        self.assertEqual(
+            filter_options(self.records, "production"),
+            ["80", "100", BLANK_FILTER],
+        )
+
     def test_filters_rm_size(self) -> None:
         filtered = filter_orders(self.records, {"rm_size": "S"})
         self.assertEqual([record.record_id for record in filtered], ["2", "3"])

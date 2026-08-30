@@ -82,6 +82,7 @@ ASSORTMENT_CLASS_COLORS = {
     "SS": ("#ffe5cc", "#c66a16"),
 }
 ORDER_COLUMN_FILTER_KEYS = {
+    "order_no": "order_no",
     "year": "year",
     "month": "month",
     "date": "date",
@@ -92,8 +93,12 @@ ORDER_COLUMN_FILTER_KEYS = {
     "packaging": "packaging",
     "rm_size": "rm_size",
     "soup": "soup",
+    "wontons_per_cup": "wontons_per_cup",
+    "order_unit": "order_unit",
+    "order_cups": "order_cups",
     "cups_per_unit": "cups_per_unit",
-    "production": "production_status",
+    "total_wontons": "total_wontons",
+    "production": "production",
 }
 DEFAULT_EXISTING_STOCK_PIECES_PER_KG = {
     "M": "53",

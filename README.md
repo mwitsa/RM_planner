@@ -66,11 +66,11 @@ The Order table uses compact Excel-style filters directly in its column
 headers, so no separate filter panel takes up space. Click a header to sort,
 search its available values, select one or several values with checkboxes, or
 clear its filter. The menu includes Excel-style **Select All**, **OK**, and
-**Cancel** controls. Year, month, date, country, customer, Group 1, Group 2,
-packaging, RM Size, soup, ถ้วย/Unit, and production status filters cascade, so
-each selection limits the available choices in every other header. A dot marks
-filtered columns, an arrow marks the active sort direction, and the summary
-recalculates from the visible orders.
+**Cancel** controls. Every visible Order column is filterable, including order
+number, all quantity columns, and Production. Filters cascade, so each selection
+limits the available choices in every other header. A dot marks filtered
+columns, an arrow marks the active sort direction, and the summary recalculates
+from the visible orders.
 
 Orders are shown oldest-to-newest by their complete year, month, and date, with
 today first. Past orders are hidden by default; use **Show past orders** to

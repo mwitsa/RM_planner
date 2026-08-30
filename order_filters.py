@@ -30,6 +30,7 @@ ORDER_COLUMN_ATTRIBUTES = {
 }
 
 FILTER_SPECS = (
+    ("order_no", "Order No."),
     ("year", "Year"),
     ("month", "Month"),
     ("date", "Date"),
@@ -40,9 +41,22 @@ FILTER_SPECS = (
     ("packaging", "Packaging"),
     ("rm_size", "RM Size"),
     ("soup", "Soup"),
+    ("wontons_per_cup", "ลูกเกี๊ยว/ถ้วย"),
+    ("order_unit", "Order (unit)"),
+    ("order_cups", "Order (ถ้วย)"),
     ("cups_per_unit", "ถ้วย/Unit"),
-    ("production_status", "Production status"),
+    ("total_wontons", "จำนวนเกี๊ยว"),
+    ("production", "Production"),
 )
+
+NUMERIC_FILTER_KEYS = {
+    "wontons_per_cup",
+    "order_unit",
+    "order_cups",
+    "cups_per_unit",
+    "total_wontons",
+    "production",
+}
 
 FilterSelection = str | frozenset[str]
 
@@ -91,7 +105,7 @@ def filter_options(records: Iterable[OrderRecord], key: str) -> list[str]:
     if key == "production_status":
         return [PRODUCTION_ENTERED, PRODUCTION_MISSING]
     values = {filter_value(record, key) for record in records}
-    if key == "cups_per_unit":
+    if key in NUMERIC_FILTER_KEYS:
         return sorted(
             values,
             key=lambda value: (
@@ -219,11 +233,13 @@ def filter_value(record: OrderRecord, key: str) -> str:
         value = record.customer_name
     elif key == "production_status":
         return PRODUCTION_ENTERED if record.production is not None else PRODUCTION_MISSING
-    elif key == "cups_per_unit":
-        if record.cups_per_unit is None:
+    elif key in NUMERIC_FILTER_KEYS:
+        value = getattr(record, key)
+        if value is None:
             return BLANK_FILTER
-        return f"{record.cups_per_unit:.2f}".rstrip("0").rstrip(".")
+        return f"{value:.2f}".rstrip("0").rstrip(".")
     elif key in {
+        "order_no",
         "year",
         "month",
         "date",
