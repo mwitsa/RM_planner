@@ -8,12 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-STORE_VERSION = 1
+STORE_VERSION = 2
 
 
 @dataclass(frozen=True, slots=True)
 class CapacitySettings:
-    percentage: int = 100
+    percentage: int = 50
     raw_wonton: int | float | None = None
     cooked_wonton: int | float | None = None
 
@@ -22,14 +22,19 @@ def capacities_at_percentage(
     settings: CapacitySettings,
     percentage: int | float | None = None,
 ) -> tuple[int | float | None, int | float | None]:
-    """Return raw and cooked capacities scaled to the selected percentage."""
+    """Return capacities using a complementary raw/cooked production split.
+
+    ``percentage`` is the share assigned to raw wontons. Cooked wontons receive
+    the remaining share, so the two production shares always total 100%.
+    """
 
     normalized = _validate_settings(settings)
     selected_percentage = normalized.percentage if percentage is None else _required_percentage(percentage)
-    multiplier = selected_percentage / 100
+    raw_multiplier = selected_percentage / 100
+    cooked_multiplier = (100 - selected_percentage) / 100
     return (
-        _scaled_number(normalized.raw_wonton, multiplier),
-        _scaled_number(normalized.cooked_wonton, multiplier),
+        _scaled_number(normalized.raw_wonton, raw_multiplier),
+        _scaled_number(normalized.cooked_wonton, cooked_multiplier),
     )
 
 
@@ -46,7 +51,7 @@ def load_capacity_settings(store_path: str | Path) -> CapacitySettings:
         raise ValueError("Capacity settings have an invalid structure.")
     return _validate_settings(
         CapacitySettings(
-            percentage=payload.get("percentage", 100),
+            percentage=payload.get("raw_percentage", payload.get("percentage", 50)),
             raw_wonton=payload.get("raw_wonton"),
             cooked_wonton=payload.get("cooked_wonton"),
         )
@@ -62,7 +67,7 @@ def save_capacity_settings(
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "version": STORE_VERSION,
-        "percentage": normalized.percentage,
+        "raw_percentage": normalized.percentage,
         "raw_wonton": normalized.raw_wonton,
         "cooked_wonton": normalized.cooked_wonton,
     }
@@ -88,10 +93,10 @@ def _validate_settings(settings: CapacitySettings) -> CapacitySettings:
 
 def _required_percentage(value: object) -> int:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError("Capacity percentage must be a number from 0 to 100.")
+        raise ValueError("Raw capacity share must be a number from 0 to 100.")
     numeric = float(value)
     if not math.isfinite(numeric) or not 0 <= numeric <= 100:
-        raise ValueError("Capacity percentage must be from 0 to 100.")
+        raise ValueError("Raw capacity share must be from 0 to 100.")
     return int(round(numeric))
 
 

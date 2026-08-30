@@ -1776,8 +1776,8 @@ class ProductionPlanApp(tk.Tk):
         self._show_rm_section("actual")
 
     def _build_capacity_tab(self) -> None:
-        self.capacity_percentage_var = tk.DoubleVar(value=100)
-        self.capacity_percentage_text_var = tk.StringVar(value="100%")
+        self.capacity_percentage_var = tk.DoubleVar(value=50)
+        self.capacity_percentage_text_var = tk.StringVar(value="ดิบ 50% / สุก 50%")
         self.raw_wonton_capacity_var = tk.StringVar()
         self.cooked_wonton_capacity_var = tk.StringVar()
         self.raw_wonton_scaled_var = tk.StringVar(value="Set base capacity first")
@@ -1785,7 +1785,7 @@ class ProductionPlanApp(tk.Tk):
 
         percentage_frame = ttk.LabelFrame(
             self.capacity_tab,
-            text="Capacity percentage",
+            text="Capacity split between เกี๊ยวดิบ and เกี๊ยวสุก",
             padding=14,
         )
         percentage_frame.pack(fill=tk.X, pady=(0, 14))
@@ -1801,20 +1801,24 @@ class ProductionPlanApp(tk.Tk):
             percentage_frame,
             textvariable=self.capacity_percentage_text_var,
             style="Summary.TLabel",
-            width=6,
+            width=20,
             anchor=tk.CENTER,
         ).grid(row=0, column=1, padx=(0, 12))
         ttk.Button(
             percentage_frame,
-            text="Save percentage",
+            text="Save split",
             command=self._save_capacity_percentage,
         ).grid(row=0, column=2)
-        ttk.Label(percentage_frame, text="0%").grid(row=1, column=0, sticky=tk.W)
-        ttk.Label(percentage_frame, text="100%").grid(row=1, column=0, sticky=tk.E)
+        ttk.Label(percentage_frame, text="ดิบ 0% / สุก 100%").grid(
+            row=1, column=0, sticky=tk.W
+        )
+        ttk.Label(percentage_frame, text="ดิบ 100% / สุก 0%").grid(
+            row=1, column=0, sticky=tk.E
+        )
 
         self.capacity_preview_frame = ttk.LabelFrame(
             self.capacity_tab,
-            text="Available capacity at 100%",
+            text="Available capacity at ดิบ 50% / สุก 50%",
             padding=14,
         )
         self.capacity_preview_frame.pack(fill=tk.X, pady=(0, 14))
@@ -1841,7 +1845,7 @@ class ProductionPlanApp(tk.Tk):
 
         wonton_frame = ttk.LabelFrame(
             self.capacity_tab,
-            text="Wonton capacity numbers",
+            text="Maximum wonton capacity when 100% assigned to that type",
             padding=14,
         )
         wonton_frame.pack(fill=tk.X)
@@ -1873,16 +1877,22 @@ class ProductionPlanApp(tk.Tk):
         ).pack(fill=tk.X, pady=(14, 0))
 
     def _capacity_slider_changed(self, value: str) -> None:
-        self.capacity_percentage_text_var.set(f"{round(float(value))}%")
+        raw_share = round(float(value))
+        self.capacity_percentage_text_var.set(
+            f"ดิบ {raw_share}% / สุก {100 - raw_share}%"
+        )
         self._update_capacity_preview()
 
     def _update_capacity_preview(self) -> None:
-        percentage = round(self.capacity_percentage_var.get())
+        raw_share = round(self.capacity_percentage_var.get())
+        cooked_share = 100 - raw_share
         raw_wonton, cooked_wonton = capacities_at_percentage(
             self.capacity_settings,
-            percentage,
+            raw_share,
         )
-        self.capacity_preview_frame.configure(text=f"Available capacity at {percentage}%")
+        self.capacity_preview_frame.configure(
+            text=f"Available capacity at ดิบ {raw_share}% / สุก {cooked_share}%"
+        )
         self.raw_wonton_scaled_var.set(
             "Set base capacity first"
             if raw_wonton is None
@@ -1902,7 +1912,9 @@ class ProductionPlanApp(tk.Tk):
             return
         self.capacity_settings = settings
         self.capacity_percentage_var.set(settings.percentage)
-        self.capacity_percentage_text_var.set(f"{settings.percentage}%")
+        self.capacity_percentage_text_var.set(
+            f"ดิบ {settings.percentage}% / สุก {100 - settings.percentage}%"
+        )
         self.raw_wonton_capacity_var.set(self._format_optional_number(settings.raw_wonton))
         self.cooked_wonton_capacity_var.set(self._format_optional_number(settings.cooked_wonton))
         self._update_capacity_preview()
@@ -1921,10 +1933,14 @@ class ProductionPlanApp(tk.Tk):
             messagebox.showerror("Save capacity", str(exc))
             return
         self.capacity_percentage_var.set(self.capacity_settings.percentage)
-        self.capacity_percentage_text_var.set(f"{self.capacity_settings.percentage}%")
+        self.capacity_percentage_text_var.set(
+            f"ดิบ {self.capacity_settings.percentage}% / "
+            f"สุก {100 - self.capacity_settings.percentage}%"
+        )
         self._update_capacity_preview()
         self.capacity_status_var.set(
-            f"Saved capacity percentage at {self.capacity_settings.percentage}%."
+            f"Saved capacity split: ดิบ {self.capacity_settings.percentage}% and "
+            f"สุก {100 - self.capacity_settings.percentage}%."
         )
 
     def _save_capacity_numbers(self) -> None:

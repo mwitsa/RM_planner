@@ -84,6 +84,16 @@ def class_definition(class_value: str, name: str, group: str) -> ClassDefinition
     )
 
 
+def balanced_capacity(raw_wonton: float, cooked_wonton: float) -> CapacitySettings:
+    """Build a 50/50 split whose available limits equal the supplied numbers."""
+
+    return CapacitySettings(
+        percentage=50,
+        raw_wonton=raw_wonton * 2,
+        cooked_wonton=cooked_wonton * 2,
+    )
+
+
 class PlanEngineTests(unittest.TestCase):
     def test_month_only_order_is_due_on_last_day(self) -> None:
         self.assertEqual(order_due_date(order("a", day="", month="02")), date(2026, 2, 28))
@@ -93,7 +103,7 @@ class PlanEngineTests(unittest.TestCase):
             [order("a", rm_size="S", order_cups=650, wontons_per_cup=1, order_unit=650)],
             [stock((("61-69", 10),))],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=1000, cooked_wonton=1000),
+            balanced_capacity(1000, 1000),
             [],
             [],
             planning_date=date(2026, 8, 28),
@@ -111,7 +121,7 @@ class PlanEngineTests(unittest.TestCase):
             [order("a", day="31", order_cups=250, wontons_per_cup=1, order_unit=250)],
             [stock((("51-55", 10),))],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=100, cooked_wonton=100),
+            balanced_capacity(100, 100),
             [],
             [],
             planning_date=date(2026, 8, 28),
@@ -129,7 +139,7 @@ class PlanEngineTests(unittest.TestCase):
             ],
             [stock((("61-69", 10),))],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             [],
             [],
             planning_date=date(2026, 8, 28),
@@ -147,7 +157,7 @@ class PlanEngineTests(unittest.TestCase):
             ],
             [stock((("71-75", 10), ("61-65", 10)))],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             [],
             [],
             planning_date=date(2026, 8, 28),
@@ -163,7 +173,7 @@ class PlanEngineTests(unittest.TestCase):
             [order("a", day="31", order_cups=100, wontons_per_cup=1, order_unit=100)],
             [stock((("51-55", 10),), record_date="2026-08-30")],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             [],
             [],
             planning_date=date(2026, 8, 28),
@@ -209,7 +219,7 @@ class PlanEngineTests(unittest.TestCase):
                 stock((("51-55", 2),), market_type="export", record_id="export-rm", rm_id="RM-EXPORT"),
             ],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=100, cooked_wonton=100),
+            balanced_capacity(100, 100),
             definitions,
             ["RM", "country"],
             planning_date=date(2026, 8, 28),
@@ -263,7 +273,7 @@ class PlanEngineTests(unittest.TestCase):
                 stock((("51-55", 2),), market_type="domestic", record_id="domestic-rm", rm_id="RM-DOMESTIC"),
             ],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=100, cooked_wonton=100),
+            balanced_capacity(100, 100),
             definitions,
             ["group1"],
             planning_date=date(2026, 8, 28),
@@ -289,7 +299,7 @@ class PlanEngineTests(unittest.TestCase):
             ],
             [stock((("51-55", 2),), market_type="domestic")],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             definitions,
             [],
             planning_date=date(2026, 8, 28),
@@ -340,7 +350,7 @@ class PlanEngineTests(unittest.TestCase):
             ],
             [existing],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             definitions,
             [],
             planning_date=date(2026, 8, 28),
@@ -354,7 +364,7 @@ class PlanEngineTests(unittest.TestCase):
             [order("a", order_cups=100, wontons_per_cup=10, order_unit=10, production=5)],
             [stock((("51-55", 20),))],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             [],
             [],
             planning_date=date(2026, 8, 28),
@@ -372,7 +382,7 @@ class PlanEngineTests(unittest.TestCase):
             ],
             [stock((("51-55", 20),))],
             RANGES,
-            CapacitySettings(percentage=100, raw_wonton=5000, cooked_wonton=5000),
+            balanced_capacity(5000, 5000),
             [],
             [],
             planning_date=date(2026, 8, 28),
