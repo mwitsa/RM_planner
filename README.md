@@ -76,7 +76,8 @@ Orders are shown oldest-to-newest by their complete year, month, and date, with
 today first. Past orders are hidden by default; use **Show past orders** to
 include them and **Hide past orders** to return to the current view. Orders that
 only specify a month use the final day of that month for chronological sorting
-and the past-order check.
+and the past-order check, but they appear after every explicitly dated order in
+that month (including orders dated on the final day).
 
 The **Class Rule** tab stores text rules in waterfall priority. Add or update a
 rule, drag it up or down (or use the Move buttons), and click **Save rules**.

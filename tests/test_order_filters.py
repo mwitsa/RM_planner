@@ -226,6 +226,33 @@ class OrderFilterTests(unittest.TestCase):
 
         self.assertEqual([record.record_id for record in sorted_records], ["2", "3", "1"])
 
+    def test_schedule_sort_places_month_only_after_explicit_month_end(self) -> None:
+        self.records[0].year, self.records[0].month, self.records[0].date = (
+            "2026",
+            "08",
+            "",
+        )
+        self.records[1].year, self.records[1].month, self.records[1].date = (
+            "2026",
+            "08",
+            "31",
+        )
+        self.records[2].year, self.records[2].month, self.records[2].date = (
+            "2026",
+            "09",
+            "01",
+        )
+
+        ascending = sort_orders(self.records, SCHEDULE_DATE_COLUMN)
+        descending = sort_orders(
+            self.records,
+            SCHEDULE_DATE_COLUMN,
+            descending=True,
+        )
+
+        self.assertEqual([record.record_id for record in ascending], ["2", "1", "3"])
+        self.assertEqual([record.record_id for record in descending], ["3", "2", "1"])
+
 
 if __name__ == "__main__":
     unittest.main()

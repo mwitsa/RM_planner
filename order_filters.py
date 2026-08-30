@@ -153,16 +153,20 @@ def sort_orders(
     if column is None:
         return record_list
     if column == SCHEDULE_DATE_COLUMN:
-        dated: list[tuple[date, OrderRecord]] = []
+        dated: list[tuple[date, bool, OrderRecord]] = []
         undated: list[OrderRecord] = []
         for record in record_list:
             effective_date = order_effective_date(record)
             if effective_date is None:
                 undated.append(record)
             else:
-                dated.append((effective_date, record))
+                month_only = not str(record.date).strip()
+                dated.append((effective_date, month_only, record))
+        # Preserve explicit month-end dates before month-only rows even when the
+        # primary date direction is reversed.
+        dated.sort(key=lambda item: item[1])
         dated.sort(key=lambda item: item[0], reverse=descending)
-        return [record for _value, record in dated] + undated
+        return [record for _value, _month_only, record in dated] + undated
     attribute = ORDER_COLUMN_ATTRIBUTES.get(column, column)
     if not hasattr(OrderRecord, attribute) and attribute not in OrderRecord.__slots__:
         raise ValueError(f"Unknown order sort column: {column}")
