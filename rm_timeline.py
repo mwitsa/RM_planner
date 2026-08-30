@@ -125,7 +125,7 @@ def _summarize_records(
             "Unused": SizeClassWeightSummary(total),
         }
     entries: list[tuple[str, str, float]] = []
-    direct_totals = {key: 0.0 for key in SIZE_CLASSES}
+    direct_totals = {key: 0.0 for key in (*SIZE_CLASSES, "Unused")}
     for record in records:
         for entry in record.entries:
             size_class = normalize_size_class(entry.size_class)

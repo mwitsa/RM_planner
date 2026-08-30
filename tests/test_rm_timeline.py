@@ -121,6 +121,26 @@ class RmTimelineTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0].m_wontons, 1000 / 8.6)
         self.assertAlmostEqual(rows[0].cumulative_wontons, 1000 / 8.6)
 
+    def test_direct_unused_class_is_counted_but_has_no_wonton_yield(self) -> None:
+        unused = ActualAssortmentRecord(
+            record_id="unused-1",
+            rm_id="RM-UNUSED",
+            record_date="2026-08-28",
+            entries=(
+                ActualAssortmentEntry("Unused", 25, size_class="Unused"),
+            ),
+            record_type="actual",
+            market_type="domestic",
+            created_at="2026-08-28T00:00:00+00:00",
+            updated_at="2026-08-28T00:00:00+00:00",
+        )
+
+        rows = build_rm_timeline([unused], RANGES)
+
+        self.assertEqual(rows[0].unused_stock.total, 25)
+        self.assertEqual(rows[0].cumulative_kg, 25)
+        self.assertEqual(rows[0].cumulative_wontons, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

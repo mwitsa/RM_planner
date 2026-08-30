@@ -11,6 +11,7 @@ from assortment_range_store import (
     default_size_ranges,
     load_size_ranges,
     save_size_ranges,
+    normalize_size_class,
     summarize_size_class_weight_details,
     summarize_size_class_weights,
 )
@@ -34,6 +35,10 @@ class AssortmentRangeStoreTests(unittest.TestCase):
             ),
         )
         self.assertEqual(load_size_ranges(self.store_path, self.sizes), ranges)
+
+    def test_normalizes_legacy_and_unused_class_names(self) -> None:
+        self.assertEqual(normalize_size_class("SS"), "S+")
+        self.assertEqual(normalize_size_class("unused"), "Unused")
 
     def test_round_trip_preserves_ranges(self) -> None:
         ranges = (

@@ -14,21 +14,18 @@ from assortment import AssortmentTable, load_assortment, predict_assortment
 from assortment_range_store import (
     SIZE_CLASSES,
     AssortmentSizeRange,
-    classify_size_range,
     default_size_ranges,
     load_size_ranges,
     normalize_size_class,
     save_size_ranges,
     SizeClassWeightSummary,
-    summarize_size_class_weight_details,
 )
 from assortment_actual_store import (
     ActualAssortmentEntry,
     ActualAssortmentRecord,
-    combine_size_range,
+    aggregate_entries_by_size_class,
     delete_actual_record,
     load_actual_records,
-    split_size_range,
     upsert_actual_record,
 )
 from class_store import (
@@ -2076,12 +2073,14 @@ class ProductionPlanApp(tk.Tk):
 
         self._editing_actual_record_id = None
         self.assortment_actual_save_button.configure(text="Save stock")
-        self._set_assortment_actual_boxes(
-            [
+        class_entries = aggregate_entries_by_size_class(
+            (
                 ActualAssortmentEntry(size=item.output_size, weight=item.weight)
                 for item in predictions
-            ]
+            ),
+            self._current_assortment_size_range_definitions(),
         )
+        self._set_assortment_actual_boxes(list(class_entries))
         requested_size = self.stock_harvest_size_var.get().strip()
         master_size = requested_size if requested_size.casefold().startswith("s.") else f"S.{requested_size}"
         resolved_size = next(
@@ -2090,7 +2089,8 @@ class ProductionPlanApp(tk.Tk):
             if base_size.casefold() == master_size.casefold()
         )
         message = (
-            f"Filled {len(predictions)} size rows from {resolved_size} and "
+            f"Combined {len(predictions)} assortment sizes into "
+            f"{len(class_entries)} class rows from {resolved_size} and "
             f"{allocated_weight:,} kg in whole kilograms. "
             "Review or edit the rows before saving."
         )
@@ -2458,7 +2458,10 @@ class ProductionPlanApp(tk.Tk):
         ).grid(row=0, column=4, sticky=tk.E)
         ttk.Label(
             std_fill_frame,
-            text="Uses STD percentages to fill the size rows below; all calculated rows remain editable.",
+            text=(
+                "Uses STD percentages, then combines all output sizes into "
+                "M, S+, and Unused class totals."
+            ),
         ).grid(row=1, column=0, columnspan=5, sticky=tk.W, pady=(6, 0))
 
         form_actions = ttk.Frame(form_panel)
@@ -2477,7 +2480,7 @@ class ProductionPlanApp(tk.Tk):
 
         box_header = ttk.Frame(form_panel)
         box_header.pack(fill=tk.X, pady=(0, 6))
-        ttk.Label(box_header, text="3. Size and weight", style="Summary.TLabel").pack(side=tk.LEFT)
+        ttk.Label(box_header, text="3. Class and weight", style="Summary.TLabel").pack(side=tk.LEFT)
         self.assortment_entry_summary_var = tk.StringVar(value="1 row | Total 0 kg")
         ttk.Label(
             box_header,
@@ -2486,23 +2489,17 @@ class ProductionPlanApp(tk.Tk):
 
         ttk.Label(
             form_panel,
-            text="Size class is filled automatically from Assortment STD. Crossing ranges become Unused.",
+            text="Enter stock directly as M, S+, or Unused. Each class may be used once.",
         ).pack(anchor=tk.W, pady=(0, 6))
 
         entry_headings = ttk.Frame(form_panel, padding=(6, 5))
         entry_headings.pack(fill=tk.X)
         entry_headings.columnconfigure(1, weight=1)
-        entry_headings.columnconfigure(3, weight=1)
-        entry_headings.columnconfigure(5, weight=1)
+        entry_headings.columnconfigure(2, weight=1)
         ttk.Label(entry_headings, text="#", width=4).grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(entry_headings, text="Size start").grid(row=0, column=1, sticky=tk.W)
-        ttk.Label(entry_headings, text="").grid(row=0, column=2, padx=5)
-        ttk.Label(entry_headings, text="Size end").grid(row=0, column=3, sticky=tk.W)
-        ttk.Label(entry_headings, text="Class", width=12).grid(
-            row=0, column=4, sticky=tk.W, padx=(10, 8)
-        )
-        ttk.Label(entry_headings, text="Weight (kg)").grid(row=0, column=5, sticky=tk.W)
-        ttk.Label(entry_headings, text="", width=8).grid(row=0, column=6)
+        ttk.Label(entry_headings, text="Class").grid(row=0, column=1, sticky=tk.W)
+        ttk.Label(entry_headings, text="Weight (kg)").grid(row=0, column=2, sticky=tk.W)
+        ttk.Label(entry_headings, text="", width=8).grid(row=0, column=3)
 
         list_container = ttk.Frame(form_panel)
         list_container.pack(fill=tk.BOTH, expand=True)
@@ -2634,12 +2631,10 @@ class ProductionPlanApp(tk.Tk):
 
     def _add_assortment_actual_box(
         self,
-        size_start: str = "",
-        size_end: str = "",
+        size_class: str = "",
         weight: str = "",
     ) -> None:
-        size_start_var = tk.StringVar(value=size_start)
-        size_end_var = tk.StringVar(value=size_end)
+        size_class_var = tk.StringVar(value=normalize_size_class(size_class))
         weight_var = tk.StringVar(value=weight)
         row_number_var = tk.StringVar()
         box = ttk.Frame(self.assortment_actual_list, padding=(6, 5))
@@ -2647,62 +2642,42 @@ class ProductionPlanApp(tk.Tk):
         box.pack(fill=tk.X, pady=(0, 2))
         self.assortment_actual_add_row_footer.pack(fill=tk.X)
         box.columnconfigure(1, weight=1)
-        box.columnconfigure(3, weight=1)
-        box.columnconfigure(5, weight=1)
+        box.columnconfigure(2, weight=1)
 
         ttk.Label(box, textvariable=row_number_var, width=4).grid(
             row=0, column=0, sticky=tk.W
         )
-        ttk.Entry(box, textvariable=size_start_var).grid(
-            row=0, column=1, sticky="ew"
-        )
-        ttk.Label(box, text="–").grid(row=0, column=2, padx=5)
-        ttk.Entry(box, textvariable=size_end_var).grid(
-            row=0, column=3, sticky="ew"
-        )
-
-        size_class_var = tk.StringVar()
-        size_class_label = ttk.Label(
+        ttk.Combobox(
             box,
             textvariable=size_class_var,
-            width=12,
-            anchor=tk.CENTER,
-            font=("Segoe UI", 9, "bold"),
-        )
-        size_class_label.grid(row=0, column=4, sticky="ew", padx=(10, 8))
+            values=(*SIZE_CLASSES, "Unused"),
+            state="readonly",
+        ).grid(row=0, column=1, sticky="ew", padx=(0, 12))
         ttk.Entry(box, textvariable=weight_var).grid(
-            row=0, column=5, sticky="ew"
+            row=0, column=2, sticky="ew"
         )
 
         ttk.Button(
             box,
             text="Remove",
             command=lambda current_box=box: self._remove_assortment_actual_box(current_box),
-        ).grid(row=0, column=6, sticky=tk.E, padx=(8, 0))
+        ).grid(row=0, column=3, sticky=tk.E, padx=(8, 0))
 
         box_entry: dict[str, object] = {
             "frame": box,
-            "size_start": size_start_var,
-            "size_end": size_end_var,
             "size_class": size_class_var,
-            "size_class_label": size_class_label,
             "weight": weight_var,
             "row_number": row_number_var,
         }
-        size_start_var.trace_add(
+        size_class_var.trace_add(
             "write",
-            lambda *_args, current=box_entry: self._update_assortment_box_size_class(current),
-        )
-        size_end_var.trace_add(
-            "write",
-            lambda *_args, current=box_entry: self._update_assortment_box_size_class(current),
+            lambda *_args: self._update_assortment_entry_summary(),
         )
         weight_var.trace_add(
             "write",
             lambda *_args: self._update_assortment_entry_summary(),
         )
         self.assortment_actual_boxes.append(box_entry)
-        self._update_assortment_box_size_class(box_entry)
         self._renumber_assortment_actual_boxes()
         self._update_assortment_entry_summary()
         self.assortment_actual_canvas.after_idle(
@@ -2735,12 +2710,11 @@ class ProductionPlanApp(tk.Tk):
         completed_rows = 0
         total_weight = 0.0
         for entry in self.assortment_actual_boxes:
-            start = entry["size_start"]
-            end = entry["size_end"]
+            size_class = entry["size_class"]
             weight = entry["weight"]
-            if not all(isinstance(value, tk.StringVar) for value in (start, end, weight)):
+            if not all(isinstance(value, tk.StringVar) for value in (size_class, weight)):
                 continue
-            if start.get().strip() and end.get().strip() and weight.get().strip():
+            if size_class.get().strip() and weight.get().strip():
                 completed_rows += 1
             try:
                 total_weight += float(weight.get().strip().replace(",", "") or 0)
@@ -2766,35 +2740,6 @@ class ProductionPlanApp(tk.Tk):
             for size_class in SIZE_CLASSES
         )
 
-    def _update_assortment_box_size_class(self, box_entry: dict[str, object]) -> None:
-        size_start_var = box_entry.get("size_start")
-        size_end_var = box_entry.get("size_end")
-        size_class_var = box_entry.get("size_class")
-        size_class_label = box_entry.get("size_class_label")
-        if not all(
-            isinstance(value, tk.StringVar)
-            for value in (size_start_var, size_end_var, size_class_var)
-        ) or not isinstance(size_class_label, ttk.Label):
-            return
-        size_start = size_start_var.get().strip()
-        size_end = size_end_var.get().strip()
-        ranges = self._current_assortment_size_range_definitions()
-        if not size_start or not size_end or not ranges:
-            size_class_var.set("")
-            return
-        try:
-            classes = classify_size_range(size_start, size_end, ranges)
-        except ValueError:
-            size_class_var.set("Invalid range")
-            return
-        size_class_var.set(", ".join(classes))
-
-    def _refresh_assortment_actual_size_classes(self) -> None:
-        if not hasattr(self, "assortment_actual_boxes"):
-            return
-        for box_entry in self.assortment_actual_boxes:
-            self._update_assortment_box_size_class(box_entry)
-
     def _new_assortment_actual_form(self, set_status: bool = True) -> None:
         today = date.today()
         self.actual_day_var.set(f"{today.day:02d}")
@@ -2816,11 +2761,13 @@ class ProductionPlanApp(tk.Tk):
                 frame.destroy()
         self.assortment_actual_boxes.clear()
         if entries:
-            for entry in entries:
-                size_start, size_end = split_size_range(entry.size)
+            class_entries = aggregate_entries_by_size_class(
+                entries,
+                self._current_assortment_size_range_definitions(),
+            )
+            for entry in class_entries:
                 self._add_assortment_actual_box(
-                    size_start,
-                    size_end,
+                    entry.size_class,
                     self._format_weight(entry.weight),
                 )
         else:
@@ -2828,38 +2775,37 @@ class ProductionPlanApp(tk.Tk):
 
     def _collect_assortment_actual_entries(self) -> list[ActualAssortmentEntry]:
         entries: list[ActualAssortmentEntry] = []
+        used_classes: set[str] = set()
         for number, box_entry in enumerate(self.assortment_actual_boxes, start=1):
-            size_start_var = box_entry["size_start"]
-            size_end_var = box_entry["size_end"]
+            size_class_var = box_entry["size_class"]
             weight_var = box_entry["weight"]
             if not all(
                 isinstance(value, tk.StringVar)
-                for value in (size_start_var, size_end_var, weight_var)
+                for value in (size_class_var, weight_var)
             ):
                 continue
-            size_start = size_start_var.get().strip()
-            size_end = size_end_var.get().strip()
+            size_class = normalize_size_class(size_class_var.get())
             weight_text = weight_var.get().strip().replace(",", "")
-            if not size_start and not size_end and not weight_text:
+            if not size_class and not weight_text:
                 continue
-            if not size_start or not size_end or not weight_text:
-                raise ValueError(
-                    f"Row {number} needs Size start, Size end, and Weight."
-                )
+            if not size_class or not weight_text:
+                raise ValueError(f"Row {number} needs Class and Weight.")
+            if size_class not in (*SIZE_CLASSES, "Unused"):
+                raise ValueError(f"Row {number} has an invalid Class.")
+            if size_class in used_classes:
+                raise ValueError(f"Class {size_class} is already used in another row.")
             try:
                 weight = float(weight_text)
             except ValueError as exc:
                 raise ValueError(f"Row {number} has an invalid Weight.") from exc
-            ranges = self._current_assortment_size_range_definitions()
-            if ranges:
-                try:
-                    classify_size_range(size_start, size_end, ranges)
-                except ValueError as exc:
-                    raise ValueError(
-                        f"Row {number} has an invalid Size range: {exc}"
-                    ) from exc
-            size = combine_size_range(size_start, size_end)
-            entries.append(ActualAssortmentEntry(size=size, weight=weight))
+            used_classes.add(size_class)
+            entries.append(
+                ActualAssortmentEntry(
+                    size=size_class,
+                    weight=weight,
+                    size_class=size_class,
+                )
+            )
         return entries
 
     def _selected_assortment_actual_date(self) -> str:
@@ -2963,28 +2909,15 @@ class ProductionPlanApp(tk.Tk):
         self,
         record: ActualAssortmentRecord,
     ) -> dict[str, SizeClassWeightSummary]:
-        ranges = self._current_assortment_size_range_definitions()
-        direct_totals = {size_class: 0.0 for size_class in SIZE_CLASSES}
-        entries: list[tuple[str, str, float]] = []
-        for entry in record.entries:
-            size_class = normalize_size_class(entry.size_class)
-            if size_class in direct_totals:
-                direct_totals[size_class] += float(entry.weight)
-                continue
-            size_start, size_end = split_size_range(entry.size)
-            entries.append((size_start, size_end, entry.weight))
-        if ranges:
-            summarized = summarize_size_class_weight_details(entries, ranges)
-        else:
-            summarized = {
-                "M": SizeClassWeightSummary(0),
-                "S+": SizeClassWeightSummary(0),
-                "Unused": SizeClassWeightSummary(sum(weight for _, _, weight in entries)),
-            }
+        aggregated = aggregate_entries_by_size_class(
+            record.entries,
+            self._current_assortment_size_range_definitions(),
+        )
+        totals = {size_class: 0.0 for size_class in (*SIZE_CLASSES, "Unused")}
+        for entry in aggregated:
+            totals[entry.size_class] += float(entry.weight)
         return {
-            size_class: SizeClassWeightSummary(
-                summarized[size_class].total + direct_totals.get(size_class, 0)
-            )
+            size_class: SizeClassWeightSummary(totals[size_class])
             for size_class in (*SIZE_CLASSES, "Unused")
         }
 
@@ -3011,13 +2944,6 @@ class ProductionPlanApp(tk.Tk):
         record = self.assortment_actual_records.get(selected[0])
         if not record:
             messagebox.showerror("Stock error", "The selected stock record could not be found.")
-            return
-        if any(entry.size_class for entry in record.entries):
-            messagebox.showinfo(
-                "Legacy stock record",
-                "This older class-only stock record cannot be edited in the size-range form. "
-                "You can delete it with Delete selected stock, then enter a replacement if needed.",
-            )
             return
         year, month, day = record.record_date.split("-")
         self.actual_day_var.set(day)
@@ -3256,8 +3182,6 @@ class ProductionPlanApp(tk.Tk):
                 justify=tk.CENTER,
                 tags="assortment_range",
             )
-        self._refresh_assortment_actual_size_classes()
-
     def _start_assortment_range_drag(self, event: tk.Event) -> None:
         if not self.assortment_table:
             return

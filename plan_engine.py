@@ -432,7 +432,11 @@ def _inventory_lots(
         available_date = date.fromisoformat(record.record_date)
         for entry in record.entries:
             if entry.size_class:
-                classes = (normalize_size_class(entry.size_class),)
+                classes = tuple(
+                    size_class
+                    for size_class in (normalize_size_class(entry.size_class),)
+                    if size_class in SUPPORTED_RM_SIZES
+                )
             else:
                 start, end = split_size_range(entry.size)
                 classes = tuple(

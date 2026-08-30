@@ -11,12 +11,19 @@ from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
-from assortment_range_store import SIZE_CLASSES, normalize_size_class
+from assortment_range_store import (
+    AssortmentSizeRange,
+    SIZE_CLASSES,
+    SizeClassWeightSummary,
+    normalize_size_class,
+    summarize_size_class_weight_details,
+)
 from market_labels import market_internal_value
 
 
-STORE_VERSION = 5
+STORE_VERSION = 6
 RECORD_TYPES = {"actual", "prediction", "existing"}
+STOCK_SIZE_CLASSES = (*SIZE_CLASSES, "Unused")
 RM_ID_PREFIX = "RM-"
 RM_ID_WIDTH = 6
 RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
@@ -106,6 +113,47 @@ def estimate_wonton_pieces(entries: Iterable[ActualAssortmentEntry]) -> int | fl
     return int(total) if total.is_integer() else total
 
 
+def aggregate_entries_by_size_class(
+    entries: Iterable[ActualAssortmentEntry],
+    ranges: Iterable[AssortmentSizeRange],
+) -> tuple[ActualAssortmentEntry, ...]:
+    """Combine physical size rows and class rows into M, S+, and Unused totals."""
+
+    direct_totals = {size_class: 0.0 for size_class in STOCK_SIZE_CLASSES}
+    physical_entries: list[tuple[str, str, float]] = []
+    for entry in entries:
+        size_class = normalize_size_class(entry.size_class)
+        if size_class in direct_totals:
+            direct_totals[size_class] += float(entry.weight)
+            continue
+        size_start, size_end = split_size_range(entry.size)
+        physical_entries.append((size_start, size_end, entry.weight))
+
+    range_list = tuple(ranges)
+    if range_list:
+        summarized = summarize_size_class_weight_details(physical_entries, range_list)
+    else:
+        unused_total = sum(float(weight) for _, _, weight in physical_entries)
+        summarized = {
+            "M": SizeClassWeightSummary(0),
+            "S+": SizeClassWeightSummary(0),
+            "Unused": SizeClassWeightSummary(unused_total),
+        }
+
+    aggregated: list[ActualAssortmentEntry] = []
+    for size_class in STOCK_SIZE_CLASSES:
+        total = direct_totals[size_class] + float(summarized[size_class].total)
+        if total > 0:
+            aggregated.append(
+                ActualAssortmentEntry(
+                    size=size_class,
+                    weight=int(total) if total.is_integer() else total,
+                    size_class=size_class,
+                )
+            )
+    return tuple(aggregated)
+
+
 def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
     path = Path(store_path)
     if not path.exists():
@@ -173,7 +221,7 @@ def upsert_actual_record(
     _validate_date(record_date)
     normalized_entries = tuple(_validate_entry(entry) for entry in entries)
     if not normalized_entries:
-        raise ValueError("Add at least one Size and Weight entry before saving.")
+        raise ValueError("Add at least one Class and Weight entry before saving.")
 
     records = load_actual_records(path)
     now = datetime.now(timezone.utc).isoformat()
@@ -270,18 +318,20 @@ def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
     if weight <= 0:
         raise ValueError(f"Weight for size {size} must be greater than zero.")
     pieces_per_kg = entry.pieces_per_kg
-    if size_class or pieces_per_kg is not None:
+    if size_class and size_class not in STOCK_SIZE_CLASSES:
+        raise ValueError("Stock class must be M, S+, or Unused.")
+    if pieces_per_kg is not None:
         if size_class not in SIZE_CLASSES:
-            raise ValueError("Existing stock Size class must be M or S+.")
+            raise ValueError("Legacy pieces/kg is supported only for M or S+ stock.")
         try:
             pieces_per_kg = float(pieces_per_kg)
         except (TypeError, ValueError) as exc:
             raise ValueError(
-                f"Existing {size_class} stock needs a valid average pieces/kg value."
+                f"{size_class} stock needs a valid average pieces/kg value."
             ) from exc
         if not math.isfinite(pieces_per_kg) or pieces_per_kg <= 0:
             raise ValueError(
-                f"Existing {size_class} stock pieces/kg must be greater than zero."
+                f"{size_class} stock pieces/kg must be greater than zero."
             )
     return ActualAssortmentEntry(
         size=size,

@@ -134,22 +134,20 @@ range maintenance, and per-class wonton-weight settings; stock entry is handled
 in the Stock editor.
 In **+ Add stock**, enter the availability date and optionally use **Fill from
 Assortment STD** with a harvest size (for example `74`) and total weight. The app
-uses column `S.74` and fills editable size/weight rows from its percentages.
-Generated weights use whole kilograms and are allocated so their sum remains
-equal to the rounded harvest weight.
-Transferred and manually entered rows use the same stock workflow. Older saved
+uses column `S.74`, calculates its output-size distribution, and combines those
+sizes into editable M, S+, and Unused class totals. Generated weights use whole
+kilograms and are allocated so their sum remains equal to the rounded harvest
+weight.
+Manual stock entry also uses only a Class and Weight—physical size ranges are no
+longer entered in Add Stock. Older saved
 records that contain an internal stock type remain readable and are combined in
 Stock totals, but the type is no longer shown or selected in the app. A saved
 history row can also be permanently deleted after confirmation. Use **+ Add
 stock** on the Stock page to open the stock editor. Stock details and actions are
-grouped at the top, while each size and weight entry uses one compact row. Use
+grouped at the top, while each class and weight entry uses one compact row. Use
 **Add row** for additional entries. The editor shows completed row count and total
 weight while entering data. Saved stock appears in the panel on the right and can
 be loaded, edited, and updated. Saving returns to the refreshed Stock overview.
-Legacy class-only stock from the removed Existing Stock page is also listed in
-Saved stock so it can be deleted. Because it has no original size range, it must
-be deleted and re-entered rather than edited in the size-range form.
-Each completed size range is automatically classified against the current M/S+
-ranges. A range crossing both classes or outside both classifications shows
-`Unused`.
+Legacy physical-size records remain readable and are combined into their class
+totals when loaded into the editor.
 Saved stock summarizes the weight for M, S+, and Unused in separate columns.

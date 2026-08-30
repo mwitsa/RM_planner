@@ -31,7 +31,11 @@ def normalize_size_class(value: object) -> str:
     """Return the current RM class while accepting legacy S and SS values."""
 
     normalized = str(value or "").strip().upper()
-    return "S+" if normalized in {"S", "SS", "S+"} else normalized
+    if normalized in {"S", "SS", "S+"}:
+        return "S+"
+    if normalized == "UNUSED":
+        return "Unused"
+    return normalized
 
 
 def classify_size_range(

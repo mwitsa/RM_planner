@@ -7,6 +7,7 @@ from pathlib import Path
 
 from assortment_actual_store import (
     ActualAssortmentEntry,
+    aggregate_entries_by_size_class,
     combine_size_range,
     delete_actual_record,
     estimate_wonton_pieces,
@@ -14,6 +15,7 @@ from assortment_actual_store import (
     split_size_range,
     upsert_actual_record,
 )
+from assortment_range_store import AssortmentSizeRange
 
 
 class ActualAssortmentStoreTests(unittest.TestCase):
@@ -100,8 +102,25 @@ class ActualAssortmentStoreTests(unittest.TestCase):
         self.assertEqual(loaded.entries[0].pieces_per_kg, 65)
         self.assertEqual(estimate_wonton_pieces(loaded.entries), 6500)
 
-    def test_existing_stock_requires_valid_size_class_and_pieces_per_kg(self) -> None:
-        with self.assertRaisesRegex(ValueError, r"M or S\+"):
+    def test_class_only_stock_round_trips_without_physical_size_ranges(self) -> None:
+        saved = upsert_actual_record(
+            self.store_path,
+            "2026-08-20",
+            [
+                ActualAssortmentEntry("M", 100, size_class="M"),
+                ActualAssortmentEntry("S+", 200, size_class="S+"),
+                ActualAssortmentEntry("Unused", 50, size_class="Unused"),
+            ],
+        )
+
+        self.assertEqual(
+            [(entry.size_class, entry.weight) for entry in saved.entries],
+            [("M", 100), ("S+", 200), ("Unused", 50)],
+        )
+        self.assertTrue(all(entry.pieces_per_kg is None for entry in saved.entries))
+
+    def test_stock_requires_valid_size_class(self) -> None:
+        with self.assertRaisesRegex(ValueError, r"M, S\+, or Unused"):
             upsert_actual_record(
                 self.store_path,
                 "2026-08-20",
@@ -115,6 +134,28 @@ class ActualAssortmentStoreTests(unittest.TestCase):
                 ],
                 record_type="existing",
             )
+
+    def test_aggregates_physical_assortment_rows_into_class_totals(self) -> None:
+        ranges = (
+            AssortmentSizeRange("M", "46-50", "56-60"),
+            AssortmentSizeRange("S+", "61-65", "81-85"),
+        )
+
+        aggregated = aggregate_entries_by_size_class(
+            (
+                ActualAssortmentEntry("51-55", 132),
+                ActualAssortmentEntry("56-60", 1030),
+                ActualAssortmentEntry("61-65", 188),
+                ActualAssortmentEntry("66-70", 1657),
+                ActualAssortmentEntry("91-95", 188),
+            ),
+            ranges,
+        )
+
+        self.assertEqual(
+            [(entry.size_class, entry.weight) for entry in aggregated],
+            [("M", 1162), ("S+", 1845), ("Unused", 188)],
+        )
 
     def test_legacy_record_without_type_loads_as_actual(self) -> None:
         self.store_path.write_text(

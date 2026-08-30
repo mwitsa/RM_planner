@@ -135,9 +135,19 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual(order_due_date(order("a", day="", month="02")), date(2026, 2, 28))
 
     def test_configured_wonton_weight_converts_stock_kg_to_wontons(self) -> None:
+        class_stock = ActualAssortmentRecord(
+            record_id="class-stock",
+            rm_id="RM-CLASS",
+            record_date="2026-08-28",
+            entries=(ActualAssortmentEntry("M", 1, size_class="M"),),
+            record_type="actual",
+            market_type="unassigned",
+            created_at="2026-08-28T00:00:00+00:00",
+            updated_at="2026-08-28T00:00:00+00:00",
+        )
         result = generate_plan(
             [order("a", rm_size="M", order_cups=200, wontons_per_cup=1, order_unit=200)],
-            [stock((("51-55", 1),))],
+            [class_stock],
             RANGES,
             balanced_capacity(1000, 1000),
             [],
@@ -416,6 +426,33 @@ class PlanEngineTests(unittest.TestCase):
 
         self.assertAlmostEqual(result.planned_wontons, 500)
         self.assertAlmostEqual(result.allocations[0].planned_units, 5)
+
+    def test_direct_unused_class_is_never_available_to_plan(self) -> None:
+        unused = ActualAssortmentRecord(
+            record_id="unused-1",
+            rm_id="RM-UNUSED",
+            record_date="2026-08-28",
+            entries=(
+                ActualAssortmentEntry("Unused", 100, size_class="Unused"),
+            ),
+            record_type="actual",
+            market_type="unassigned",
+            created_at="2026-08-28T00:00:00+00:00",
+            updated_at="2026-08-28T00:00:00+00:00",
+        )
+        result = generate_plan(
+            [order("a", order_cups=100, wontons_per_cup=1, order_unit=100)],
+            [unused],
+            RANGES,
+            balanced_capacity(5000, 5000),
+            [],
+            [],
+            planning_date=date(2026, 8, 28),
+        )
+
+        self.assertEqual(result.allocations, ())
+        self.assertEqual(len(result.unplanned), 1)
+        self.assertIn("Insufficient", result.unplanned[0].reason)
 
     def test_past_orders_are_ignored_and_bk_hc_are_explained(self) -> None:
         result = generate_plan(
