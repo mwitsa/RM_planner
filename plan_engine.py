@@ -90,7 +90,6 @@ class PlanResult:
 @dataclass(slots=True)
 class _InventoryLot:
     available_date: date
-    record_type: str
     market_type: str
     rm_id: str
     record_id: str
@@ -438,7 +437,6 @@ def _inventory_lots(
             lots.append(
                 _InventoryLot(
                     available_date=available_date,
-                    record_type=record.record_type,
                     market_type=_normalize_market_type(record.market_type),
                     rm_id=record.rm_id,
                     record_id=record.record_id,
@@ -471,7 +469,6 @@ def _compatible_lots(
         key=lambda lot: (
             len(lot.eligible_classes),
             lot.available_date,
-            lot.record_type == "prediction",
             -lot.pieces_per_kg,
             lot.record_id,
             lot.size_range,

@@ -172,7 +172,6 @@ class ProductionPlanApp(tk.Tk):
         self._assortment_range_drag_changed = False
         self._editing_actual_record_id: str | None = None
         self._editing_existing_stock_id: str | None = None
-        self._assortment_record_type = "actual"
         self._rule_text_by_item: dict[str, str] = {}
         self._drag_rule_item: str | None = None
         self._rule_drag_changed = False
@@ -438,7 +437,6 @@ class ProductionPlanApp(tk.Tk):
             )
 
     def _build_rm_timeline_tab(self) -> None:
-        self.rm_timeline_type_var = tk.StringVar(value="ALL")
         self.rm_timeline_market_var = tk.StringVar(value="ALL")
         self.rm_stock_as_of_var = tk.StringVar(value="—")
         self.rm_stock_total_var = tk.StringVar(value="0 kg")
@@ -470,15 +468,6 @@ class ProductionPlanApp(tk.Tk):
 
         controls = ttk.LabelFrame(self.rm_timeline_tab, text="Stock filters", padding=8)
         controls.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(controls, text="Type").pack(side=tk.LEFT)
-        type_combo = ttk.Combobox(
-            controls,
-            textvariable=self.rm_timeline_type_var,
-            values=("ALL", "EXISTING", "ACTUAL", "PREDICTION"),
-            state="readonly",
-            width=12,
-        )
-        type_combo.pack(side=tk.LEFT, padx=(6, 16))
         ttk.Label(controls, text="Use for").pack(side=tk.LEFT)
         market_combo = ttk.Combobox(
             controls,
@@ -499,7 +488,6 @@ class ProductionPlanApp(tk.Tk):
             command=self._toggle_rm_timeline_details,
         )
         self.rm_timeline_detail_button.pack(side=tk.RIGHT)
-        type_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
         market_combo.bind("<<ComboboxSelected>>", self._refresh_rm_timeline)
 
         overview = ttk.LabelFrame(
@@ -571,9 +559,6 @@ class ProductionPlanApp(tk.Tk):
         columns = (
             "date",
             "rm_ids",
-            "actual_in",
-            "prediction_in",
-            "existing_in",
             "incoming",
             "stock",
             "M",
@@ -586,9 +571,6 @@ class ProductionPlanApp(tk.Tk):
         headings = {
             "date": "Date",
             "rm_ids": "RM IDs",
-            "actual_in": "Actual in (kg)",
-            "prediction_in": "Prediction in (kg)",
-            "existing_in": "Existing in (kg)",
             "incoming": "RM in (kg)",
             "stock": "Stock (kg)",
             "M": "M stock (kg)",
@@ -600,9 +582,6 @@ class ProductionPlanApp(tk.Tk):
         widths = {
             "date": 95,
             "rm_ids": 190,
-            "actual_in": 105,
-            "prediction_in": 125,
-            "existing_in": 125,
             "incoming": 100,
             "stock": 100,
             "M": 110,
@@ -663,7 +642,6 @@ class ProductionPlanApp(tk.Tk):
             self.rm_timeline_detail_button.configure(text="Show details")
 
     def _clear_rm_timeline_filters(self) -> None:
-        self.rm_timeline_type_var.set("ALL")
         self.rm_timeline_market_var.set("ALL")
         self._refresh_rm_timeline()
 
@@ -674,7 +652,6 @@ class ProductionPlanApp(tk.Tk):
             rows = build_rm_timeline(
                 self.assortment_actual_records.values(),
                 self._current_assortment_size_range_definitions(),
-                record_type=self.rm_timeline_type_var.get(),
                 market_type=self.rm_timeline_market_var.get(),
             )
         except ValueError as exc:
@@ -697,9 +674,6 @@ class ProductionPlanApp(tk.Tk):
                 values=(
                     row.record_date,
                     ", ".join(row.rm_ids),
-                    self._format_optional_number(row.actual_in_kg),
-                    self._format_optional_number(row.prediction_in_kg),
-                    self._format_optional_number(row.existing_in_kg),
                     self._format_optional_number(row.incoming_kg),
                     self._format_optional_number(row.cumulative_kg),
                     self._format_size_class_summary(row.m_stock),
@@ -1809,9 +1783,8 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var.set(f"{harvest_date.month:02d}")
         self.actual_year_var.set(f"{harvest_date.year:04d}")
         self._editing_actual_record_id = None
-        self._set_assortment_record_type("prediction")
         self.actual_market_type_var.set("DOMESTIC")
-        self.assortment_actual_save_button.configure(text="Save prediction stock")
+        self.assortment_actual_save_button.configure(text="Save stock")
         self._set_assortment_actual_boxes(
             [
                 ActualAssortmentEntry(size=item.output_size, weight=item.weight)
@@ -1828,7 +1801,7 @@ class ProductionPlanApp(tk.Tk):
         message = (
             f"Predicted {len(predictions)} output sizes from {resolved_size} and "
             f"{allocated_weight:,} kg in whole kilograms. "
-            "Review the result, then click Save prediction stock."
+            "Review the result, then click Save stock."
         )
         self.assortment_status_var.set(message)
         self.assortment_actual_status_var.set(message)
@@ -2101,7 +2074,6 @@ class ProductionPlanApp(tk.Tk):
         self.actual_day_var = tk.StringVar(value=f"{today.day:02d}")
         self.actual_month_var = tk.StringVar(value=f"{today.month:02d}")
         self.actual_year_var = tk.StringVar(value=f"{today.year:04d}")
-        self.actual_record_type_var = tk.StringVar(value="ACTUAL")
         self.actual_market_type_var = tk.StringVar(value="DOMESTIC")
 
         pane = ttk.Panedwindow(self.assortment_actual_tab, orient=tk.HORIZONTAL)
@@ -2117,22 +2089,16 @@ class ProductionPlanApp(tk.Tk):
             text="Add an RM arrival, enter its size ranges and weights, then save it to Stock.",
         ).pack(anchor=tk.W, pady=(2, 12))
 
-        self._set_assortment_record_type("actual")
-
         details_frame = ttk.LabelFrame(form_panel, text="1. Stock details", padding=10)
         details_frame.pack(fill=tk.X, pady=(0, 12))
         details_frame.columnconfigure(0, weight=2)
         details_frame.columnconfigure(1, weight=1)
-        details_frame.columnconfigure(2, weight=1)
 
         ttk.Label(details_frame, text="Availability date").grid(
             row=0, column=0, sticky=tk.W, padx=(0, 12)
         )
-        ttk.Label(details_frame, text="Stock type").grid(
-            row=0, column=1, sticky=tk.W, padx=(0, 12)
-        )
         ttk.Label(details_frame, text="Use for").grid(
-            row=0, column=2, sticky=tk.W
+            row=0, column=1, sticky=tk.W
         )
 
         date_inputs = ttk.Frame(details_frame)
@@ -2159,25 +2125,13 @@ class ProductionPlanApp(tk.Tk):
             values=[str(year) for year in range(today.year - 5, today.year + 6)],
             width=7,
         ).pack(side=tk.LEFT)
-        record_type_combo = ttk.Combobox(
-            details_frame,
-            textvariable=self.actual_record_type_var,
-            values=("ACTUAL", "PREDICTION"),
-            state="readonly",
-            width=12,
-        )
-        record_type_combo.grid(row=1, column=1, sticky="ew", padx=(0, 12), pady=(4, 0))
-        record_type_combo.bind(
-            "<<ComboboxSelected>>",
-            self._manual_assortment_record_type_changed,
-        )
         ttk.Combobox(
             details_frame,
             textvariable=self.actual_market_type_var,
             values=("DOMESTIC", "EXPORT"),
             state="readonly",
             width=10,
-        ).grid(row=1, column=2, sticky="ew", pady=(4, 0))
+        ).grid(row=1, column=1, sticky="ew", pady=(4, 0))
 
         form_actions = ttk.Frame(form_panel)
         form_actions.pack(fill=tk.X, pady=(0, 12))
@@ -2188,7 +2142,7 @@ class ProductionPlanApp(tk.Tk):
         ).pack(side=tk.LEFT)
         self.assortment_actual_save_button = ttk.Button(
             form_actions,
-            text="Save actual stock",
+            text="Save stock",
             command=self._save_assortment_actual,
         )
         self.assortment_actual_save_button.pack(side=tk.RIGHT)
@@ -2277,7 +2231,6 @@ class ProductionPlanApp(tk.Tk):
             history_table,
             columns=(
                 "rm_id",
-                "type",
                 "market",
                 "date",
                 "weight",
@@ -2290,7 +2243,6 @@ class ProductionPlanApp(tk.Tk):
             selectmode="browse",
         )
         self.assortment_actual_history_tree.heading("rm_id", text="RM ID")
-        self.assortment_actual_history_tree.heading("type", text="Type")
         self.assortment_actual_history_tree.heading("market", text="Use for")
         self.assortment_actual_history_tree.heading("date", text="Date")
         self.assortment_actual_history_tree.heading("weight", text="Total weight")
@@ -2299,7 +2251,6 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_history_tree.heading("unused", text="Unused (kg)")
         self.assortment_actual_history_tree.heading("est_wonton", text="Est. wonton")
         self.assortment_actual_history_tree.column("rm_id", width=100, anchor=tk.CENTER)
-        self.assortment_actual_history_tree.column("type", width=85, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("market", width=90, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("date", width=95, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("weight", width=95, anchor=tk.E)
@@ -2346,22 +2297,6 @@ class ProductionPlanApp(tk.Tk):
             anchor=tk.W,
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(8, 0))
-
-    def _set_assortment_record_type(self, record_type: str) -> None:
-        self._assortment_record_type = record_type
-        if hasattr(self, "actual_record_type_var"):
-            self.actual_record_type_var.set(record_type.upper())
-
-    def _manual_assortment_record_type_changed(self, _event: tk.Event | None = None) -> None:
-        record_type = self.actual_record_type_var.get().strip().casefold()
-        self._set_assortment_record_type(record_type)
-        action = "Update" if self._editing_actual_record_id else "Save"
-        self.assortment_actual_save_button.configure(
-            text=f"{action} {record_type} stock"
-        )
-        self.assortment_actual_status_var.set(
-            f"Record type manually set to {record_type.upper()}."
-        )
 
     def _add_assortment_actual_box(
         self,
@@ -2530,9 +2465,8 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var.set(f"{today.month:02d}")
         self.actual_year_var.set(f"{today.year:04d}")
         self._editing_actual_record_id = None
-        self._set_assortment_record_type("actual")
         self.actual_market_type_var.set("DOMESTIC")
-        self.assortment_actual_save_button.configure(text="Save actual stock")
+        self.assortment_actual_save_button.configure(text="Save stock")
         self._set_assortment_actual_boxes([])
         if set_status:
             self.assortment_actual_status_var.set("New stock form ready.")
@@ -2608,7 +2542,7 @@ class ProductionPlanApp(tk.Tk):
                 self._selected_assortment_actual_date(),
                 self._collect_assortment_actual_entries(),
                 record_id=self._editing_actual_record_id,
-                record_type=self._assortment_record_type,
+                record_type="actual",
                 market_type=self.actual_market_type_var.get(),
             )
         except ValueError as exc:
@@ -2618,7 +2552,7 @@ class ProductionPlanApp(tk.Tk):
         self._load_assortment_actual_history()
         self._new_assortment_actual_form(set_status=False)
         self.assortment_actual_status_var.set(
-            f"{action} {record.record_type.title()} for {record.market_type.title()} "
+            f"{action} stock for {record.market_type.title()} "
             f"with {len(record.entries)} entries "
             f"for {record.record_date}."
         )
@@ -2667,7 +2601,6 @@ class ProductionPlanApp(tk.Tk):
                 iid=record.record_id,
                 values=(
                     record.rm_id,
-                    record.record_type.upper(),
                     record.market_type.upper(),
                     record.record_date,
                     self._format_weight(record.total_weight),
@@ -2676,7 +2609,6 @@ class ProductionPlanApp(tk.Tk):
                     self._format_size_class_summary(class_summaries["Unused"]),
                     estimated_wontons,
                 ),
-                tags=(record.record_type,),
             )
         for record_id in selected:
             if self.assortment_actual_history_tree.exists(record_id):
@@ -2718,12 +2650,9 @@ class ProductionPlanApp(tk.Tk):
         self.actual_market_type_var.set(record.market_type.upper())
         self._set_assortment_actual_boxes(list(record.entries))
         self._editing_actual_record_id = record.record_id
-        self._set_assortment_record_type(record.record_type)
-        self.assortment_actual_save_button.configure(
-            text=f"Update {record.record_type} stock"
-        )
+        self.assortment_actual_save_button.configure(text="Update stock")
         self.assortment_actual_status_var.set(
-            f"Editing saved {record.record_type} stock for {record.record_date}."
+            f"Editing saved stock {record.rm_id} for {record.record_date}."
         )
 
     def _delete_selected_assortment_actual(self) -> None:
@@ -2737,8 +2666,8 @@ class ProductionPlanApp(tk.Tk):
             return
         confirmed = messagebox.askyesno(
             "Delete saved stock",
-            f"Permanently delete the {record.record_type.upper()} record for "
-            f"{record.record_date}?\n\nThis cannot be undone.",
+            f"Permanently delete stock {record.rm_id} for {record.record_date}?"
+            "\n\nThis cannot be undone.",
         )
         if not confirmed:
             return
@@ -2754,7 +2683,7 @@ class ProductionPlanApp(tk.Tk):
             self._new_assortment_actual_form(set_status=False)
         self._load_assortment_actual_history()
         self.assortment_actual_status_var.set(
-            f"Deleted {deleted.record_type.upper()} stock for {deleted.record_date}."
+            f"Deleted stock {deleted.rm_id} for {deleted.record_date}."
         )
 
     @staticmethod

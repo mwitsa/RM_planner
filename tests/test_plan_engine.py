@@ -56,6 +56,7 @@ def stock(
     entries: tuple[tuple[str, float], ...],
     *,
     record_date: str = "2026-08-28",
+    record_type: str = "actual",
     market_type: str = "unassigned",
     record_id: str = "stock-1",
     rm_id: str = "RM-000001",
@@ -64,7 +65,7 @@ def stock(
         record_id=record_id,
         record_date=record_date,
         entries=tuple(ActualAssortmentEntry(size, weight) for size, weight in entries),
-        record_type="actual",
+        record_type=record_type,
         created_at="2026-08-28T00:00:00+00:00",
         updated_at="2026-08-28T00:00:00+00:00",
         rm_id=rm_id,
@@ -95,6 +96,40 @@ def balanced_capacity(raw_wonton: float, cooked_wonton: float) -> CapacitySettin
 
 
 class PlanEngineTests(unittest.TestCase):
+    def test_legacy_stock_type_does_not_change_lot_priority(self) -> None:
+        result = generate_plan(
+            [
+                order(
+                    "one-order",
+                    order_cups=530,
+                    wontons_per_cup=1,
+                    order_unit=530,
+                )
+            ],
+            [
+                stock(
+                    (("51-55", 20),),
+                    record_type="actual",
+                    record_id="z-actual",
+                    rm_id="RM-ACTUAL",
+                ),
+                stock(
+                    (("51-55", 20),),
+                    record_type="prediction",
+                    record_id="a-prediction",
+                    rm_id="RM-PREDICTION",
+                ),
+            ],
+            RANGES,
+            balanced_capacity(1000, 1000),
+            [],
+            [],
+            planning_date=date(2026, 8, 28),
+        )
+
+        self.assertEqual(len(result.allocations), 1)
+        self.assertEqual(result.allocations[0].rm_sources, "RM-PREDICTION: 10.00 kg")
+
     def test_month_only_order_is_due_on_last_day(self) -> None:
         self.assertEqual(order_due_date(order("a", day="", month="02")), date(2026, 2, 28))
 

@@ -45,8 +45,7 @@ class RmTimelineTests(unittest.TestCase):
 
         self.assertEqual(len(rows), 2)
         self.assertEqual(rows[0].rm_ids, ("RM-000001", "RM-000002"))
-        self.assertEqual(rows[0].actual_in_kg, 10)
-        self.assertEqual(rows[0].prediction_in_kg, 20)
+        self.assertEqual(rows[0].incoming_kg, 30)
         self.assertEqual(rows[0].cumulative_kg, 30)
         self.assertEqual(rows[1].cumulative_kg, 60)
         self.assertEqual(rows[0].s_plus_stock.total, 20)
@@ -54,7 +53,7 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].cumulative_wontons, 1790)
         self.assertEqual(rows[1].cumulative_wontons, 3980)
 
-    def test_filters_type_and_market_before_calculating_cumulative_stock(self) -> None:
+    def test_filters_market_before_calculating_cumulative_stock(self) -> None:
         rows = build_rm_timeline(
             [
                 record("RM-000001", "2026-08-28", "actual", "domestic", (("51-55", 10),)),
@@ -62,13 +61,13 @@ class RmTimelineTests(unittest.TestCase):
                 record("RM-000003", "2026-08-30", "actual", "export", (("51-55", 30),)),
             ],
             RANGES,
-            record_type="actual",
             market_type="domestic",
         )
 
-        self.assertEqual(len(rows), 1)
+        self.assertEqual(len(rows), 2)
         self.assertEqual(rows[0].rm_ids, ("RM-000001",))
-        self.assertEqual(rows[0].cumulative_kg, 10)
+        self.assertEqual(rows[1].rm_ids, ("RM-000002",))
+        self.assertEqual(rows[1].cumulative_kg, 30)
 
     def test_existing_stock_adds_direct_class(self) -> None:
         existing = ActualAssortmentRecord(
@@ -92,12 +91,11 @@ class RmTimelineTests(unittest.TestCase):
         rows = build_rm_timeline(
             [existing],
             RANGES,
-            record_type="existing",
             market_type="domestic",
         )
 
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0].existing_in_kg, 100)
+        self.assertEqual(rows[0].incoming_kg, 100)
         self.assertEqual(rows[0].s_plus_stock.total, 100)
         self.assertEqual(rows[0].cumulative_wontons, 6500)
 

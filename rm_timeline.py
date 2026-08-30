@@ -23,9 +23,6 @@ from assortment_range_store import (
 class RmTimelineRow:
     record_date: str
     rm_ids: tuple[str, ...]
-    actual_in_kg: float
-    prediction_in_kg: float
-    existing_in_kg: float
     incoming_kg: float
     cumulative_kg: float
     m_stock: SizeClassWeightSummary
@@ -38,19 +35,16 @@ class RmTimelineRow:
 def build_rm_timeline(
     records: Iterable[ActualAssortmentRecord],
     ranges: Iterable[AssortmentSizeRange],
-    record_type: str | None = None,
     market_type: str | None = None,
 ) -> tuple[RmTimelineRow, ...]:
     """Group filtered RM arrivals by date and return cumulative stock rows."""
 
     range_list = tuple(ranges)
-    normalized_type = _normalize_filter(record_type)
     normalized_market = _normalize_filter(market_type)
     filtered = [
         record
         for record in records
-        if (normalized_type is None or record.record_type == normalized_type)
-        and (normalized_market is None or record.market_type == normalized_market)
+        if normalized_market is None or record.market_type == normalized_market
     ]
     by_date: dict[str, list[ActualAssortmentRecord]] = {}
     for record in filtered:
@@ -67,19 +61,6 @@ def build_rm_timeline(
         incoming_wontons = sum(
             float(estimate_wonton_pieces(record.entries)) for record in dated_records
         )
-        actual_in = sum(
-            record.total_weight for record in dated_records if record.record_type == "actual"
-        )
-        prediction_in = sum(
-            record.total_weight
-            for record in dated_records
-            if record.record_type == "prediction"
-        )
-        existing_in = sum(
-            record.total_weight
-            for record in dated_records
-            if record.record_type == "existing"
-        )
         daily_summaries = _summarize_records(dated_records, range_list)
         cumulative_kg += incoming_kg
         cumulative_wontons += incoming_wontons
@@ -90,9 +71,6 @@ def build_rm_timeline(
             RmTimelineRow(
                 record_date=record_date,
                 rm_ids=tuple(record.rm_id for record in dated_records),
-                actual_in_kg=actual_in,
-                prediction_in_kg=prediction_in,
-                existing_in_kg=existing_in,
                 incoming_kg=incoming_kg,
                 cumulative_kg=cumulative_kg,
                 m_stock=_summary(cumulative_totals["M"]),

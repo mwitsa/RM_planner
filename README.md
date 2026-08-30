@@ -124,12 +124,11 @@ The app uses column `S.74`, splits the weight by its percentages, and transfers
 the size/weight rows to **Update Stock** for review and saving.
 Generated weights use whole kilograms and are allocated so their sum remains
 equal to the rounded harvest weight.
-Transferred rows carry a persistent **PREDICTION** type, while manually entered
-data carries an **ACTUAL** type. Saved stock also displays and preserves this
-Type when a record is edited. The Type dropdown allows either
-classification to be selected manually before saving or while editing. A saved
+Transferred and manually entered rows use the same stock workflow. Older saved
+records that contain an internal stock type remain readable and are combined in
+Stock totals, but the type is no longer shown or selected in the app. A saved
 history row can also be permanently deleted after confirmation. The
-separate **Update Stock** page is used for actual harvest assortment data. Stock
+separate **Update Stock** page is used for RM arrival data. Stock
 details and actions are grouped at the top, while each size and weight entry uses
 one compact row. Use **Add row** for additional entries. The page shows completed
 row count and total weight while entering data. Saved stock appears in the panel
