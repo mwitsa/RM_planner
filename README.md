@@ -120,8 +120,8 @@ and a responsive horizontal bar for the M, S+, and Unused stock percentages and
 weights. M and S+ have separate stock sections,
 each with ในประเทศ and ต่างประเทศ weight and estimated-wonton details. Stock always
 shows the combined inventory; its market breakdown remains visible in these cards.
-The dated RM-arrival table is always visible so the individual RM IDs behind the
-balances can be inspected directly. Legacy
+The dated RM-arrival table is always visible so the farm and LOT sources behind
+the balances can be inspected directly. Legacy
 existing-stock records remain readable in Stock and Plan, but the unused
 Existing Stock entry page is no longer shown.
 
@@ -132,8 +132,10 @@ output yield percentage. Each base-size column is checked to ensure its output
 distribution totals 100%. Assortment STD contains master-data review, M/S+
 range maintenance, and per-class wonton-weight settings; stock entry is handled
 in the Stock editor.
-In **+ Add stock**, enter the availability date and optionally use **Fill from
-Assortment STD** with a harvest size (for example `74`) and total weight. The app
+In **+ Add stock**, manually enter the farm name and LOT together with the
+availability date. These replace the generated RM ID in Saved Stock, Stock
+arrival details, and Plan RM source. Optionally use **Fill from Assortment STD**
+with a harvest size (for example `74`) and total weight. The app
 uses column `S.74`, calculates its output-size distribution, and combines those
 sizes into editable M, S+, and Unused class totals. Generated weights use whole
 kilograms and are allocated so their sum remains equal to the rounded harvest

@@ -61,6 +61,8 @@ def stock(
     market_type: str = "unassigned",
     record_id: str = "stock-1",
     rm_id: str = "RM-000001",
+    farm_name: str = "",
+    lot: str = "",
 ) -> ActualAssortmentRecord:
     return ActualAssortmentRecord(
         record_id=record_id,
@@ -71,6 +73,8 @@ def stock(
         updated_at="2026-08-28T00:00:00+00:00",
         rm_id=rm_id,
         market_type=market_type,
+        farm_name=farm_name,
+        lot=lot,
     )
 
 
@@ -160,6 +164,25 @@ class PlanEngineTests(unittest.TestCase):
         self.assertAlmostEqual(result.allocations[0].planned_wontons, 1000 / 8.6)
         self.assertAlmostEqual(result.allocations[0].rm_kg, 1)
         self.assertEqual(result.allocations[0].rm_size, "M")
+
+    def test_plan_source_uses_manually_entered_farm_and_lot(self) -> None:
+        result = generate_plan(
+            [order("a", order_cups=100, wontons_per_cup=1, order_unit=100)],
+            [
+                stock(
+                    (("51-55", 10),),
+                    farm_name="Farm A",
+                    lot="LOT-42",
+                )
+            ],
+            RANGES,
+            balanced_capacity(1000, 1000),
+            [],
+            [],
+            planning_date=date(2026, 8, 28),
+        )
+
+        self.assertEqual(result.allocations[0].rm_sources, "Farm A / LOT-42: 1.89 kg")
 
     def test_order_can_split_over_multiple_capacity_days(self) -> None:
         result = generate_plan(

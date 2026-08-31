@@ -80,6 +80,38 @@ class ActualAssortmentStoreTests(unittest.TestCase):
         self.assertEqual(saved.market_type, "export")
         self.assertEqual(load_actual_records(self.store_path)[0].market_type, "export")
 
+    def test_saves_manual_farm_and_lot_as_stock_identity(self) -> None:
+        saved = upsert_actual_record(
+            self.store_path,
+            "2026-08-27",
+            [ActualAssortmentEntry("M", 100, size_class="M")],
+            farm_name="  Farm A  ",
+            lot=" LOT-42 ",
+        )
+        loaded = load_actual_records(self.store_path)[0]
+
+        self.assertEqual(saved.farm_name, "Farm A")
+        self.assertEqual(saved.lot, "LOT-42")
+        self.assertEqual(loaded.source_label, "Farm A / LOT-42")
+
+    def test_manual_stock_identity_requires_both_farm_and_lot(self) -> None:
+        with self.assertRaisesRegex(ValueError, "farm name"):
+            upsert_actual_record(
+                self.store_path,
+                "2026-08-27",
+                [ActualAssortmentEntry("M", 100, size_class="M")],
+                farm_name="",
+                lot="LOT-42",
+            )
+        with self.assertRaisesRegex(ValueError, "LOT"):
+            upsert_actual_record(
+                self.store_path,
+                "2026-08-27",
+                [ActualAssortmentEntry("M", 100, size_class="M")],
+                farm_name="Farm A",
+                lot="",
+            )
+
     def test_saves_existing_stock_with_explicit_class_and_pieces_per_kg(self) -> None:
         saved = upsert_actual_record(
             self.store_path,

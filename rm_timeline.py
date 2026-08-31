@@ -22,7 +22,7 @@ from wonton_weight_store import WontonWeightSettings
 @dataclass(frozen=True, slots=True)
 class RmTimelineRow:
     record_date: str
-    rm_ids: tuple[str, ...]
+    source_labels: tuple[str, ...]
     incoming_kg: float
     cumulative_kg: float
     m_stock: SizeClassWeightSummary
@@ -61,7 +61,10 @@ def build_rm_timeline(
     cumulative_class_wontons = {key: 0.0 for key in summary_classes}
     rows: list[RmTimelineRow] = []
     for record_date in sorted(by_date):
-        dated_records = sorted(by_date[record_date], key=lambda item: item.rm_id)
+        dated_records = sorted(
+            by_date[record_date],
+            key=lambda item: (item.source_label.casefold(), item.record_id),
+        )
         incoming_kg = sum(record.total_weight for record in dated_records)
         daily_summaries = _summarize_records(dated_records, range_list)
         daily_class_wontons = {
@@ -82,7 +85,7 @@ def build_rm_timeline(
         rows.append(
             RmTimelineRow(
                 record_date=record_date,
-                rm_ids=tuple(record.rm_id for record in dated_records),
+                source_labels=tuple(record.source_label for record in dated_records),
                 incoming_kg=incoming_kg,
                 cumulative_kg=cumulative_kg,
                 m_stock=_summary(cumulative_totals["M"]),

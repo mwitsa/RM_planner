@@ -93,7 +93,7 @@ class PlanResult:
 class _InventoryLot:
     available_date: date
     market_type: str
-    rm_id: str
+    stock_source: str
     record_id: str
     size_range: str
     wontons_per_kg: float
@@ -102,7 +102,7 @@ class _InventoryLot:
 
     @property
     def source_label(self) -> str:
-        return self.rm_id or self.record_id
+        return self.stock_source or self.record_id
 
 
 @dataclass(slots=True)
@@ -451,7 +451,7 @@ def _inventory_lots(
                 _InventoryLot(
                     available_date=available_date,
                     market_type=_normalize_market_type(record.market_type),
-                    rm_id=record.rm_id,
+                    stock_source=record.source_label,
                     record_id=record.record_id,
                     size_range=entry.size,
                     wontons_per_kg=wontons_per_kg,

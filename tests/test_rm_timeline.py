@@ -20,6 +20,8 @@ def record(
     record_type: str,
     market_type: str,
     entries: tuple[tuple[str, float], ...],
+    farm_name: str = "",
+    lot: str = "",
 ) -> ActualAssortmentRecord:
     return ActualAssortmentRecord(
         record_id=rm_id,
@@ -30,6 +32,8 @@ def record(
         market_type=market_type,
         created_at="2026-08-29T00:00:00+00:00",
         updated_at="2026-08-29T00:00:00+00:00",
+        farm_name=farm_name,
+        lot=lot,
     )
 
 
@@ -51,7 +55,7 @@ class RmTimelineTests(unittest.TestCase):
         )
 
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0].rm_ids, ("RM-000001", "RM-000002"))
+        self.assertEqual(rows[0].source_labels, ("RM-000001", "RM-000002"))
         self.assertEqual(rows[0].incoming_kg, 30)
         self.assertEqual(rows[0].cumulative_kg, 30)
         self.assertEqual(rows[1].cumulative_kg, 60)
@@ -75,8 +79,8 @@ class RmTimelineTests(unittest.TestCase):
         )
 
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0].rm_ids, ("RM-000001",))
-        self.assertEqual(rows[1].rm_ids, ("RM-000002",))
+        self.assertEqual(rows[0].source_labels, ("RM-000001",))
+        self.assertEqual(rows[1].source_labels, ("RM-000002",))
         self.assertEqual(rows[1].cumulative_kg, 30)
 
     def test_existing_stock_adds_direct_class(self) -> None:
@@ -110,6 +114,24 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].s_plus_stock.total, 100)
         self.assertEqual(rows[0].s_plus_wontons, 6500)
         self.assertEqual(rows[0].cumulative_wontons, 6500)
+
+    def test_uses_farm_and_lot_instead_of_internal_rm_id(self) -> None:
+        rows = build_rm_timeline(
+            [
+                record(
+                    "RM-000001",
+                    "2026-08-28",
+                    "actual",
+                    "domestic",
+                    (("51-55", 10),),
+                    farm_name="Farm A",
+                    lot="LOT-42",
+                )
+            ],
+            RANGES,
+        )
+
+        self.assertEqual(rows[0].source_labels, ("Farm A / LOT-42",))
 
     def test_custom_m_wonton_weight_controls_estimated_yield(self) -> None:
         rows = build_rm_timeline(

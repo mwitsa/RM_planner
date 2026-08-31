@@ -673,7 +673,7 @@ class ProductionPlanApp(tk.Tk):
         table_frame.columnconfigure(0, weight=1)
         columns = (
             "date",
-            "rm_ids",
+            "sources",
             "incoming",
             "stock",
             "M",
@@ -683,7 +683,7 @@ class ProductionPlanApp(tk.Tk):
         self.rm_timeline_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         headings = {
             "date": "Date",
-            "rm_ids": "RM IDs",
+            "sources": "ชื่อฟาร์ม / LOT",
             "incoming": "RM in (kg)",
             "stock": "Stock (kg)",
             "M": "M stock (kg)",
@@ -692,14 +692,14 @@ class ProductionPlanApp(tk.Tk):
         }
         widths = {
             "date": 95,
-            "rm_ids": 190,
+            "sources": 220,
             "incoming": 100,
             "stock": 100,
             "M": 110,
             "S+": 110,
             "unused": 125,
         }
-        numeric = set(columns) - {"date", "rm_ids"}
+        numeric = set(columns) - {"date", "sources"}
         for column in columns:
             self.rm_timeline_tree.heading(column, text=headings[column])
             self.rm_timeline_tree.column(
@@ -707,7 +707,7 @@ class ProductionPlanApp(tk.Tk):
                 width=widths[column],
                 minwidth=75,
                 anchor=tk.E if column in numeric else tk.W,
-                stretch=column == "rm_ids",
+                stretch=column == "sources",
             )
         vertical = ttk.Scrollbar(
             table_frame,
@@ -849,7 +849,7 @@ class ProductionPlanApp(tk.Tk):
                 iid=f"rm-timeline:{index}",
                 values=(
                     row.record_date,
-                    ", ".join(row.rm_ids),
+                    ", ".join(row.source_labels),
                     self._format_optional_number(row.incoming_kg),
                     self._format_optional_number(row.cumulative_kg),
                     self._format_size_class_summary(row.m_stock),
@@ -857,7 +857,7 @@ class ProductionPlanApp(tk.Tk):
                     self._format_size_class_summary(row.unused_stock),
                 ),
             )
-        record_count = sum(len(row.rm_ids) for row in rows)
+        record_count = sum(len(row.source_labels) for row in rows)
         if rows:
             final = rows[-1]
             self.rm_stock_as_of_var.set(final.record_date)
@@ -2342,6 +2342,8 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var = tk.StringVar(value=f"{today.month:02d}")
         self.actual_year_var = tk.StringVar(value=f"{today.year:04d}")
         self.actual_market_type_var = tk.StringVar(value=market_display_label("domestic"))
+        self.actual_farm_name_var = tk.StringVar()
+        self.actual_lot_var = tk.StringVar()
         self.stock_harvest_size_var = tk.StringVar()
         self.stock_harvest_weight_var = tk.StringVar()
 
@@ -2403,6 +2405,20 @@ class ProductionPlanApp(tk.Tk):
             state="readonly",
             width=10,
         ).grid(row=1, column=1, sticky="ew", pady=(4, 0))
+        ttk.Label(details_frame, text="ชื่อฟาร์ม").grid(
+            row=2, column=0, sticky=tk.W, padx=(0, 12), pady=(10, 0)
+        )
+        ttk.Label(details_frame, text="LOT").grid(
+            row=2, column=1, sticky=tk.W, pady=(10, 0)
+        )
+        ttk.Entry(
+            details_frame,
+            textvariable=self.actual_farm_name_var,
+        ).grid(row=3, column=0, sticky="ew", padx=(0, 12), pady=(4, 0))
+        ttk.Entry(
+            details_frame,
+            textvariable=self.actual_lot_var,
+        ).grid(row=3, column=1, sticky="ew", pady=(4, 0))
 
         std_fill_frame = ttk.LabelFrame(
             form_panel,
@@ -2540,7 +2556,8 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_history_tree = ttk.Treeview(
             history_table,
             columns=(
-                "rm_id",
+                "farm_name",
+                "lot",
                 "market",
                 "date",
                 "weight",
@@ -2552,7 +2569,8 @@ class ProductionPlanApp(tk.Tk):
             show="headings",
             selectmode="browse",
         )
-        self.assortment_actual_history_tree.heading("rm_id", text="RM ID")
+        self.assortment_actual_history_tree.heading("farm_name", text="ชื่อฟาร์ม")
+        self.assortment_actual_history_tree.heading("lot", text="LOT")
         self.assortment_actual_history_tree.heading("market", text="Use for")
         self.assortment_actual_history_tree.heading("date", text="Date")
         self.assortment_actual_history_tree.heading("weight", text="Total weight")
@@ -2560,7 +2578,8 @@ class ProductionPlanApp(tk.Tk):
         self.assortment_actual_history_tree.heading("S+", text="S+ (kg)")
         self.assortment_actual_history_tree.heading("unused", text="Unused (kg)")
         self.assortment_actual_history_tree.heading("est_wonton", text="Est. wonton")
-        self.assortment_actual_history_tree.column("rm_id", width=100, anchor=tk.CENTER)
+        self.assortment_actual_history_tree.column("farm_name", width=130, anchor=tk.W)
+        self.assortment_actual_history_tree.column("lot", width=100, anchor=tk.W)
         self.assortment_actual_history_tree.column("market", width=90, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("date", width=95, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("weight", width=95, anchor=tk.E)
@@ -2726,6 +2745,8 @@ class ProductionPlanApp(tk.Tk):
         self.actual_year_var.set(f"{today.year:04d}")
         self._editing_actual_record_id = None
         self.actual_market_type_var.set(market_display_label("domestic"))
+        self.actual_farm_name_var.set("")
+        self.actual_lot_var.set("")
         self.stock_harvest_size_var.set("")
         self.stock_harvest_weight_var.set("")
         self.assortment_actual_save_button.configure(text="Save stock")
@@ -2807,6 +2828,8 @@ class ProductionPlanApp(tk.Tk):
                 record_id=self._editing_actual_record_id,
                 record_type="actual",
                 market_type=self.actual_market_type_var.get(),
+                farm_name=self.actual_farm_name_var.get(),
+                lot=self.actual_lot_var.get(),
             )
         except ValueError as exc:
             messagebox.showerror("Save stock", str(exc))
@@ -2815,12 +2838,13 @@ class ProductionPlanApp(tk.Tk):
         self._load_assortment_actual_history()
         self._new_assortment_actual_form(set_status=False)
         self.assortment_actual_status_var.set(
-            f"{action} stock for {market_display_label(record.market_type)} "
+            f"{action} stock {record.source_label} for "
+            f"{market_display_label(record.market_type)} "
             f"with {len(record.entries)} entries "
             f"for {record.record_date}."
         )
         self.rm_timeline_status_var.set(
-            f"{action} stock {record.rm_id} for {record.record_date}."
+            f"{action} stock {record.source_label} for {record.record_date}."
         )
         self._show_rm_section("timeline")
 
@@ -2856,7 +2880,8 @@ class ProductionPlanApp(tk.Tk):
                 tk.END,
                 iid=record.record_id,
                 values=(
-                    record.rm_id,
+                    record.farm_name or "—",
+                    record.lot or record.rm_id,
                     market_display_label(record.market_type),
                     record.record_date,
                     self._format_weight(record.total_weight),
@@ -2929,13 +2954,15 @@ class ProductionPlanApp(tk.Tk):
         self.actual_month_var.set(month)
         self.actual_year_var.set(year)
         self.actual_market_type_var.set(market_display_label(record.market_type))
+        self.actual_farm_name_var.set(record.farm_name)
+        self.actual_lot_var.set(record.lot)
         self.stock_harvest_size_var.set("")
         self.stock_harvest_weight_var.set("")
         self._set_assortment_actual_boxes(list(record.entries))
         self._editing_actual_record_id = record.record_id
         self.assortment_actual_save_button.configure(text="Update stock")
         self.assortment_actual_status_var.set(
-            f"Editing saved stock {record.rm_id} for {record.record_date}."
+            f"Editing saved stock {record.source_label} for {record.record_date}."
         )
 
     def _delete_selected_assortment_actual(self) -> None:
@@ -2949,7 +2976,7 @@ class ProductionPlanApp(tk.Tk):
             return
         confirmed = messagebox.askyesno(
             "Delete saved stock",
-            f"Permanently delete stock {record.rm_id} for {record.record_date}?"
+            f"Permanently delete stock {record.source_label} for {record.record_date}?"
             "\n\nThis cannot be undone.",
         )
         if not confirmed:
@@ -2966,7 +2993,7 @@ class ProductionPlanApp(tk.Tk):
             self._new_assortment_actual_form(set_status=False)
         self._load_assortment_actual_history()
         self.assortment_actual_status_var.set(
-            f"Deleted stock {deleted.rm_id} for {deleted.record_date}."
+            f"Deleted stock {deleted.source_label} for {deleted.record_date}."
         )
 
     @staticmethod

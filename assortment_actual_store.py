@@ -21,7 +21,7 @@ from assortment_range_store import (
 from market_labels import market_internal_value
 
 
-STORE_VERSION = 6
+STORE_VERSION = 7
 RECORD_TYPES = {"actual", "prediction", "existing"}
 STOCK_SIZE_CLASSES = (*SIZE_CLASSES, "Unused")
 RM_ID_PREFIX = "RM-"
@@ -47,10 +47,19 @@ class ActualAssortmentRecord:
     updated_at: str
     market_type: str = "unassigned"
     rm_id: str = ""
+    farm_name: str = ""
+    lot: str = ""
 
     @property
     def total_weight(self) -> float:
         return sum(entry.weight for entry in self.entries)
+
+    @property
+    def source_label(self) -> str:
+        identity = " / ".join(
+            value for value in (self.farm_name.strip(), self.lot.strip()) if value
+        )
+        return identity or self.rm_id or self.record_id
 
 
 def split_size_range(size: str) -> tuple[str, str]:
@@ -178,11 +187,21 @@ def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
         record_type = _normalize_record_type(raw_record.get("record_type", "actual"))
         market_type = _normalize_market_type(raw_record.get("market_type", "unassigned"))
         rm_id = raw_record.get("rm_id", "")
+        farm_name = raw_record.get("farm_name", "")
+        lot = raw_record.get("lot", "")
         created_at = raw_record.get("created_at")
         updated_at = raw_record.get("updated_at")
         if not all(
             isinstance(value, str)
-            for value in (record_id, record_date, created_at, updated_at, rm_id)
+            for value in (
+                record_id,
+                record_date,
+                created_at,
+                updated_at,
+                rm_id,
+                farm_name,
+                lot,
+            )
         ):
             raise ValueError("Actual assortment history contains invalid record metadata.")
         if record_id in seen_ids:
@@ -202,6 +221,8 @@ def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
                 updated_at=updated_at,
                 market_type=market_type,
                 rm_id=rm_id.strip().upper(),
+                farm_name=farm_name.strip(),
+                lot=lot.strip(),
             )
         )
     return _assign_missing_rm_ids(records)
@@ -214,6 +235,8 @@ def upsert_actual_record(
     record_id: str | None = None,
     record_type: str | None = None,
     market_type: str | None = None,
+    farm_name: str | None = None,
+    lot: str | None = None,
 ) -> ActualAssortmentRecord:
     """Create a new history record or update an existing record by ID."""
 
@@ -228,6 +251,7 @@ def upsert_actual_record(
     if record_id is None:
         saved_record_type = _normalize_record_type(record_type or "actual")
         saved_market_type = _normalize_market_type(market_type or "unassigned")
+        saved_farm_name, saved_lot = _normalize_source_identity(farm_name, lot)
         saved_record = ActualAssortmentRecord(
             record_id=str(uuid4()),
             record_date=record_date,
@@ -237,6 +261,8 @@ def upsert_actual_record(
             updated_at=now,
             market_type=saved_market_type,
             rm_id=_next_rm_id(records),
+            farm_name=saved_farm_name,
+            lot=saved_lot,
         )
         records.append(saved_record)
     else:
@@ -253,6 +279,14 @@ def upsert_actual_record(
                     if market_type is None
                     else _normalize_market_type(market_type)
                 )
+                if farm_name is None and lot is None:
+                    saved_farm_name = existing.farm_name
+                    saved_lot = existing.lot
+                else:
+                    saved_farm_name, saved_lot = _normalize_source_identity(
+                        farm_name,
+                        lot,
+                    )
                 saved_record = ActualAssortmentRecord(
                     record_id=record_id,
                     record_date=record_date,
@@ -262,6 +296,8 @@ def upsert_actual_record(
                     updated_at=now,
                     market_type=saved_market_type,
                     rm_id=existing.rm_id,
+                    farm_name=saved_farm_name,
+                    lot=saved_lot,
                 )
                 records[index] = saved_record
                 break
@@ -304,6 +340,21 @@ def _normalize_record_type(value: object) -> str:
 
 def _normalize_market_type(value: object) -> str:
     return market_internal_value(value, allow_unassigned=True)
+
+
+def _normalize_source_identity(
+    farm_name: str | None,
+    lot: str | None,
+) -> tuple[str, str]:
+    if farm_name is None and lot is None:
+        return "", ""
+    normalized_farm = str(farm_name or "").strip()
+    normalized_lot = str(lot or "").strip()
+    if not normalized_farm:
+        raise ValueError("Enter the farm name before saving stock.")
+    if not normalized_lot:
+        raise ValueError("Enter the LOT before saving stock.")
+    return normalized_farm, normalized_lot
 
 
 def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
@@ -363,6 +414,8 @@ def _write_records(path: Path, records: list[ActualAssortmentRecord]) -> None:
             {
                 "id": record.record_id,
                 "rm_id": record.rm_id,
+                "farm_name": record.farm_name,
+                "lot": record.lot,
                 "date": record.record_date,
                 "record_type": record.record_type,
                 "market_type": record.market_type,
