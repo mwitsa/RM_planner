@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "ranges": [
+    {
+      "size_class": "M",
+      "start_size": "46-50",
+      "end_size": "56-60"
+    },
+    {
+      "size_class": "S",
+      "start_size": "61-65",
+      "end_size": "66-70"
+    },
+    {
+      "size_class": "SS",
+      "start_size": "61-65",
+      "end_size": "81-85"
+    }
+  ]
+}

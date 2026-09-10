@@ -1,0 +1,98 @@
+{
+  "version": 7,
+  "records": [
+    {
+      "id": "1615070c-837a-4782-9aae-fdaeddffbb85",
+      "rm_id": "RM-000001",
+      "farm_name": "Stock",
+      "lot": "1",
+      "date": "2026-08-31",
+      "record_type": "actual",
+      "market_type": "domestic",
+      "entries": [
+        {
+          "size": "M",
+          "weight": 380.0,
+          "size_class": "M",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "S+",
+          "weight": 3537.0,
+          "size_class": "S+",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "Unused",
+          "weight": 1083.0,
+          "size_class": "Unused",
+          "pieces_per_kg": null
+        }
+      ],
+      "created_at": "2026-08-31T04:41:14.838048+00:00",
+      "updated_at": "2026-08-31T04:41:14.838048+00:00"
+    },
+    {
+      "id": "c7542dfa-c456-400a-bd61-7e5ead7f5564",
+      "rm_id": "RM-000002",
+      "farm_name": "ฟาร์ม1",
+      "lot": "42752",
+      "date": "2026-08-31",
+      "record_type": "actual",
+      "market_type": "domestic",
+      "entries": [
+        {
+          "size": "M",
+          "weight": 1521.0,
+          "size_class": "M",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "S+",
+          "weight": 14148.0,
+          "size_class": "S+",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "Unused",
+          "weight": 4331.0,
+          "size_class": "Unused",
+          "pieces_per_kg": null
+        }
+      ],
+      "created_at": "2026-08-31T04:42:14.740159+00:00",
+      "updated_at": "2026-08-31T04:42:14.740159+00:00"
+    },
+    {
+      "id": "3d967533-d334-4615-a876-a05c9ea1c3d3",
+      "rm_id": "RM-000003",
+      "farm_name": "Stock",
+      "lot": "14144",
+      "date": "2026-08-31",
+      "record_type": "actual",
+      "market_type": "export",
+      "entries": [
+        {
+          "size": "M",
+          "weight": 6083.0,
+          "size_class": "M",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "S+",
+          "weight": 56590.0,
+          "size_class": "S+",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "Unused",
+          "weight": 17327.0,
+          "size_class": "Unused",
+          "pieces_per_kg": null
+        }
+      ],
+      "created_at": "2026-08-31T05:05:37.357757+00:00",
+      "updated_at": "2026-08-31T05:05:37.357757+00:00"
+    }
+  ]
+}

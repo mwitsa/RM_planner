@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "priority": 1,
+      "text": "RM"
+    },
+    {
+      "priority": 2,
+      "text": "Load Date"
+    },
+    {
+      "priority": 3,
+      "text": "country"
+    },
+    {
+      "priority": 4,
+      "text": "group1"
+    }
+  ]
+}

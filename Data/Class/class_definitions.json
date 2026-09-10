@@ -1,0 +1,2525 @@
+{
+  "version": 3,
+  "classes": [
+    {
+      "id": "3eecc204-02a4-4aa3-a864-5eb10a83e511",
+      "class": "Country",
+      "name": ".7-11",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:18:52.933817+00:00"
+    },
+    {
+      "id": "2c2a78e3-a0ea-4dd1-be13-217fa8405f08",
+      "class": "Country",
+      "name": "5 Stars",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:18:56.536656+00:00"
+    },
+    {
+      "id": "3497633c-8ec5-42ed-891c-52b4c4c1f336",
+      "class": "Country",
+      "name": "AUS",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "64b91149-f95b-4319-8ce0-7dabb1a54448",
+      "class": "Country",
+      "name": "Belgium",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8875d4f9-f1ed-4d88-8446-d0098cba68c0",
+      "class": "Country",
+      "name": "BRUNEI",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "923fef05-6f96-4ec7-addf-6a0784244b0e",
+      "class": "Country",
+      "name": "Cambodia",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fe4b82d4-d7b9-4d83-9129-f0defc6b4433",
+      "class": "Country",
+      "name": "CAN",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "67595d3f-0b7b-4143-8641-a65950e105d8",
+      "class": "Country",
+      "name": "China",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "019203d9-25e4-4719-905d-a5a978b03a30",
+      "class": "Country",
+      "name": "Denmark",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "330d2e81-7e5a-4ab7-9560-d2eab8322acc",
+      "class": "Country",
+      "name": "Germany",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "dac2c714-7d8b-4403-928c-d426acf57c84",
+      "class": "Country",
+      "name": "HK",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1bf65f5a-101a-4a00-af7a-f56f497acf10",
+      "class": "Country",
+      "name": "Ireland",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "14b148e5-99f2-4263-b94e-c227c4efaa06",
+      "class": "Country",
+      "name": "Japan",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f49d6f8e-65e4-4e08-b2b5-9ab963b676fd",
+      "class": "Country",
+      "name": "Korea",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6490e78d-05be-4aca-9961-97b0f80478f8",
+      "class": "Country",
+      "name": "Laos",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c3f30e0f-0894-4311-8eb3-d0a4688c82ed",
+      "class": "Country",
+      "name": "Malay",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ec3015ea-8655-440b-b7eb-9ccfc04279c7",
+      "class": "Country",
+      "name": "MTFS",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6e9a89bf-0de2-44cf-a76e-c3e08d91fe38",
+      "class": "Country",
+      "name": "Netherlands",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2f110a96-ea84-4b9c-9038-5dfede33f280",
+      "class": "Country",
+      "name": "New Zealand",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "de5763f8-fbb4-42f8-baa5-7c66991d79a6",
+      "class": "Country",
+      "name": "SG",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6b102fdb-dea9-4d6a-a5ee-d3c896771b65",
+      "class": "Country",
+      "name": "Spain",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0a1b56f0-0d82-4741-bc4e-b7ed808189b5",
+      "class": "Country",
+      "name": "Taiwan",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "d24141d5-dd3d-458f-b013-9f44b29b3f08",
+      "class": "Country",
+      "name": "UAE",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f76ef769-ce0c-450a-8dbb-5ff26d4af899",
+      "class": "Country",
+      "name": "UK",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c855aec9-13a8-4f04-944c-48802f16370b",
+      "class": "Country",
+      "name": "USA",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "775ea8f2-68a6-4401-a64c-9953c2f1d1bb",
+      "class": "Country",
+      "name": "ขายภายใน",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "01aaa7c7-b2bc-44ed-8af9-9d1e0d1d78f6",
+      "class": "Customer",
+      "name": "Bellisio",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fcbec8b7-13bb-410b-9017-674542b5a365",
+      "class": "Customer",
+      "name": "Bellisio Foods Canada",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "499d370e-7c34-415a-81ce-86773f171b55",
+      "class": "Customer",
+      "name": "Bellisio Foods, Inc.",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4da3a031-b72d-4f43-9f4a-139e29735888",
+      "class": "Customer",
+      "name": "Ben Foods",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "97a947f4-22fa-4dc0-a5a0-5289f63e3ffb",
+      "class": "Customer",
+      "name": "C.P. Food Products, INC.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "857cca55-b9ff-4f72-adeb-770f26daeb2a",
+      "class": "Customer",
+      "name": "Charoen Pokphand Import&Export Trading (Shanghai) Co., Ltd",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1f37bdbe-15d8-4c91-a752-982657f6e643",
+      "class": "Customer",
+      "name": "Consumer Package Commerce",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "13734dde-cfbd-48ec-bb53-371410fc9cb3",
+      "class": "Customer",
+      "name": "CP Foods Canada,Inc (CPFC)",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7d5926b4-2756-4cf6-aa18-79c0a143e4b4",
+      "class": "Customer",
+      "name": "CP FOODS SINGAPORE PTE. LTD",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "948b0347-aa7c-4883-9b8c-5da9447e18fd",
+      "class": "Customer",
+      "name": "CP Global Supply Chain (Guangdong) Co., Ltd.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "02fd20c8-0c68-4427-9247-56d8be3b0e11",
+      "class": "Customer",
+      "name": "CP TAIWAN",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9740f770-6c2a-4476-8b40-ddadfe22d2e8",
+      "class": "Customer",
+      "name": "CPF Australia Pty Ltd.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "582d58be-5477-49db-b43f-dd38629b7f8c",
+      "class": "Customer",
+      "name": "CPF Australia Pty Ltd.(Woolworth)",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "bc53b79a-6f12-418c-bacd-df19cf30e48c",
+      "class": "Customer",
+      "name": "CPF DENMARK",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "99e2eec2-5d86-4113-b8c0-a83f217c50d7",
+      "class": "Customer",
+      "name": "CPF Distribution (under Paulsen Food)",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1bcf3caa-c959-43b5-a54c-80f8a1c1b043",
+      "class": "Customer",
+      "name": "CPF EUROPE S.A.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c53cc66d-5b4c-4f21-a32b-fa101cf9f9a4",
+      "class": "Customer",
+      "name": "CPF JAPAN",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ed6370e7-bcf6-4f4c-93b7-8befaae478d8",
+      "class": "Customer",
+      "name": "CPFB",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "52a52950-b369-4f1c-89c0-e5ae6830da7d",
+      "class": "Customer",
+      "name": "CPFGS",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4d7cdbb1-7746-4cab-bda9-db647facfde1",
+      "class": "Customer",
+      "name": "CPFRF",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "92eb9746-c736-476d-a92d-eef3310a5f00",
+      "class": "Customer",
+      "name": "CPI SINGAPORE",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2f512f8b-3ec0-460f-8af7-0eb5fc06b478",
+      "class": "Customer",
+      "name": "CPM Hongkong",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "90d48c79-a786-4ce1-b1e8-3386ea381877",
+      "class": "Customer",
+      "name": "CPM Malaysia",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "140a10de-0f61-40da-9738-1fef842b3043",
+      "class": "Customer",
+      "name": "Emart",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "88eca25b-410b-4e43-9756-1c44e5bff742",
+      "class": "Customer",
+      "name": "Everspring Industry Co., Ltd.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "686f19f3-a03d-4c8c-bde6-85159da90865",
+      "class": "Customer",
+      "name": "Food Fellas",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "22f67301-b07b-40a0-be09-8ccc3c4225bd",
+      "class": "Customer",
+      "name": "Lim Brothers",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c9a6f046-8c6c-47e5-ba36-a584eabf0fb0",
+      "class": "Customer",
+      "name": "Lim Brothers Import&Export Co.,Ltd.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "562447aa-29ad-45bf-b8a3-a6676be87cba",
+      "class": "Customer",
+      "name": "Mercadona",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "395cb702-424e-417b-98b9-21c5b2d1ae12",
+      "class": "Customer",
+      "name": "Sam's (Shanghai) Investment Co., Ltd.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "50f62c6c-81c8-4fac-911a-64bca0ff8ec8",
+      "class": "Customer",
+      "name": "Seven ถ้วยดำ",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c81e1c06-494e-4a84-8d64-f63464f26cc8",
+      "class": "Customer",
+      "name": "Shore Mariner Limited",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7910adc8-e6e4-4de1-a231-20bdb6ce6f3e",
+      "class": "Customer",
+      "name": "STK ตรุษจีน",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b75f661d-e390-465c-bae4-f691e262493b",
+      "class": "Customer",
+      "name": "Westbridge Foods Limited",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "e4fdb2f6-ba94-4f72-811a-d4d78be77992",
+      "class": "Customer",
+      "name": "Westbridge Foods Limited (One UK)",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9daf525e-a02f-4d63-85d3-5c024eb6cf5f",
+      "class": "Customer",
+      "name": "ซีพีเอฟ เทรดดิ้ง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f64408da-9b0e-4a14-8ce7-1bdf0495e2c8",
+      "class": "Customer",
+      "name": "ถ้วยขาวพิมพ์ STKตุษจีน",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f8dee9f4-8e6e-4260-95cd-4217c6234948",
+      "class": "Customer",
+      "name": "ถ้วยขาวพิมพ์กดสีฟ้า",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a3087fab-f0eb-44fb-860e-ad2a4362fc5c",
+      "class": "Customer",
+      "name": "ถ้วยขาวพิมพ์ลายใหม่",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "e3655416-4323-42f0-b6a0-ce4415633676",
+      "class": "Customer",
+      "name": "ถ้วยใหม่",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fa16d36d-14dc-4a44-9bf9-1138a97e605a",
+      "class": "Customer",
+      "name": "บริษัท ปิก้าเทรดดิ้ง จำกัด",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "aaca17fd-9c09-4459-bf0c-ab4d65a7c5f5",
+      "class": "Customer",
+      "name": "บริษัท อินสยาม ฟู้ด แอนด์ เบฟเวอเรจ จำกัด",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "506618fa-4194-4930-87a7-e946ae6d9b95",
+      "class": "Customer",
+      "name": "หจก.คิงฟู้ดส์",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "e319f967-3ad4-4746-8267-d9694c92c8c6",
+      "class": "Group 1",
+      "name": "C-Minced WT in tray no egg",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:41.543639+00:00"
+    },
+    {
+      "id": "38087bf1-b12d-4878-8e08-10435bfd8e8d",
+      "class": "Group 1",
+      "name": "C-WT in tray no egg",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:44.104857+00:00"
+    },
+    {
+      "id": "dd689447-e2a4-4091-ac93-af333a9fd7a7",
+      "class": "Group 1",
+      "name": "E+Minced NDE",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-28T09:58:23.258697+00:00"
+    },
+    {
+      "id": "e88f2832-20d0-4496-9a88-29f826faa850",
+      "class": "Group 1",
+      "name": "E+Minced WT",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "90b5045c-656f-4480-8eb8-3d849c86b07c",
+      "class": "Group 1",
+      "name": "E+NDเส้นมัน+หมาล่า",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "e87e4ed0-a96f-4b67-9ec1-aa312e0a9204",
+      "class": "Group 1",
+      "name": "E+Wonton",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fc03a1f4-013d-4821-a808-7ef9378657d7",
+      "class": "Group 1",
+      "name": "E+Wonton NDE",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1867a4fe-bf50-401a-8f36-3050f57c2161",
+      "class": "Group 1",
+      "name": "E+Wonton TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:19.884932+00:00"
+    },
+    {
+      "id": "4248ff6c-9c4e-4ac7-a9a1-8cbeb70a9593",
+      "class": "Group 1",
+      "name": "E+Wonton+หมาล่า",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "49f426a3-044d-438c-83aa-83f629230db2",
+      "class": "Group 1",
+      "name": "EP+Wonton",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:48:23.343666+00:00"
+    },
+    {
+      "id": "f148dbb3-9174-4419-b471-8d4d08948215",
+      "class": "Group 1",
+      "name": "Minced ND",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "505cff0a-387a-41d3-b63a-889f6eaf4608",
+      "class": "Group 1",
+      "name": "Minced ND+BC",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2904fd1d-93b5-4f77-a10c-3e25035bf22a",
+      "class": "Group 1",
+      "name": "Minced ND+BC+LS",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4f8bae22-429f-484a-9d52-345ace98e853",
+      "class": "Group 1",
+      "name": "Minced ND+BC+TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:22.228806+00:00"
+    },
+    {
+      "id": "eedb7710-4e76-49e0-ab2d-4d5eabfc0931",
+      "class": "Group 1",
+      "name": "Minced ND+Kee Mao",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2269145b-ca01-43d8-9b62-6268d749534f",
+      "class": "Group 1",
+      "name": "Minced ND+TK",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "184ce879-1b66-4e35-9fae-8b203c226336",
+      "class": "Group 1",
+      "name": "Minced ND+TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:24.401406+00:00"
+    },
+    {
+      "id": "ea65655c-ef9c-4122-99f5-583cbcf5c86c",
+      "class": "Group 1",
+      "name": "Minced ND+V",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:45:11.835567+00:00"
+    },
+    {
+      "id": "3a1d5124-108a-4309-92b2-5f6904626fca",
+      "class": "Group 1",
+      "name": "Minced ND+V+TK",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:45:21.579879+00:00"
+    },
+    {
+      "id": "0307acf3-d733-426e-84f5-f22e34f4340d",
+      "class": "Group 1",
+      "name": "Minced ND+V+TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:45:24.030973+00:00"
+    },
+    {
+      "id": "7071b075-4a60-46f9-819e-da32f1338268",
+      "class": "Group 1",
+      "name": "Minced ND+V+น้ำราดเป็ด",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0b8ff6e6-f74f-4375-9a17-fa315ef3c300",
+      "class": "Group 1",
+      "name": "Minced ND+หมาล่า",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7e0afa44-bb37-4c6d-ba8a-78c7e726821e",
+      "class": "Group 1",
+      "name": "Minced WT",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "973110fa-c889-403b-82a9-1237ab47f08b",
+      "class": "Group 1",
+      "name": "Minced+ND+Kee Mao แห้ง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "28c456f6-e5cb-4405-8ecc-fd39ac63f878",
+      "class": "Group 1",
+      "name": "Minced+ND+V+น้ำราดเป็ด",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0bc99d23-a1ac-478e-9d06-ee726a2359e1",
+      "class": "Group 1",
+      "name": "Noodles+BC",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c78bd5e7-1bfa-4b27-8a89-680c88d2cf91",
+      "class": "Group 1",
+      "name": "R-Minced",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "705f09b0-c030-4692-9874-9b1630432434",
+      "class": "Group 1",
+      "name": "R-Minced egg past",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:46.740484+00:00"
+    },
+    {
+      "id": "91dd70f8-faaa-43ee-a3bf-9816a7d0aa45",
+      "class": "Group 1",
+      "name": "R-Minced no egg",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:51.577177+00:00"
+    },
+    {
+      "id": "2f4ea7d8-c955-4b86-b810-28940204e60a",
+      "class": "Group 1",
+      "name": "R-Wonton (Fried Sheet)",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c9f7825e-c821-403a-9905-41d01bfa32ca",
+      "class": "Group 1",
+      "name": "R-Wonton egg past",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:54.393073+00:00"
+    },
+    {
+      "id": "6bc47d4b-3357-44d1-96d3-f8cfc2d800f7",
+      "class": "Group 1",
+      "name": "R-Wonton no egg",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:58.313250+00:00"
+    },
+    {
+      "id": "95b0ec57-7d15-439a-a6df-3c386422a4e8",
+      "class": "Group 1",
+      "name": "Wonton",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:43:23.718286+00:00"
+    },
+    {
+      "id": "8f304b7d-4e2a-4aa7-8fc0-80b4f0e243fe",
+      "class": "Group 1",
+      "name": "Wonton +LS",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:43:16.706660+00:00"
+    },
+    {
+      "id": "d744a91a-055b-436e-a6c7-43917c34dffe",
+      "class": "Group 1",
+      "name": "Wonton +TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:43:27.505393+00:00"
+    },
+    {
+      "id": "33115214-1d16-4f16-88cf-75f1a0ab129d",
+      "class": "Group 1",
+      "name": "Wonton +V",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:45:30.434089+00:00"
+    },
+    {
+      "id": "f65270f2-c0c1-4fa4-b3c9-d2e29b6811a1",
+      "class": "Group 1",
+      "name": "Wonton ND",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "88ba7ab0-c74b-4809-b2cf-048a7f3d8a1b",
+      "class": "Group 1",
+      "name": "Wonton ND+BC",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "61f879a4-8196-4356-83ff-2ce82b8f7374",
+      "class": "Group 1",
+      "name": "Wonton ND+BC+TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:26.457587+00:00"
+    },
+    {
+      "id": "cfb7827a-1337-4d69-bfdc-6384a775efff",
+      "class": "Group 1",
+      "name": "Wonton ND+Kee Mao",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "3f702081-c57f-4287-94ca-1b10745d03da",
+      "class": "Group 1",
+      "name": "Wonton ND+V",
+      "group": "1",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:45:34.031976+00:00"
+    },
+    {
+      "id": "bdd774b6-8701-4ae1-8fd8-52f26c563995",
+      "class": "Group 1",
+      "name": "Wonton ND+V+TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:45:36.810030+00:00"
+    },
+    {
+      "id": "87a0e95a-b9ac-4ddc-bc82-5acde1f52287",
+      "class": "Group 1",
+      "name": "Wonton ND+เย็นตาโฟ",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "07fb4ac9-b607-4994-b71c-848899ba233f",
+      "class": "Group 1",
+      "name": "Wonton TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:28.603857+00:00"
+    },
+    {
+      "id": "5e846d00-e0d4-4c30-b5e3-0a46dd054ec5",
+      "class": "Group 1",
+      "name": "Wonton+TY",
+      "group": "2",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:47:30.969879+00:00"
+    },
+    {
+      "id": "06df71f8-6525-435a-b590-882219321539",
+      "class": "Group 2",
+      "name": "Cooked Minced ND No Egg หมาล่า",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "053154cc-ccc4-475b-b281-c76efa1f8827",
+      "class": "Group 2",
+      "name": "Cooked Wonton",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "d0baca6d-41db-4fa0-90df-79e1716361b2",
+      "class": "Group 2",
+      "name": "Cooked Wonton ND No Egg with Pumpkin + Yu Choy",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c0c5b6df-6fb6-4172-bc34-164c5dc1c8f2",
+      "class": "Group 2",
+      "name": "Raw Wonton",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f3ad8c8a-ef20-4563-9fdd-07a3cf010993",
+      "class": "Packaging",
+      "name": "101g*18in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "922ff49c-e93c-46e0-b0a2-9b1d1fd01664",
+      "class": "Packaging",
+      "name": "115g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "03e14546-bcd4-4122-92cc-8fe994e958bc",
+      "class": "Packaging",
+      "name": "115g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "dcc149b0-530e-48a5-a0a9-b9c0c13a4225",
+      "class": "Packaging",
+      "name": "117*2tray*8in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b7a78d62-c59f-4a3c-a0f5-e2efc6f1f8bd",
+      "class": "Packaging",
+      "name": "126g*18in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9273302d-9440-40c6-a59d-4646bf9882b8",
+      "class": "Packaging",
+      "name": "129g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "608dde2f-ac69-44d1-bc63-bc30b14b94f0",
+      "class": "Packaging",
+      "name": "130g*12ถ้วย",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8de67998-31bd-4bad-8d30-af028e35ece0",
+      "class": "Packaging",
+      "name": "130g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4b310846-42ae-4261-ad0d-761c1d7e71b3",
+      "class": "Packaging",
+      "name": "135g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7eab312b-9715-45bd-9111-f4fb320bbc45",
+      "class": "Packaging",
+      "name": "135g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "78638258-96cc-4bf6-b982-641823e08a40",
+      "class": "Packaging",
+      "name": "135g*3ถ้วย*6ถุง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9cbbb1c4-43aa-424a-88c6-58ceda3bc36c",
+      "class": "Packaging",
+      "name": "141*2tray*12in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "62a5633d-c7fa-4669-8ee0-cbe92c115242",
+      "class": "Packaging",
+      "name": "143g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "83afeeb5-a9e2-4606-be63-31aaba38a60d",
+      "class": "Packaging",
+      "name": "143g*18",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8b2b2244-4c89-4bed-89c8-cfdd46dc63bd",
+      "class": "Packaging",
+      "name": "143g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "bd8609f3-c885-4ad1-918d-e2468b09b8f9",
+      "class": "Packaging",
+      "name": "143g*3ถ้วย*6ถุง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "83ba7729-4300-4ee7-8be4-d7e177c0fd6b",
+      "class": "Packaging",
+      "name": "144g*20in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a8f2b18d-f3e1-4562-9ff1-b06bb4cfe7c9",
+      "class": "Packaging",
+      "name": "145g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "aa8a5d13-72c5-4d59-99e8-10cc5553c6b9",
+      "class": "Packaging",
+      "name": "145g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0b74671f-2de8-44b4-9cf0-ef064a34e346",
+      "class": "Packaging",
+      "name": "145g*6c*6",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "788dc62d-0cc5-4f62-b112-e37993da3859",
+      "class": "Packaging",
+      "name": "145g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "d59f8f6b-c64f-455b-9449-861ca6fbab3e",
+      "class": "Packaging",
+      "name": "145g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7a68b049-3e9d-4d39-b187-ae8dd7090675",
+      "class": "Packaging",
+      "name": "147g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "02902e5b-261b-4caa-9dac-d2e78d754dbe",
+      "class": "Packaging",
+      "name": "147g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "852f973e-177d-4ce1-bccc-e05d404323ca",
+      "class": "Packaging",
+      "name": "148g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c1f13f58-5de1-40cd-89c8-5e4505691eba",
+      "class": "Packaging",
+      "name": "154g*20in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f60110ed-2e80-407f-be62-fa5265dfba01",
+      "class": "Packaging",
+      "name": "154g*20inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "cee1c92d-765c-4e26-aa4c-554b2ad97323",
+      "class": "Packaging",
+      "name": "154g*40in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2175312d-82da-4a79-bd29-3fc5165fc077",
+      "class": "Packaging",
+      "name": "154g*40inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fb4f2c77-b8ce-46ce-9c39-ddfd9cf89834",
+      "class": "Packaging",
+      "name": "191g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "604f9f79-3630-404b-ae4f-7fa4bbcf0246",
+      "class": "Packaging",
+      "name": "191g*3ถ้วย*6ถุง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "883c7133-d7db-4615-8d37-97b76ec3470d",
+      "class": "Packaging",
+      "name": "191g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ccd392da-aa7b-442e-83af-84c208a9f7b7",
+      "class": "Packaging",
+      "name": "194g*20in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "01667d12-3837-41ed-a933-9819f9a7aae2",
+      "class": "Packaging",
+      "name": "20 pcs*16",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2d7735ca-41a3-448a-ab56-7504fb32d9a6",
+      "class": "Packaging",
+      "name": "204g*20in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6aa47e73-f853-47c7-b29d-b72a02935019",
+      "class": "Packaging",
+      "name": "211g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b2475401-f0a9-4420-8a1c-5313f50821ac",
+      "class": "Packaging",
+      "name": "211g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7bd5acb7-0200-489a-84b5-314140b6f5a4",
+      "class": "Packaging",
+      "name": "219g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ad30381a-a250-4589-8702-14fd6216abf1",
+      "class": "Packaging",
+      "name": "219g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4e70394d-edc5-4e34-9426-6b43a4047f4e",
+      "class": "Packaging",
+      "name": "220g*12in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9b36bea1-bd5b-4f2e-8126-d69ccfb1b6e3",
+      "class": "Packaging",
+      "name": "225g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8c649d19-fba3-4c94-8173-1b6fe98882a0",
+      "class": "Packaging",
+      "name": "225g*3ถ้วย*6ถุง/ctn",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4f2625b9-14fd-4c9d-aa59-1fdedfe123d6",
+      "class": "Packaging",
+      "name": "226g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "234b2eee-21f5-4af8-81e0-2fe68de3f98b",
+      "class": "Packaging",
+      "name": "226g*3ถ้วย*6ถุง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "36d5b30d-0e27-47a7-aaa3-fdad30d4a2e0",
+      "class": "Packaging",
+      "name": "227g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2c2413c8-231a-4948-bb65-8ceba8590145",
+      "class": "Packaging",
+      "name": "231g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2927dba6-3bd1-488d-9ec3-e85e3c6fa61c",
+      "class": "Packaging",
+      "name": "235g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9e970449-b208-4b6f-8e50-b98eba7ad717",
+      "class": "Packaging",
+      "name": "235g*3ถ้วย*6ถุง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "32959d21-98ce-49c5-96eb-0dbebc8dfc19",
+      "class": "Packaging",
+      "name": "239g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "937a30aa-1458-46a6-ad47-cbb0c2595354",
+      "class": "Packaging",
+      "name": "240g*12ถ้วย",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b61c61ae-91a0-496d-a1b9-3db424303744",
+      "class": "Packaging",
+      "name": "242g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "79930d31-fc48-42f7-897b-0125e7a01b22",
+      "class": "Packaging",
+      "name": "250g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6ceec93c-bbbc-423a-bd4a-5fe92767906b",
+      "class": "Packaging",
+      "name": "250g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "631c7339-6501-4903-bdd6-3dda8c9b9d13",
+      "class": "Packaging",
+      "name": "250g*3ถ้วย*6ถุง",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "dafb18f8-c799-41b0-b793-5338f9b39962",
+      "class": "Packaging",
+      "name": "255g*16in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "430efef3-0231-4c00-80fa-7285b8cf3e27",
+      "class": "Packaging",
+      "name": "258g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "94b66b42-d35e-4bf4-8da1-13e8a6cb67bb",
+      "class": "Packaging",
+      "name": "258g*4c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "da04c7b7-9a9d-4208-8f7d-54831e494745",
+      "class": "Packaging",
+      "name": "258g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "cdc33c29-23e7-48ea-ad8b-a0468daf3d52",
+      "class": "Packaging",
+      "name": "260g*10in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1114b305-46b4-41af-95b6-634006f3794b",
+      "class": "Packaging",
+      "name": "270g*3B*6B",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "23b974c9-dfd6-46b0-8436-347267ccaafb",
+      "class": "Packaging",
+      "name": "283g*5",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "deecb640-e649-470b-b577-bbc5b8fc17d4",
+      "class": "Packaging",
+      "name": "300g*24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "41a7dff2-0a20-4a46-8e47-6853548062a9",
+      "class": "Packaging",
+      "name": "300g*6",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ddb886ff-e98c-4b18-b725-70034b5f47cb",
+      "class": "Packaging",
+      "name": "300g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "23fff524-f3c8-4f44-a482-8925a987de9a",
+      "class": "Packaging",
+      "name": "302g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8dd26ee4-1681-4be7-bf13-21c5cb21ae69",
+      "class": "Packaging",
+      "name": "302g*2c*8in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a19c46c7-cfb4-4d57-b930-b1e623e8e7c5",
+      "class": "Packaging",
+      "name": "302g*4c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a05fd5f6-9afd-484b-8f1a-537a91bd27ce",
+      "class": "Packaging",
+      "name": "302g*5",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ac5c35e3-d729-4c7e-9a09-98724ff26410",
+      "class": "Packaging",
+      "name": "302g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f243d0cf-c4fe-4830-9634-661d3121c769",
+      "class": "Packaging",
+      "name": "302g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c9264e10-00d2-45da-85bf-b7960d93c6a3",
+      "class": "Packaging",
+      "name": "305g*2c*8in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9b496995-a011-49e0-9b68-afaa918ddc7d",
+      "class": "Packaging",
+      "name": "305g*5",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "168c759e-c3ff-4120-a0ec-eace0b1427dc",
+      "class": "Packaging",
+      "name": "305g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8a04394f-0407-4323-b729-631450dafea9",
+      "class": "Packaging",
+      "name": "307g*4c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b82a7a45-2f6d-4402-b50a-10a6893d9de6",
+      "class": "Packaging",
+      "name": "307g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "bb49a1e7-d9f6-41ed-95aa-cae09a95ae62",
+      "class": "Packaging",
+      "name": "308g*4c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "54fac942-e6e5-4258-aded-49d1520d1be7",
+      "class": "Packaging",
+      "name": "308g*6c*6in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "cdf4b1b8-82e9-4154-a2c5-c8eb9930b6de",
+      "class": "Packaging",
+      "name": "309g*12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "5302381a-7ce8-4a39-999f-0c4207d2f90a",
+      "class": "Packaging",
+      "name": "309g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "902e82b0-14d4-42f8-997b-6259ad2a1475",
+      "class": "Packaging",
+      "name": "310g*12ถ้วย",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "dba7d00e-18e6-4770-be00-70eba59e3294",
+      "class": "Packaging",
+      "name": "315g*8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f596f213-15ab-4d09-9e84-a872eb80b59d",
+      "class": "Packaging",
+      "name": "320g*12ถ้วย",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fe7841d2-aae4-4415-9158-fe023cff3a30",
+      "class": "Packaging",
+      "name": "360g.*16Pack",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "784f0c31-4562-4e0d-8915-208c873f9930",
+      "class": "Packaging",
+      "name": "500g*10inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9324b942-b355-430e-9c35-b96054b383ff",
+      "class": "Packaging",
+      "name": "500g*10inner*2C/B",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f3525290-da7f-4f0d-b16f-03de756e4f23",
+      "class": "Packaging",
+      "name": "530g*10inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "41557658-b82b-4a94-84f6-057eefedec02",
+      "class": "Packaging",
+      "name": "580g*10in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4e4f96b5-dc3c-4510-9391-a7163dbe84d0",
+      "class": "Packaging",
+      "name": "600g*10inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b22a1702-c99a-44ca-9b75-fb2006cd1d37",
+      "class": "Packaging",
+      "name": "600g.*8 packs",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "ac18a8e0-c95f-4625-84e4-0357edd151c6",
+      "class": "Packaging",
+      "name": "630g*10inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c311815c-57e7-4646-bef3-a978fe2edd47",
+      "class": "Packaging",
+      "name": "630g*8in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "9b0bd7c6-9757-46e8-b4ad-58781a4cc0b9",
+      "class": "Packaging",
+      "name": "681g*6",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fae52efc-897a-42a2-b11c-812a976e5786",
+      "class": "Packaging",
+      "name": "750g*10inner",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a9268033-5a52-466b-90ab-0ec58ae8ccd6",
+      "class": "Packaging",
+      "name": "750g*8in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "8ac729ee-9ace-4f1d-bca1-9c0e76c95402",
+      "class": "Packaging",
+      "name": "770g*8in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "40421452-6ef1-49ad-b495-7a8a705b33f0",
+      "class": "Packaging",
+      "name": "90g*100B",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b5bd0fb7-b181-4c19-b9a5-fa7ebce7ce5b",
+      "class": "Packaging",
+      "name": "90g*18in",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6db139d7-bd18-4429-b377-f551674daafc",
+      "class": "Packaging",
+      "name": "90g*3B*6B",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7279b7b5-c080-445d-a54d-95c628f87cb2",
+      "class": "Packaging",
+      "name": "98g*24tray",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "d5f513dc-39a5-4c5b-8195-ff0692629e21",
+      "class": "Soup",
+      "name": "-",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "00308866-400f-439b-a158-6d29216c70bc",
+      "class": "Soup",
+      "name": "HOTPOT 10g",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1c3cac56-7fd5-4d2e-b2a8-d98749678508",
+      "class": "Soup",
+      "name": "Kee Mao",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "3dc60e6a-3a27-48db-a975-07e1b5ca4c7b",
+      "class": "Soup",
+      "name": "Kee Mao 50G.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "99e0f9c3-5b5f-4e28-a25a-d08de82ae436",
+      "class": "Soup",
+      "name": "Laksa",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "dae17b9f-5d40-4f34-83b8-4e9bc7679d59",
+      "class": "Soup",
+      "name": "MK",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2bc0ee42-4f8a-403c-9762-b00f0bde66b0",
+      "class": "Soup",
+      "name": "Regular",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "96621893-33c2-4c6d-b091-5e8b0fb1bab8",
+      "class": "Soup",
+      "name": "Sesame 15g",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0fe9ece3-467f-4600-b71d-f868ecd3e955",
+      "class": "Soup",
+      "name": "sesame 30g",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "86fa5860-e1df-4fdc-9e08-5a9511e9fd9e",
+      "class": "Soup",
+      "name": "Soy Sauce",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "82c46da2-5e03-4420-baf4-2d45b7d3ab03",
+      "class": "Soup",
+      "name": "Tomkha+CM",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2a7cedfa-4d80-4ed6-904a-be6c025c9b29",
+      "class": "Soup",
+      "name": "Tomkha1+CM",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b7c106c0-46c8-465b-8227-8b401a0305fc",
+      "class": "Soup",
+      "name": "TYA+CO",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "cc570e31-80a6-479f-882f-21bbbe62a8a5",
+      "class": "Soup",
+      "name": "TYANS+CM",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a59317fb-bcdf-4387-9b64-21fe80c83113",
+      "class": "Soup",
+      "name": "TYANSSG+CM",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "200f5745-4348-490f-ba13-38e213bd1ccf",
+      "class": "Soup",
+      "name": "TYEX+CO",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "400461ea-f53c-436a-82f6-f6a76b5f3ab3",
+      "class": "Soup",
+      "name": "TYEXSG+CO",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "240d19c1-3c16-4217-819b-1fe1c64dfd61",
+      "class": "Soup",
+      "name": "TYNSF",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4ee1e648-bfab-4354-b18b-83612cb49a4a",
+      "class": "Soup",
+      "name": "TYTB3C 30G",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "95001ec3-6ad1-4b1a-9dd4-6ab374f32f5a",
+      "class": "Soup",
+      "name": "Y3",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "62cbfdca-2121-4772-9436-9bda194db29d",
+      "class": "Soup",
+      "name": "ซุปซอง 10g.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0e222b9f-c993-49f9-b96b-9c5fac954b57",
+      "class": "Soup",
+      "name": "ซุปซอง 5g.",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "023145db-171c-4596-8369-aa3d3025e01b",
+      "class": "Soup",
+      "name": "น้ำดำ",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4bf9ec1c-3c56-402a-82a7-e26de358cc6c",
+      "class": "Soup",
+      "name": "น้ำราดเป็ด",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "2c976670-7801-4563-91a0-4d843d619cf0",
+      "class": "Soup",
+      "name": "หมาล่า",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "85b09845-e32d-4291-a8bf-55ba50ac302d",
+      "class": "Soup",
+      "name": "เย็นตาโฟ",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0f41f1c1-7e59-4554-99a8-cffed9ad4584",
+      "class": "ถ้วย/Unit",
+      "name": "3.96",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "b0fb7f35-071d-4ca5-a5d2-28f0a61399af",
+      "class": "ถ้วย/Unit",
+      "name": "4.714286",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "1db74e63-6a5f-4e92-b227-9e9d742efe94",
+      "class": "ถ้วย/Unit",
+      "name": "5",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "00f1996e-4b48-4596-ae57-33ab485d4a26",
+      "class": "ถ้วย/Unit",
+      "name": "6",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "51a1f426-4772-41f4-859d-db833dd5dea6",
+      "class": "ถ้วย/Unit",
+      "name": "6.6",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7873bca2-78bd-4443-98bf-e06169348bef",
+      "class": "ถ้วย/Unit",
+      "name": "8",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "0e27c1a9-d8f5-4c67-90d6-243bb49d9e04",
+      "class": "ถ้วย/Unit",
+      "name": "10",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "20536b31-ab8b-41a7-babb-987839176927",
+      "class": "ถ้วย/Unit",
+      "name": "10.421053",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "475e32c4-d24e-45b4-8eaf-dbfa848f075a",
+      "class": "ถ้วย/Unit",
+      "name": "12",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "393107e6-f920-4e73-8b02-f2ab051b5ccf",
+      "class": "ถ้วย/Unit",
+      "name": "12.375",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a20406ee-b7ce-4844-b2cd-c2d8a47d7b9c",
+      "class": "ถ้วย/Unit",
+      "name": "13.2",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7addab80-87a4-4950-a44c-0c5d2e115769",
+      "class": "ถ้วย/Unit",
+      "name": "14.142857",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "33afe923-b65d-4424-bc2e-371477ecc55f",
+      "class": "ถ้วย/Unit",
+      "name": "16",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "85ba7217-5cf7-4239-ae8f-8c178455ded9",
+      "class": "ถ้วย/Unit",
+      "name": "16.5",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4326c127-94e9-45b8-9ad7-67a089d7e686",
+      "class": "ถ้วย/Unit",
+      "name": "18",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c7f1799c-6842-4c82-bdb3-13fcff5ef597",
+      "class": "ถ้วย/Unit",
+      "name": "19.373777",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "66f74f00-1038-44b1-ae5e-236cb7796a9d",
+      "class": "ถ้วย/Unit",
+      "name": "20",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "7033a21b-c44f-4cc5-9ce1-37489b887bc8",
+      "class": "ถ้วย/Unit",
+      "name": "22",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "a3bc3346-6cc4-436d-a858-a6a0c3b8eca7",
+      "class": "ถ้วย/Unit",
+      "name": "22.654462",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "371bba5c-c6b4-4860-af09-560cba3cbb15",
+      "class": "ถ้วย/Unit",
+      "name": "24",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "937387f2-74c3-45b1-a6e5-8014234a1d17",
+      "class": "ถ้วย/Unit",
+      "name": "24.75",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "3ae09ba9-f7b6-4045-a900-3c12f88809f2",
+      "class": "ถ้วย/Unit",
+      "name": "26.4",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "4517d0ed-1c43-4498-ab75-585ff1880d16",
+      "class": "ถ้วย/Unit",
+      "name": "28.285714",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "492e59bb-02ca-4228-b30b-750c89ad9040",
+      "class": "ถ้วย/Unit",
+      "name": "33",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6b0594b3-8752-470b-a4f4-9052e2e0186d",
+      "class": "ถ้วย/Unit",
+      "name": "36",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "e279c95d-254f-4bb9-95ac-d6bc6bb2666c",
+      "class": "ถ้วย/Unit",
+      "name": "38.671875",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "fa484dfb-7158-454c-8793-e913854c4db5",
+      "class": "ถ้วย/Unit",
+      "name": "39.6",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6a44f63d-c47c-4e47-b172-a835fff47e26",
+      "class": "ถ้วย/Unit",
+      "name": "40",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "db41124e-10a9-40ee-8261-d7622231fdac",
+      "class": "ถ้วย/Unit",
+      "name": "44",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "19ecfb97-b3c4-47a2-8fe8-c240cbf73339",
+      "class": "ถ้วย/Unit",
+      "name": "49.5",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "c6b70bb5-9a9a-488e-94a6-278dd2763685",
+      "class": "ถ้วย/Unit",
+      "name": "52.380952",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f18e4a6e-6cb3-4f06-ad40-268874586af1",
+      "class": "ถ้วย/Unit",
+      "name": "56.571429",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "eb9a16be-b683-4497-bb1a-759f20b7fa7c",
+      "class": "ถ้วย/Unit",
+      "name": "66",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "f4b5efe2-3315-443e-83ea-fec338aa50e1",
+      "class": "ถ้วย/Unit",
+      "name": "79.2",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "95f0a72c-640a-4913-8bcd-aed24e97da40",
+      "class": "ถ้วย/Unit",
+      "name": "100",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "96c14094-7ed0-48d3-9e92-1202315fc2f6",
+      "class": "ถ้วย/Unit",
+      "name": "1320",
+      "group": "",
+      "value": "",
+      "created_at": "2026-08-27T11:10:12.739974+00:00",
+      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+    },
+    {
+      "id": "6d667161-c889-43c8-89c6-7cd7e12829d0",
+      "class": "ถ้วย/Unit",
+      "name": "3.735849",
+      "group": "",
+      "value": "",
+      "created_at": "2026-09-10T09:00:29.884878+00:00",
+      "updated_at": "2026-09-10T09:00:29.884878+00:00"
+    }
+  ]
+}
