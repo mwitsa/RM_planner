@@ -14,7 +14,7 @@ from typing import Iterable
 from extractor import ORDER_EXPORT_FIELDS, OrderRecord
 
 
-STORE_VERSION = 5
+STORE_VERSION = 6
 ORDER_NUMBER_PREFIX = "ORD-"
 ORDER_NUMBER_WIDTH = 6
 ORDER_NUMBER_PATTERN = re.compile(r"^ORD-(\d+)$", re.IGNORECASE)
@@ -88,6 +88,10 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                 raw.get("wontons_per_cup"),
                 "ลูกเกี๊ยว per cup",
             )
+            pd_weight_kg = _optional_number(
+                raw.get("pd_weight_kg"),
+                "น้ำหนัก PD (kg)",
+            )
             if cups_per_unit is None and order_cups is not None and order_unit != 0:
                 cups_per_unit = order_cups / order_unit
             records.append(
@@ -106,6 +110,7 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                     order_unit=order_unit,
                     order_cups=order_cups,
                     cups_per_unit=cups_per_unit,
+                    pd_weight_kg=pd_weight_kg,
                     production=production,
                     record_id=record_id,
                     order_no=order_no.strip().upper(),
@@ -201,6 +206,11 @@ def _backfill_new_source_fields(
             changed = True
         if existing.wontons_per_cup is None and incoming.wontons_per_cup is not None:
             existing.wontons_per_cup = incoming.wontons_per_cup
+            changed = True
+        if incoming.pd_weight_kg is not None and (
+            existing.pd_weight_kg != incoming.pd_weight_kg
+        ):
+            existing.pd_weight_kg = incoming.pd_weight_kg
             changed = True
         if changed:
             upgraded += 1

@@ -100,6 +100,27 @@ class OrderFilterTests(unittest.TestCase):
             ["2"],
         )
 
+    def test_filters_and_sorts_pd_weight_numerically(self) -> None:
+        self.records[0].pd_weight_kg = 1250
+        self.records[1].pd_weight_kg = 84
+        self.records[2].pd_weight_kg = None
+
+        self.assertEqual(
+            filter_options(self.records, "pd_weight_kg"),
+            ["84", "1250", BLANK_FILTER],
+        )
+        self.assertEqual(
+            [
+                record.record_id
+                for record in sort_orders(
+                    self.records,
+                    "pd_weight_kg",
+                    descending=True,
+                )
+            ],
+            ["1", "2", "3"],
+        )
+
     def test_order_number_and_production_columns_are_filterable(self) -> None:
         for index, record in enumerate(self.records, start=1):
             record.order_no = f"ORD-{index:03d}"

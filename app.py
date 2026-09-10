@@ -117,6 +117,7 @@ ORDER_COLUMN_FILTER_KEYS = {
     "order_cups": "order_cups",
     "cups_per_unit": "cups_per_unit",
     "total_wontons": "total_wontons",
+    "pd_weight_kg": "pd_weight_kg",
     "production": "production",
 }
 DEFAULT_EXISTING_STOCK_PIECES_PER_KG = {
@@ -308,6 +309,7 @@ class ProductionPlanApp(tk.Tk):
             "order_cups",
             "cups_per_unit",
             "total_wontons",
+            "pd_weight_kg",
             "production",
         )
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
@@ -328,6 +330,7 @@ class ProductionPlanApp(tk.Tk):
             "order_cups": "Order (ถ้วย)",
             "cups_per_unit": "ถ้วย/Unit",
             "total_wontons": "จำนวนเกี๊ยว",
+            "pd_weight_kg": "น้ำหนัก PD (kg)",
             "production": "Production",
         }
         widths = {
@@ -347,6 +350,7 @@ class ProductionPlanApp(tk.Tk):
             "order_cups": 120,
             "cups_per_unit": 110,
             "total_wontons": 130,
+            "pd_weight_kg": 130,
             "production": 120,
         }
         for column in columns:
@@ -363,6 +367,7 @@ class ProductionPlanApp(tk.Tk):
                 "cups_per_unit",
                 "wontons_per_cup",
                 "total_wontons",
+                "pd_weight_kg",
                 "production",
             ) else tk.W
             self.tree.column(column, width=widths[column], minwidth=70, anchor=anchor)
@@ -3593,6 +3598,7 @@ class ProductionPlanApp(tk.Tk):
                     self._format_optional_number(record.order_cups),
                     self._format_optional_number(record.cups_per_unit),
                     self._format_optional_number(record.total_wontons),
+                    self._format_optional_number(record.pd_weight_kg),
                     self._format_optional_number(record.production),
                 ),
             )

@@ -38,6 +38,7 @@ class ExtractorTests(unittest.TestCase):
         plan["S5"] = "M"
         plan["U5"] = " Regular "
         plan["V5"] = "1,250"
+        plan["AF5"] = 1.25
         plan["AI5"] = 20000
         plan["C6"] = datetime(2026, 8, 28)  # separator/incomplete row
         plan["C7"] = "28/08/2569"
@@ -45,6 +46,7 @@ class ExtractorTests(unittest.TestCase):
         plan["V7"] = 10.5
         plan["Q7"] = 12
         plan["S7"] = "S"
+        plan["AF7"] = 0.084
         plan["AI7"] = 84
         plan["C8"] = "'10-2026"
         plan["J8"] = "Month-only customer"
@@ -74,6 +76,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0].order_cups, 20000)
         self.assertEqual(result.records[0].cups_per_unit, 16)
         self.assertEqual(result.records[0].total_wontons, 160000)
+        self.assertEqual(result.records[0].pd_weight_kg, 1250)
         self.assertIsNone(result.records[0].production)
         self.assertTrue(result.records[0].record_id.endswith(":5"))
         self.assertEqual(result.records[1].date, "28")
@@ -85,6 +88,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[1].cups_per_unit, 8)
         self.assertEqual(result.records[1].wontons_per_cup, 12)
         self.assertEqual(result.records[1].total_wontons, 1008)
+        self.assertEqual(result.records[1].pd_weight_kg, 84)
         self.assertEqual(result.records[2].date, "")
         self.assertEqual(result.records[2].month, "10")
         self.assertEqual(result.records[2].year, "2026")
@@ -122,6 +126,7 @@ class ExtractorTests(unittest.TestCase):
             "order_cups",
             "cups_per_unit",
             "total_wontons",
+            "pd_weight_kg",
             "production",
         ])
         self.assertEqual(json_rows[0]["date"], "27")
@@ -133,6 +138,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(json_rows[0]["cups_per_unit"], 16)
         self.assertEqual(json_rows[0]["wontons_per_cup"], 8)
         self.assertEqual(json_rows[0]["total_wontons"], 160000)
+        self.assertEqual(json_rows[0]["pd_weight_kg"], 1250)
         self.assertIsNone(json_rows[0]["production"])
         self.assertNotIn("record_id", json_rows[0])
 
