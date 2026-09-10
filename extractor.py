@@ -23,10 +23,10 @@ GROUP_1_COLUMN = 11  # K
 GROUP_2_COLUMN = 12  # L
 PACKAGING_COLUMN = 15  # O
 WONTONS_PER_CUP_COLUMN = 17  # Q
+HO_WEIGHT_FACTOR_COLUMN = 18  # R
 RM_SIZE_COLUMN = 19  # S
 SOUP_COLUMN = 21  # U
 ORDER_UNIT_COLUMN = 22  # V
-PD_WEIGHT_COLUMN = 32  # AF
 ORDER_CUPS_COLUMN = 35  # AI
 SUPPORTED_EXTENSIONS = {".xlsx", ".xlsm"}
 ORDER_EXPORT_FIELDS = (
@@ -45,7 +45,7 @@ ORDER_EXPORT_FIELDS = (
     "order_cups",
     "cups_per_unit",
     "total_wontons",
-    "pd_weight_kg",
+    "ho_weight_kg",
     "production",
 )
 
@@ -68,7 +68,7 @@ class OrderRecord:
     cups_per_unit: float | None
     rm_size: str = ""
     wontons_per_cup: int | float | None = None
-    pd_weight_kg: int | float | None = None
+    ho_weight_kg: int | float | None = None
     production: int | float | None = None
     record_id: str = ""
     order_no: str = ""
@@ -143,9 +143,9 @@ def extract_orders(
     Column C becomes separate zero-padded date, month, and year fields. Column J
     becomes the customer name. Column V becomes the order quantity in units,
     column Q becomes ลูกเกี๊ยว/ถ้วย, and column AI becomes the order quantity
-    in cups. Column AF becomes น้ำหนัก PD (kg) after multiplying its value by
-    1,000. Cups per unit is derived by dividing column AI by column V, while
-    จำนวนเกี๊ยว is derived by multiplying column AI by column Q.
+    in cups. Cups per unit is derived by dividing column AI by column V, while
+    จำนวนเกี๊ยว is derived by multiplying column AI by column Q. น้ำหนัก HO
+    (kg) is จำนวนเกี๊ยว multiplied by column R, then divided by 0.54.
     Rows with no selected values are ignored; other incomplete rows are reported
     as issues rather than silently converted to orders.
     """
@@ -177,10 +177,10 @@ def extract_orders(
             raw_group_2 = _cell_value(row, GROUP_2_COLUMN)
             raw_packaging = _cell_value(row, PACKAGING_COLUMN)
             raw_wontons_per_cup = _cell_value(row, WONTONS_PER_CUP_COLUMN)
+            raw_ho_weight_factor = _cell_value(row, HO_WEIGHT_FACTOR_COLUMN)
             raw_rm_size = _cell_value(row, RM_SIZE_COLUMN)
             raw_soup = _cell_value(row, SOUP_COLUMN)
             raw_unit = _cell_value(row, ORDER_UNIT_COLUMN)
-            raw_pd_weight = _cell_value(row, PD_WEIGHT_COLUMN)
             raw_cups = _cell_value(row, ORDER_CUPS_COLUMN)
 
             if all(_is_blank(value) for value in (raw_date, raw_customer, raw_unit)):
@@ -189,7 +189,7 @@ def extract_orders(
             production_period = _parse_production_period(raw_date)
             customer = _clean_text(raw_customer)
             order_unit = _parse_number(raw_unit)
-            pd_weight = _parse_number(raw_pd_weight)
+            ho_weight_factor = _parse_number(raw_ho_weight_factor)
             order_cups = _parse_number(raw_cups)
             wontons_per_cup = _parse_number(raw_wontons_per_cup)
 
@@ -204,8 +204,8 @@ def extract_orders(
                 missing.append("invalid order quantity in cups (column AI)")
             if not _is_blank(raw_wontons_per_cup) and wontons_per_cup is None:
                 missing.append("invalid ลูกเกี๊ยว/ถ้วย (column Q)")
-            if not _is_blank(raw_pd_weight) and pd_weight is None:
-                missing.append("invalid น้ำหนัก PD (column AF)")
+            if not _is_blank(raw_ho_weight_factor) and ho_weight_factor is None:
+                missing.append("invalid น้ำหนัก HO factor (column R)")
 
             if missing:
                 issues.append(
@@ -235,7 +235,11 @@ def extract_orders(
                     order_unit=order_unit,
                     order_cups=order_cups,
                     cups_per_unit=_divide_optional(order_cups, order_unit),
-                    pd_weight_kg=_multiply_optional(pd_weight, 1000),
+                    ho_weight_kg=_calculate_ho_weight(
+                        order_cups,
+                        wontons_per_cup,
+                        ho_weight_factor,
+                    ),
                     record_id=f"{selected_sheet}:{source_row}",
                 )
             )
@@ -399,6 +403,19 @@ def _multiply_optional(
     if first is None or second is None:
         return None
     result = first * second
+    return int(result) if float(result).is_integer() else result
+
+
+def _calculate_ho_weight(
+    order_cups: int | float | None,
+    wontons_per_cup: int | float | None,
+    ho_weight_factor: int | float | None,
+) -> int | float | None:
+    total_wontons = _multiply_optional(order_cups, wontons_per_cup)
+    weighted_total = _multiply_optional(total_wontons, ho_weight_factor)
+    if weighted_total is None:
+        return None
+    result = weighted_total / 0.54
     return int(result) if float(result).is_integer() else result
 
 

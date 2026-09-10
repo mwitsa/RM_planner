@@ -21,7 +21,7 @@ desktop UI.
 | Column AI | `order_cups` | `14416` |
 | Derived: AI / V | `cups_per_unit` | `16` |
 | Derived: AI × Q | `total_wontons` | `160000` |
-| Derived: AF × 1,000 | `pd_weight_kg` | `1250` |
+| Derived: (AI × Q) × R ÷ 0.54 | `ho_weight_kg` | `1600` |
 | App input | `production` | Actual quantity produced |
 
 For example, the Excel date `2024-01-04` becomes date `04`, month `01`, and

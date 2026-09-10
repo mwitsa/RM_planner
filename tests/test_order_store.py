@@ -25,7 +25,7 @@ def sample_order(production: int | float | None = None) -> OrderRecord:
         order_cups=8000,
         cups_per_unit=16,
         wontons_per_cup=8,
-        pd_weight_kg=1250,
+        ho_weight_kg=1600,
         production=production,
         record_id="แผนผลิต:10",
     )
@@ -52,7 +52,7 @@ class OrderStoreTests(unittest.TestCase):
         self.assertEqual(loaded[0].cups_per_unit, 16)
         self.assertEqual(loaded[0].wontons_per_cup, 8)
         self.assertEqual(loaded[0].total_wontons, 64000)
-        self.assertEqual(loaded[0].pd_weight_kg, 1250)
+        self.assertEqual(loaded[0].ho_weight_kg, 1600)
         self.assertEqual(loaded[0].production, 420.5)
         self.assertEqual(loaded[0].record_id, "แผนผลิต:10")
         self.assertEqual(loaded[0].order_no, "ORD-000001")
@@ -175,9 +175,9 @@ class OrderStoreTests(unittest.TestCase):
         self.assertEqual(reloaded[0].total_wontons, 64000)
         self.assertEqual(reloaded[0].production, 420)
 
-    def test_incremental_merge_backfills_pd_weight_without_duplicating(self) -> None:
+    def test_incremental_merge_backfills_ho_weight_without_duplicating(self) -> None:
         existing = sample_order(420)
-        existing.pd_weight_kg = None
+        existing.ho_weight_kg = None
         save_order_records(self.store_path, [existing])
         incoming = sample_order(None)
 
@@ -186,7 +186,7 @@ class OrderStoreTests(unittest.TestCase):
 
         self.assertEqual(added, 0)
         self.assertEqual(len(merged), 1)
-        self.assertEqual(reloaded[0].pd_weight_kg, 1250)
+        self.assertEqual(reloaded[0].ho_weight_kg, 1600)
         self.assertEqual(reloaded[0].production, 420)
 
     def test_loads_old_order_volume_store(self) -> None:
@@ -217,7 +217,7 @@ class OrderStoreTests(unittest.TestCase):
         self.assertIsNone(loaded[0].cups_per_unit)
         self.assertIsNone(loaded[0].wontons_per_cup)
         self.assertIsNone(loaded[0].total_wontons)
-        self.assertIsNone(loaded[0].pd_weight_kg)
+        self.assertIsNone(loaded[0].ho_weight_kg)
         self.assertEqual(loaded[0].order_no, "ORD-000001")
 
     def test_preserves_existing_order_number_when_adding_new_orders(self) -> None:

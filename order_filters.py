@@ -23,7 +23,7 @@ NUMERIC_ORDER_COLUMNS = {
     "order_cups",
     "cups_per_unit",
     "total_wontons",
-    "pd_weight_kg",
+    "ho_weight_kg",
     "production",
 }
 ORDER_COLUMN_ATTRIBUTES = {
@@ -47,7 +47,7 @@ FILTER_SPECS = (
     ("order_cups", "Order (ถ้วย)"),
     ("cups_per_unit", "ถ้วย/Unit"),
     ("total_wontons", "จำนวนเกี๊ยว"),
-    ("pd_weight_kg", "น้ำหนัก PD (kg)"),
+    ("ho_weight_kg", "น้ำหนัก HO (kg)"),
     ("production", "Production"),
 )
 
@@ -57,7 +57,7 @@ NUMERIC_FILTER_KEYS = {
     "order_cups",
     "cups_per_unit",
     "total_wontons",
-    "pd_weight_kg",
+    "ho_weight_kg",
     "production",
 }
 
