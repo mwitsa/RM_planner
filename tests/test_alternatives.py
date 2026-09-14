@@ -105,6 +105,36 @@ class AlternativeTests(unittest.TestCase):
         self.assertLessEqual(p['daily'][0]['hours']['COOKED'],8.000001)
         self.assertLess(sum(r['qty'] for r in p['rows'] if r['day']==c['start']),1500)
 
+    def test_raw_orders_with_the_same_code_share_one_run(self):
+        first = order('raw-a', group_2='Raw Wonton', group_1='Raw item A', order_cups=100)
+        second = order('raw-b', group_2='Raw Wonton', group_1='Raw item B', order_cups=100)
+        first = replace(first, prod_date='17', prod_month='09', prod_year='2026', order_no='RAW-A')
+        second = replace(second, prod_date='17', prod_month='09', prod_year='2026', order_no='RAW-B')
+        first.code = second.code = 'SAME-RAW-CODE'
+        profiles = {
+            item.record_id: dict(egg='มีไข่', soup_rank=0, status='ready', earliest='2026-09-17',
+                                 date='2026-09-17', max_qty=1000, reviewer='staff')
+            for item in (first, second)
+        }
+        context = build_context(
+            [first, second],
+            [],
+            RANGES,
+            balanced_capacity(2_000, 2_000),
+            [class_definition('Country', 'AUS', '2')],
+            WontonWeightSettings(10, 10),
+            '2026-09-17',
+            dict(freeze_cost=10, stop_cost=100, freeze_percent=100),
+            profiles,
+        )
+
+        plan = compare(context)[0]
+        raw_schedule = [entry for entry in plan['schedule'] if entry['line'] == 'RAW']
+
+        self.assertEqual(plan['changes'], 0)
+        self.assertEqual(len(raw_schedule), 2)
+        self.assertAlmostEqual(raw_schedule[1]['start_hours'], 0.4)
+
     def test_incompatible_allergens_and_earliest_date(self):
         c = self.context()
         c['jobs'][1]['egg']='ไม่มีไข่'

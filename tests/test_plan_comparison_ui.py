@@ -16,7 +16,7 @@ class ComparisonUiTests(unittest.TestCase):
         with ExitStack() as stack:
             directory = stack.enter_context(TemporaryDirectory())
             stack.enter_context(patch('rm_planner.ui.plan_view.PROJECT_ROOT', Path(directory)))
-            for name in ('_load_default_workbook', '_load_saved_rules', '_load_assortment_data',
+            for name in ('_load_default_workbook', '_load_assortment_data',
                          '_load_wonton_weight_settings', '_load_assortment_actual_history', '_load_saved_orders',
                          '_load_saved_class_definitions', '_load_capacity_settings', '_load_saved_master_data',
                          '_load_saved_assortment_upload'):

@@ -454,14 +454,28 @@ class PlanViewMixin:
                                         fill='#f2f6fa', outline='')
                 canvas.create_text(12, y + 13, text=line, anchor='w', fill='#18324a', font=('Segoe UI', 10, 'bold'))
                 canvas.create_text(12, y + 31, text=thai_label, anchor='w', fill='#6b7d8d', font=('Segoe UI', 8))
+                periods = []
                 for entry in entries_by_day[day].get(line, []):
                     job = jobs[entry['job']]
+                    operation = job.get('code', '').strip() if line == 'RAW' else ''
+                    if operation and periods and periods[-1]['operation'] == operation:
+                        periods[-1]['entries'].append(entry)
+                    else:
+                        periods.append(dict(operation=operation, entries=[entry]))
+                for period in periods:
+                    entries = period['entries']
+                    job = jobs[entries[0]['job']]
                     capacity = self._proposal_context_used['capacity'][line]
-                    cup_quantity = entry['qty'] / job['qty'] * job['cups'] if job['qty'] else 0
-                    duration = cup_quantity / capacity * self._proposal_context_used['settings']['shift_hours'] if capacity else 0
-                    start_offset = (start_hour - 12) + entry['start_hours']
+                    start_offset = (start_hour - 12) + entries[0]['start_hours']
                     x1 = left + start_offset * hour_width
-                    x2 = min(left + timeline_hours * hour_width, x1 + max(duration * hour_width, 3))
+                    x2 = x1
+                    for entry in entries:
+                        entry_job = jobs[entry['job']]
+                        cup_quantity = entry['qty'] / entry_job['qty'] * entry_job['cups'] if entry_job['qty'] else 0
+                        duration = cup_quantity / capacity * self._proposal_context_used['settings']['shift_hours'] if capacity else 0
+                        entry_start = left + ((start_hour - 12) + entry['start_hours']) * hour_width
+                        x2 = max(x2, entry_start + max(duration * hour_width, 3))
+                    x2 = min(left + timeline_hours * hour_width, x2)
                     colour = colours.get(job['size'], '#98a6b3')
                     canvas.create_rectangle(x1, y + 4, x2, y + row_height - 12, fill=colour, outline='')
                     if x2 - x1 > 65:

@@ -105,6 +105,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
         rank = number(p.get('soup_rank'), 'ลำดับซุป', optional=True)
         jobs.append(dict(id=order.record_id, order=order.order_no, customer=order.customer_name,
             sku=' | '.join((order.group_1, order.group_2, order.packaging, order.soup, order.rm_size)),
+            code=order.code.strip(),
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
             day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
@@ -188,9 +189,23 @@ def evaluate(context, rows):
         changes = 0
         hours = {}
         for line in ('RAW', 'COOKED'):
-            work = sorted((r for r in selected if jobs[r['job']]['line'] == line),
-                key=lambda r: (jobs[r['job']]['soup_rank'] if jobs[r['job']]['soup_rank'] is not None else 999,
-                               jobs[r['job']]['sku'], r['job']))
+            def operation_key(row):
+                job = jobs[row['job']]
+                # On the raw line, CODE identifies the actual SKU changeover.
+                # Keep matching codes together even where their other order
+                # detail differs, so they become one uninterrupted run.
+                return job['code'] if line == 'RAW' and job['code'] else job['sku']
+
+            work = sorted(
+                (r for r in selected if jobs[r['job']]['line'] == line),
+                key=lambda r: (
+                    operation_key(r) if line == 'RAW' else (
+                        jobs[r['job']]['soup_rank'] if jobs[r['job']]['soup_rank'] is not None else 999,
+                        operation_key(r),
+                    ),
+                    r['job'],
+                ),
+            )
             groups = {(jobs[r['job']]['market'], jobs[r['job']]['egg']) for r in work}
             if len(groups) > 1:
                 errors.append(f"{day} {line}: ตลาด/กลุ่มไข่ต่างกันในวันเดียวกัน")
@@ -199,10 +214,11 @@ def evaluate(context, rows):
                 j = jobs[r['job']]
                 if not j['egg'] or j['soup_rank'] is None or j['market'] == 'unassigned':
                     pending.append(f"{j['order']}: ตรวจตลาด กลุ่มไข่ และลำดับซุป")
-                if previous is not None and previous != j['sku']:
+                current_operation = operation_key(r)
+                if previous is not None and previous != current_operation:
                     changes += 1
                     elapsed += s['setup_minutes'] / 60
-                previous = j['sku']
+                previous = current_operation
                 planned_cups = r['qty'] / j['qty'] * j['cups']
                 duration = planned_cups / context['capacity'][line] * s['shift_hours'] if context['capacity'][line] else float('inf')
                 if not math.isfinite(duration):
