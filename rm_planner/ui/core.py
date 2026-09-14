@@ -268,10 +268,8 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "cups",
             "pcs_per_cup",
             "wt_per_pcs",
-            "wontons_per_cup",
             "order_unit",
             "order_cups",
-            "cups_per_unit",
             "total_wontons",
             "ho_weight_kg",
         )
@@ -292,10 +290,8 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "cups": "cups",
             "pcs_per_cup": "Pcs./Cup",
             "wt_per_pcs": "WT/Pcs",
-            "wontons_per_cup": "ลูกเกี๊ยว/ถ้วย",
             "order_unit": "Order (unit)",
             "order_cups": "Order (ถ้วย)",
-            "cups_per_unit": "ถ้วย/Unit",
             "total_wontons": "จำนวนเกี๊ยว",
             "ho_weight_kg": "น้ำหนัก HO (kg)",
         }
@@ -315,10 +311,8 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "cups": 80,
             "pcs_per_cup": 95,
             "wt_per_pcs": 90,
-            "wontons_per_cup": 120,
             "order_unit": 120,
             "order_cups": 120,
-            "cups_per_unit": 110,
             "total_wontons": 130,
             "ho_weight_kg": 130,
         }
@@ -333,8 +327,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             anchor = tk.E if column in (
                 "order_unit",
                 "order_cups",
-                "cups_per_unit",
-                "wontons_per_cup",
                 "cups",
                 "pcs_per_cup",
                 "wt_per_pcs",
@@ -356,7 +348,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.order_column_groups = (
             ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
             ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "dip", "soup", "cups", "pcs_per_cup", "wt_per_pcs"), "#e8e0fb", "#513a87"),
-            ("ปริมาณผลิต", ("wontons_per_cup", "order_unit", "order_cups", "cups_per_unit", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
+            ("ปริมาณผลิต", ("order_unit", "order_cups", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
         )
         self.order_column_widths = widths
         self.order_group_visibility = {
