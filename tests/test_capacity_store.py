@@ -32,6 +32,9 @@ class CapacityStoreTests(unittest.TestCase):
                 cooked_percentage=35,
                 raw_wonton=12000,
                 cooked_wonton=9500.5,
+                raw_wonton_per_hour=1500,
+                cooked_wonton_per_hour=1200,
+                cooked_wonton_noodle_per_hour=900,
             ),
         )
 
@@ -41,6 +44,7 @@ class CapacityStoreTests(unittest.TestCase):
         payload = json.loads(self.store_path.read_text(encoding="utf-8"))
         self.assertEqual(payload["raw_percentage"], 75)
         self.assertEqual(payload["cooked_percentage"], 35)
+        self.assertEqual(payload["cooked_wonton_noodle_per_hour"], 900)
         self.assertNotIn("percentage", payload)
 
     def test_reads_legacy_percentage_as_raw_share(self) -> None:

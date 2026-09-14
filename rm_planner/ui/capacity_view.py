@@ -13,6 +13,9 @@ class CapacityViewMixin:
         self.cooked_capacity_percentage_text_var = tk.StringVar(value="50%")
         self.raw_wonton_capacity_var = tk.StringVar()
         self.cooked_wonton_capacity_var = tk.StringVar()
+        self.raw_wonton_per_hour_var = tk.StringVar()
+        self.cooked_wonton_per_hour_var = tk.StringVar()
+        self.cooked_wonton_noodle_per_hour_var = tk.StringVar()
         self.raw_wonton_scaled_var = tk.StringVar(value="Set base capacity first")
         self.cooked_wonton_scaled_var = tk.StringVar(value="Set base capacity first")
 
@@ -147,6 +150,22 @@ class CapacityViewMixin:
         raw_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
         cooked_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
 
+        hourly_frame = ttk.LabelFrame(settings_frame, text="Prod Cap / hr", padding=12)
+        hourly_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        for column in range(3):
+            hourly_frame.columnconfigure(column, weight=1)
+        for column, (label, variable) in enumerate((
+            ("Raw wonton", self.raw_wonton_per_hour_var),
+            ("Cooked wonton", self.cooked_wonton_per_hour_var),
+            ("Cooked wonton + noodle", self.cooked_wonton_noodle_per_hour_var),
+        )):
+            field = ttk.Frame(hourly_frame)
+            field.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else 8, 8 if column < 2 else 0))
+            field.columnconfigure(0, weight=1)
+            ttk.Label(field, text=label).grid(row=0, column=0, sticky=tk.W)
+            ttk.Entry(field, textvariable=variable, font=("Segoe UI", 11)).grid(
+                row=1, column=0, sticky="ew", pady=(4, 0))
+
         action_frame = ttk.Frame(self.capacity_tab)
         action_frame.pack(fill=tk.X)
         ttk.Button(
@@ -216,6 +235,10 @@ class CapacityViewMixin:
         self.cooked_capacity_percentage_var.set(settings.cooked_percentage)
         self.raw_wonton_capacity_var.set(self._format_optional_number(settings.raw_wonton))
         self.cooked_wonton_capacity_var.set(self._format_optional_number(settings.cooked_wonton))
+        self.raw_wonton_per_hour_var.set(self._format_optional_number(settings.raw_wonton_per_hour))
+        self.cooked_wonton_per_hour_var.set(self._format_optional_number(settings.cooked_wonton_per_hour))
+        self.cooked_wonton_noodle_per_hour_var.set(
+            self._format_optional_number(settings.cooked_wonton_noodle_per_hour))
         self._update_capacity_preview()
         if self.capacity_file_path.exists():
             self.capacity_status_var.set("Loaded saved capacity settings.")
@@ -231,11 +254,20 @@ class CapacityViewMixin:
                 self.cooked_wonton_capacity_var.get(),
                 "เกี๊ยวสุก",
             )
+            raw_wonton_per_hour = self._parse_optional_capacity_number(
+                self.raw_wonton_per_hour_var.get(), "Raw wonton / hr")
+            cooked_wonton_per_hour = self._parse_optional_capacity_number(
+                self.cooked_wonton_per_hour_var.get(), "Cooked wonton / hr")
+            cooked_wonton_noodle_per_hour = self._parse_optional_capacity_number(
+                self.cooked_wonton_noodle_per_hour_var.get(), "Cooked wonton + noodle / hr")
             settings = CapacitySettings(
                 raw_percentage=round(self.raw_capacity_percentage_var.get()),
                 cooked_percentage=round(self.cooked_capacity_percentage_var.get()),
                 raw_wonton=raw_wonton,
                 cooked_wonton=cooked_wonton,
+                raw_wonton_per_hour=raw_wonton_per_hour,
+                cooked_wonton_per_hour=cooked_wonton_per_hour,
+                cooked_wonton_noodle_per_hour=cooked_wonton_noodle_per_hour,
             )
             self.capacity_settings = save_capacity_settings(self.capacity_file_path, settings)
         except ValueError as exc:
@@ -243,6 +275,9 @@ class CapacityViewMixin:
             return
         self.raw_wonton_capacity_var.set(self._format_optional_number(raw_wonton))
         self.cooked_wonton_capacity_var.set(self._format_optional_number(cooked_wonton))
+        self.raw_wonton_per_hour_var.set(self._format_optional_number(raw_wonton_per_hour))
+        self.cooked_wonton_per_hour_var.set(self._format_optional_number(cooked_wonton_per_hour))
+        self.cooked_wonton_noodle_per_hour_var.set(self._format_optional_number(cooked_wonton_noodle_per_hour))
         self.raw_capacity_percentage_var.set(self.capacity_settings.raw_percentage)
         self.cooked_capacity_percentage_var.set(
             self.capacity_settings.cooked_percentage
@@ -268,3 +303,7 @@ class CapacityViewMixin:
         if not math.isfinite(numeric) or numeric < 0:
             raise ValueError(f"{label} must be zero or greater.")
         return int(numeric) if numeric.is_integer() else numeric
+
+    @staticmethod
+    def _parse_optional_capacity_number(value: str, label: str) -> int | float | None:
+        return None if not value.strip() else CapacityViewMixin._parse_capacity_number(value, label)

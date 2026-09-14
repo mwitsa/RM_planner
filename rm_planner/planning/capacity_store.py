@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-STORE_VERSION = 3
+STORE_VERSION = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +17,9 @@ class CapacitySettings:
     cooked_percentage: int = 50
     raw_wonton: int | float | None = None
     cooked_wonton: int | float | None = None
+    raw_wonton_per_hour: int | float | None = None
+    cooked_wonton_per_hour: int | float | None = None
+    cooked_wonton_noodle_per_hour: int | float | None = None
 
 
 def capacities_at_percentage(
@@ -70,6 +73,9 @@ def load_capacity_settings(store_path: str | Path) -> CapacitySettings:
             cooked_percentage=cooked_percentage,
             raw_wonton=payload.get("raw_wonton"),
             cooked_wonton=payload.get("cooked_wonton"),
+            raw_wonton_per_hour=payload.get("raw_wonton_per_hour"),
+            cooked_wonton_per_hour=payload.get("cooked_wonton_per_hour"),
+            cooked_wonton_noodle_per_hour=payload.get("cooked_wonton_noodle_per_hour"),
         )
     )
 
@@ -87,6 +93,9 @@ def save_capacity_settings(
         "cooked_percentage": normalized.cooked_percentage,
         "raw_wonton": normalized.raw_wonton,
         "cooked_wonton": normalized.cooked_wonton,
+        "raw_wonton_per_hour": normalized.raw_wonton_per_hour,
+        "cooked_wonton_per_hour": normalized.cooked_wonton_per_hour,
+        "cooked_wonton_noodle_per_hour": normalized.cooked_wonton_noodle_per_hour,
     }
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
     try:
@@ -105,6 +114,10 @@ def _validate_settings(settings: CapacitySettings) -> CapacitySettings:
         cooked_percentage=_required_percentage(settings.cooked_percentage, "Cooked"),
         raw_wonton=_optional_nonnegative_number(settings.raw_wonton, "เกี๊ยวดิบ"),
         cooked_wonton=_optional_nonnegative_number(settings.cooked_wonton, "เกี๊ยวสุก"),
+        raw_wonton_per_hour=_optional_nonnegative_number(settings.raw_wonton_per_hour, "Raw wonton / hr"),
+        cooked_wonton_per_hour=_optional_nonnegative_number(settings.cooked_wonton_per_hour, "Cooked wonton / hr"),
+        cooked_wonton_noodle_per_hour=_optional_nonnegative_number(
+            settings.cooked_wonton_noodle_per_hour, "Cooked wonton + noodle / hr"),
     )
 
 
