@@ -228,13 +228,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         controls = ttk.Frame(self.order_tab)
         controls.pack(fill=tk.X, pady=(14, 8))
         ttk.Label(controls, textvariable=self.summary_var, style="Summary.TLabel").pack(side=tk.LEFT)
-        self.save_orders_button = ttk.Button(
-            controls,
-            text="Save orders",
-            command=self._save_orders,
-            state=tk.DISABLED,
-        )
-        self.save_orders_button.pack(side=tk.RIGHT, padx=(0, 8))
         self.clear_order_filters_button = ttk.Button(
             controls,
             text="Clear column filters",
@@ -248,7 +241,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             command=self._toggle_past_orders,
         )
         self.past_orders_button.pack(side=tk.RIGHT, padx=(0, 8))
-        self.order_action_buttons = (self.save_orders_button,)
 
         table_frame = ttk.Frame(self.order_tab)
         table_frame.pack(fill=tk.BOTH, expand=True)

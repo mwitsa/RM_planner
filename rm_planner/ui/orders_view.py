@@ -86,8 +86,6 @@ class OrdersViewMixin:
         for key, _label in FILTER_SPECS:
             self.order_filter_selections[key] = ALL_FILTER
             self.order_filter_options[key] = filter_options(result.records, key)
-        for button in self.order_action_buttons:
-            button.configure(state=tk.NORMAL)
         self.extract_button.configure(state=tk.NORMAL)
         if result.header_row == 0:
             self.status_var.set(f"Loaded {len(result.records):,} locally saved orders.")
@@ -584,21 +582,6 @@ class OrdersViewMixin:
             f"{len(records):,} orders  |  {len(customers):,} customers  |  "
             f"{len(months):,} months  |  cups {total_cups:,.0f}  |  "
             f"wontons (จำนวนเกี๊ยว) {total_wontons:,.0f}"
-        )
-
-    def _save_orders(self) -> None:
-        if not self.result:
-            return
-        try:
-            save_order_records(self.saved_orders_file_path, self.result.records)
-        except ValueError as exc:
-            messagebox.showerror("Save orders", str(exc))
-            return
-        self.saved_order_records = {
-            record.record_id: record for record in self.result.records
-        }
-        self.status_var.set(
-            f"Saved {len(self.result.records):,} orders and production quantities locally."
         )
 
     def _load_saved_orders(self) -> None:
