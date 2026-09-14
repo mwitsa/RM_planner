@@ -325,13 +325,44 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             ) else tk.W
             self.tree.column(column, width=widths[column], minwidth=70, anchor=anchor)
 
+        # Treeview has only one native header row.  Draw an aligned group bar
+        # above it so related columns remain easy to scan without changing the
+        # individual clickable/filterable column headings.
+        self.order_group_header = tk.Canvas(
+            table_frame,
+            height=30,
+            background="#f6f8fb",
+            highlightthickness=0,
+            borderwidth=0,
+        )
+        groups = (
+            ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
+            ("SKU detail", ("group_1", "group_2", "packaging", "rm_size", "soup"), "#e8e0fb", "#513a87"),
+            ("ปริมาณผลิต", ("wontons_per_cup", "order_unit", "order_cups", "cups_per_unit", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
+        )
+        x = 0
+        for label, members, background, foreground in groups:
+            group_width = sum(widths[column] for column in members)
+            self.order_group_header.create_rectangle(x, 1, x + group_width, 29,
+                                                    fill=background, outline="#ffffff")
+            self.order_group_header.create_text(x + group_width / 2, 15, text=label,
+                                                fill=foreground, font=("Segoe UI", 10, "bold"))
+            x += group_width
+        self.order_group_header.configure(scrollregion=(0, 0, x, 30))
+
         vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        self.tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vertical.grid(row=0, column=1, sticky="ns")
-        horizontal.grid(row=1, column=0, sticky="ew")
-        table_frame.rowconfigure(0, weight=1)
+
+        def sync_order_horizontal_scroll(first: str, last: str) -> None:
+            horizontal.set(first, last)
+            self.order_group_header.xview_moveto(float(first))
+
+        self.tree.configure(yscrollcommand=vertical.set, xscrollcommand=sync_order_horizontal_scroll)
+        self.order_group_header.grid(row=0, column=0, sticky="ew")
+        self.tree.grid(row=1, column=0, sticky="nsew")
+        vertical.grid(row=1, column=1, sticky="ns")
+        horizontal.grid(row=2, column=0, sticky="ew")
+        table_frame.rowconfigure(1, weight=1)
         table_frame.columnconfigure(0, weight=1)
 
         status = ttk.Label(
