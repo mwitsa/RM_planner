@@ -13,7 +13,6 @@ from rm_planner.planning.alternatives import (FACTORY_HOLIDAY_WEEKDAYS, build_co
                                                compare, settings_defaults, signature, number)
 from rm_planner.planning.proposal_store import load_preferences, save_preferences, save_approval
 
-STATUS = {'invalid': 'ติดข้อจำกัด', 'conditional': 'รอตรวจข้อมูล', 'review': 'รอยืนยันทั้งชุด'}
 READY = {'unknown': 'ยังไม่ทราบ', 'ready': 'พร้อม', 'partial': 'พร้อมบางส่วน', 'blocked': 'ไม่พร้อม'}
 
 
@@ -399,7 +398,7 @@ class PlanViewMixin:
             box = tk.Frame(self._proposal_cards, bg='white', highlightthickness=2,
                            highlightbackground='#168078' if i == index else '#d8dce2', padx=8, pady=8)
             box.grid(row=0, column=i, sticky='nsew', padx=3)
-            for title, font in [(plan['title'], ('Segoe UI', 10, 'bold')), (STATUS[plan['status']], ('Segoe UI', 9)),
+            for title, font in [(plan['title'], ('Segoe UI', 10, 'bold')),
                                 (fmt(plan['remaining'])+' kg', ('Segoe UI', 19, 'bold')),
                                 ('ต้นทุน ฿ '+fmt(plan['cost']), ('Segoe UI', 10, 'bold')),
                                 (f"เปลี่ยน SKU {plan['changes']} ครั้ง • ย้าย {plan['moved']} งาน", ('Segoe UI', 9))]:
