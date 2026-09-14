@@ -7,114 +7,178 @@ from .common import *  # shared UI types and domain services
 
 class ClassDefineMixin:
     def _build_class_define_tab(self) -> None:
-        ttk.Label(
+        page_header = tk.Frame(self.class_define_tab, bg="#f5f7fa")
+        page_header.pack(fill=tk.X, pady=(0, 12))
+        tk.Label(
+            page_header,
+            text="Class master",
+            bg="#f5f7fa",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        tk.Label(
+            page_header,
+            text="จัดการ Class และการจัดกลุ่มสำหรับใช้กับแผนผลิต",
+            bg="#f5f7fa",
+            fg="#596579",
+            font=("Segoe UI", 10),
+        ).pack(anchor=tk.W, pady=(2, 0))
+
+        editor_card = tk.Frame(
             self.class_define_tab,
-            text="Class and grouping master data",
-            style="Summary.TLabel",
-        ).pack(anchor=tk.W, pady=(0, 10))
+            bg="white",
+            highlightbackground="#d9e1ea",
+            highlightthickness=1,
+            padx=16,
+            pady=14,
+        )
+        editor_card.pack(fill=tk.X)
+        tk.Label(
+            editor_card,
+            text="เพิ่มหรือแก้ไข Class",
+            bg="white",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(anchor=tk.W)
+        tk.Label(
+            editor_card,
+            text="กรอก Class และ Name ก่อน แล้วเพิ่ม Group หรือ Value เมื่อต้องการ",
+            bg="white",
+            fg="#64748b",
+            font=("Segoe UI", 9),
+        ).pack(anchor=tk.W, pady=(2, 12))
 
-        form = ttk.LabelFrame(self.class_define_tab, text="Class details", padding=12)
-        form.pack(fill=tk.X)
-        form.columnconfigure(0, weight=1)
-        form.columnconfigure(1, weight=2)
+        fields = tk.Frame(editor_card, bg="white")
+        fields.pack(fill=tk.X)
+        fields.columnconfigure(0, weight=1, uniform="class-field")
+        fields.columnconfigure(1, weight=1, uniform="class-field")
 
-        class_box = ttk.LabelFrame(form, text="1. Class", padding=10)
-        class_box.grid(row=0, column=0, sticky="ew", padx=(0, 8))
-        class_box.columnconfigure(0, weight=1)
-        ttk.Entry(class_box, textvariable=self.class_value_var).grid(row=0, column=0, sticky="ew")
+        def field_card(row: int, column: int, label: str) -> tk.Frame:
+            card = tk.Frame(
+                fields,
+                bg="#f8fafc",
+                highlightbackground="#dce4ed",
+                highlightthickness=1,
+                padx=10,
+                pady=8,
+            )
+            card.grid(
+                row=row,
+                column=column,
+                sticky="nsew",
+                padx=(0, 6) if column == 0 else (6, 0),
+                pady=(0, 10) if row == 0 else 0,
+            )
+            card.columnconfigure(0, weight=1)
+            tk.Label(
+                card,
+                text=label,
+                bg="#f8fafc",
+                fg="#334155",
+                font=("Segoe UI", 9, "bold"),
+            ).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+            return card
 
-        name_box = ttk.LabelFrame(form, text="2. Name", padding=10)
-        name_box.grid(row=0, column=1, sticky="ew")
-        name_box.columnconfigure(0, weight=1)
-        ttk.Entry(name_box, textvariable=self.class_name_var).grid(row=0, column=0, sticky="ew")
+        class_box = field_card(0, 0, "Class  *")
+        ttk.Entry(class_box, textvariable=self.class_value_var, font=("Segoe UI", 11)).grid(
+            row=1, column=0, sticky="ew"
+        )
+        name_box = field_card(0, 1, "Name  *")
+        ttk.Entry(name_box, textvariable=self.class_name_var, font=("Segoe UI", 11)).grid(
+            row=1, column=0, sticky="ew"
+        )
 
-        group_box = ttk.LabelFrame(form, text="3. Group", padding=10)
-        group_box.grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=(10, 0))
-        group_box.columnconfigure(0, weight=1)
+        group_box = field_card(1, 0, "Group")
         self.class_group_text = tk.Text(
             group_box,
-            height=4,
+            height=3,
             wrap=tk.WORD,
             font=("Segoe UI", 10),
             undo=True,
+            relief=tk.SOLID,
+            borderwidth=1,
+            highlightthickness=0,
         )
-        self.class_group_text.grid(row=0, column=0, sticky="ew")
-
-        value_box = ttk.LabelFrame(form, text="4. Value", padding=10)
-        value_box.grid(row=1, column=1, sticky="ew", pady=(10, 0))
-        value_box.columnconfigure(0, weight=1)
+        self.class_group_text.grid(row=1, column=0, sticky="ew")
+        value_box = field_card(1, 1, "Value")
         self.class_detail_value_text = tk.Text(
             value_box,
-            height=4,
+            height=3,
             wrap=tk.WORD,
             font=("Segoe UI", 10),
             undo=True,
+            relief=tk.SOLID,
+            borderwidth=1,
+            highlightthickness=0,
         )
-        self.class_detail_value_text.grid(row=0, column=0, sticky="ew")
+        self.class_detail_value_text.grid(row=1, column=0, sticky="ew")
 
-        actions = ttk.Frame(form)
-        actions.grid(row=2, column=0, columnspan=2, sticky="e", pady=(10, 0))
-        ttk.Button(actions, text="New", command=self._new_class_form).pack(side=tk.LEFT)
+        actions = tk.Frame(editor_card, bg="white")
+        actions.pack(fill=tk.X, pady=(14, 0))
+        ttk.Button(actions, text="ล้างฟอร์ม", command=self._new_class_form).pack(side=tk.RIGHT)
         self.save_class_button = ttk.Button(
             actions,
-            text="Save class",
+            text="บันทึก Class",
             command=self._save_class_definition,
         )
-        self.save_class_button.pack(side=tk.LEFT, padx=(8, 0))
+        self.save_class_button.pack(side=tk.RIGHT, padx=(0, 8))
 
-        saved_frame = ttk.LabelFrame(self.class_define_tab, text="Saved classes", padding=10)
+        saved_frame = tk.Frame(
+            self.class_define_tab,
+            bg="white",
+            highlightbackground="#d9e1ea",
+            highlightthickness=1,
+            padx=12,
+            pady=12,
+        )
         saved_frame.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
-        saved_frame.rowconfigure(1, weight=1)
+        saved_frame.rowconfigure(2, weight=1)
         saved_frame.columnconfigure(0, weight=1)
 
-        class_filters = ttk.Frame(saved_frame)
-        class_filters.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
-        class_filters.columnconfigure(1, weight=1)
-        class_filters.columnconfigure(3, weight=2)
-        class_filters.columnconfigure(5, weight=1)
-        ttk.Label(class_filters, text="Class:").grid(row=0, column=0, padx=(0, 5))
+        saved_header = tk.Frame(saved_frame, bg="white")
+        saved_header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        tk.Label(saved_header, text="Saved classes", bg="white", font=("Segoe UI", 11, "bold")).pack(side=tk.LEFT)
+        ttk.Label(saved_header, textvariable=self.class_filter_count_var, style="Summary.TLabel").pack(side=tk.RIGHT)
+
+        class_filters = tk.Frame(saved_frame, bg="#f5f8fc", padx=10, pady=10)
+        class_filters.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        class_filters.columnconfigure(0, weight=1)
+        class_filters.columnconfigure(1, weight=2)
+        class_filters.columnconfigure(2, weight=1)
+        ttk.Label(class_filters, text="Class").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(class_filters, text="ค้นหาชื่อ").grid(row=0, column=1, sticky=tk.W, padx=(10, 0))
+        ttk.Label(class_filters, text="Group").grid(row=0, column=2, sticky=tk.W, padx=(10, 0))
         self.class_filter_combo = ttk.Combobox(
             class_filters,
             textvariable=self.class_filter_var,
             state="readonly",
             values=[ALL_CLASS_FILTER],
-            width=18,
         )
-        self.class_filter_combo.grid(row=0, column=1, sticky="ew", padx=(0, 12))
+        self.class_filter_combo.grid(row=1, column=0, sticky="ew", pady=(4, 0))
         self.class_filter_combo.bind(
             "<<ComboboxSelected>>",
             lambda _event: self._refresh_class_table(),
         )
-        ttk.Label(class_filters, text="Name contains:").grid(row=0, column=2, padx=(0, 5))
         name_search_entry = ttk.Entry(
             class_filters,
             textvariable=self.class_name_search_var,
         )
-        name_search_entry.grid(row=0, column=3, sticky="ew", padx=(0, 12))
+        name_search_entry.grid(row=1, column=1, sticky="ew", padx=(10, 0), pady=(4, 0))
         name_search_entry.bind("<KeyRelease>", lambda _event: self._refresh_class_table())
-        ttk.Label(class_filters, text="Group:").grid(row=0, column=4, padx=(0, 5))
         self.class_group_filter_combo = ttk.Combobox(
             class_filters,
             textvariable=self.class_group_filter_var,
             state="readonly",
             values=[ALL_CLASS_FILTER],
-            width=18,
         )
-        self.class_group_filter_combo.grid(row=0, column=5, sticky="ew", padx=(0, 12))
+        self.class_group_filter_combo.grid(row=1, column=2, sticky="ew", padx=(10, 0), pady=(4, 0))
         self.class_group_filter_combo.bind(
             "<<ComboboxSelected>>",
             lambda _event: self._refresh_class_table(),
         )
         ttk.Button(
             class_filters,
-            text="Clear filters",
+            text="ล้างตัวกรอง",
             command=self._clear_class_filters,
-        ).grid(row=0, column=6, padx=(0, 12))
-        ttk.Label(
-            class_filters,
-            textvariable=self.class_filter_count_var,
-            style="Summary.TLabel",
-        ).grid(row=0, column=7)
+        ).grid(row=1, column=3, padx=(10, 0), pady=(4, 0))
 
         self.class_tree = ttk.Treeview(
             saved_frame,
@@ -132,11 +196,11 @@ class ClassDefineMixin:
         self.class_tree.column("value", width=320, minwidth=180)
         class_scrollbar = ttk.Scrollbar(saved_frame, orient=tk.VERTICAL, command=self.class_tree.yview)
         self.class_tree.configure(yscrollcommand=class_scrollbar.set)
-        self.class_tree.grid(row=1, column=0, sticky="nsew")
-        class_scrollbar.grid(row=1, column=1, sticky="ns")
+        self.class_tree.grid(row=2, column=0, sticky="nsew")
+        class_scrollbar.grid(row=2, column=1, sticky="ns")
         self.class_tree.bind("<Double-1>", lambda _event: self._edit_selected_class())
-        ttk.Button(saved_frame, text="Edit selected", command=self._edit_selected_class).grid(
-            row=2, column=0, sticky="e", pady=(8, 0)
+        ttk.Button(saved_frame, text="แก้ไขรายการที่เลือก", command=self._edit_selected_class).grid(
+            row=3, column=0, sticky="e", pady=(10, 0)
         )
 
         ttk.Label(
@@ -153,7 +217,7 @@ class ClassDefineMixin:
         self.class_group_text.delete("1.0", tk.END)
         self.class_detail_value_text.delete("1.0", tk.END)
         self._editing_class_id = None
-        self.save_class_button.configure(text="Save class")
+        self.save_class_button.configure(text="บันทึก Class")
         if set_status:
             self.class_status_var.set("New class form ready.")
 
@@ -263,5 +327,5 @@ class ClassDefineMixin:
         self.class_detail_value_text.delete("1.0", tk.END)
         self.class_detail_value_text.insert("1.0", item.value)
         self._editing_class_id = item.class_id
-        self.save_class_button.configure(text="Update class")
+        self.save_class_button.configure(text="บันทึกการแก้ไข")
         self.class_status_var.set(f"Editing class {item.class_value}.")
