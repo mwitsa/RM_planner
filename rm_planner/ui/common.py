@@ -113,11 +113,13 @@ ASSORTMENT_HEADER_HEIGHT = 34
 ASSORTMENT_ROW_HEIGHT = 29
 ASSORTMENT_CLASS_COLORS = {
     "M": ("#d8edff", "#2374ab"),
-    "S+": ("#dcf5df", "#338a3e"),
+    "S": ("#fff0d8", "#c57617"),
+    "SS": ("#dcf5df", "#338a3e"),
 }
 RM_STOCK_DISTRIBUTION_COLORS = {
     "M": "#4f91c3",
-    "S+": "#63a967",
+    "S": "#d58a2a",
+    "SS": "#63a967",
     "Unused": "#91979d",
 }
 ORDER_COLUMN_FILTER_KEYS = {
@@ -141,7 +143,8 @@ ORDER_COLUMN_FILTER_KEYS = {
 }
 DEFAULT_EXISTING_STOCK_PIECES_PER_KG = {
     "M": "53",
-    "S+": "69.25",
+    "S": "69.25",
+    "SS": "69.25",
 }
 
 

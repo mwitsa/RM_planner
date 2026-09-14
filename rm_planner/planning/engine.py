@@ -2,7 +2,7 @@
 
 The engine is deliberately independent of Tkinter.  It treats every assortment
 entry as one physical inventory lot, even when that lot is eligible for more
-than one M/S+ class.
+than one M/S/SS class.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from rm_planner.planning.market_labels import market_display_label
 from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
-SUPPORTED_RM_SIZES = {"M", "S+"}
+SUPPORTED_RM_SIZES = {"M", "S", "SS"}
 SKIPPED_RM_SIZES = {"BK", "HC"}
 SUPPORTED_MARKETS = {"export", "domestic", "unassigned"}
 MISSING_PRIORITY = 1_000_000
@@ -132,7 +132,7 @@ def generate_plan(
     """Generate a finite daily plan through the latest eligible order due date.
 
     Assumptions for the first planning model:
-    - each M/S+ class uses its configured wonton weight to convert RM kg;
+    - each M/S/SS class uses its configured wonton weight to convert RM kg;
     - blank order days are due on the final day of their month;
     - assortment lots become available on their saved date and carry forward;
     - orders may split across days and inventory lots.
@@ -142,7 +142,7 @@ def generate_plan(
     weight_settings = wonton_weight_settings or WontonWeightSettings()
     ranges = tuple(size_ranges)
     if not ranges:
-        raise ValueError("Define and save the M/S+ assortment ranges first.")
+        raise ValueError("Define and save the M/S/SS assortment ranges first.")
 
     raw_capacity, cooked_capacity = capacities_at_percentage(capacity_settings)
     if raw_capacity is None or cooked_capacity is None:

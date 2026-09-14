@@ -219,6 +219,7 @@ class CapacityViewMixin:
         self._update_capacity_preview()
         if self.capacity_file_path.exists():
             self.capacity_status_var.set("Loaded saved capacity settings.")
+        self._plan_inputs_changed()
 
     def _save_all_capacity_settings(self) -> None:
         try:
@@ -253,6 +254,7 @@ class CapacityViewMixin:
             f"ดิบ {self.capacity_settings.raw_percentage}% / "
             f"สุก {self.capacity_settings.cooked_percentage}%."
         )
+        self._plan_inputs_changed()
 
     @staticmethod
     def _parse_capacity_number(value: str, label: str) -> int | float:

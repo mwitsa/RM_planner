@@ -125,7 +125,7 @@ class StockEditorMixin:
             std_fill_frame,
             text=(
                 "Uses STD percentages, then combines all output sizes into "
-                "M, S+, and Unused class totals."
+                "M, S, SS, and Unused class totals."
             ),
         ).grid(row=1, column=0, columnspan=5, sticky=tk.W, pady=(6, 0))
 
@@ -154,7 +154,7 @@ class StockEditorMixin:
 
         ttk.Label(
             form_panel,
-            text="Enter stock directly as M, S+, or Unused. Each class may be used once.",
+            text="Enter stock directly as M, S, SS, or Unused. Each class may be used once.",
         ).pack(anchor=tk.W, pady=(0, 6))
 
         entry_headings = ttk.Frame(form_panel, padding=(6, 5))
@@ -232,7 +232,8 @@ class StockEditorMixin:
                 "date",
                 "weight",
                 "M",
-                "S+",
+                "S",
+                "SS",
                 "unused",
                 "est_wonton",
             ),
@@ -245,7 +246,8 @@ class StockEditorMixin:
         self.assortment_actual_history_tree.heading("date", text="Date")
         self.assortment_actual_history_tree.heading("weight", text="Total weight")
         self.assortment_actual_history_tree.heading("M", text="M (kg)")
-        self.assortment_actual_history_tree.heading("S+", text="S+ (kg)")
+        self.assortment_actual_history_tree.heading("S", text="S (kg)")
+        self.assortment_actual_history_tree.heading("SS", text="SS (kg)")
         self.assortment_actual_history_tree.heading("unused", text="Unused (kg)")
         self.assortment_actual_history_tree.heading("est_wonton", text="Est. wonton")
         self.assortment_actual_history_tree.column("farm_name", width=130, anchor=tk.W)
@@ -254,7 +256,8 @@ class StockEditorMixin:
         self.assortment_actual_history_tree.column("date", width=95, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("weight", width=95, anchor=tk.E)
         self.assortment_actual_history_tree.column("M", width=105, anchor=tk.E)
-        self.assortment_actual_history_tree.column("S+", width=105, anchor=tk.E)
+        self.assortment_actual_history_tree.column("S", width=105, anchor=tk.E)
+        self.assortment_actual_history_tree.column("SS", width=105, anchor=tk.E)
         self.assortment_actual_history_tree.column("unused", width=90, anchor=tk.E)
         self.assortment_actual_history_tree.column("est_wonton", width=115, anchor=tk.E)
         history_scrollbar = ttk.Scrollbar(
@@ -556,7 +559,8 @@ class StockEditorMixin:
                     record.record_date,
                     self._format_weight(record.total_weight),
                     self._format_size_class_summary(class_summaries["M"]),
-                    self._format_size_class_summary(class_summaries["S+"]),
+                    self._format_size_class_summary(class_summaries["S"]),
+                    self._format_size_class_summary(class_summaries["SS"]),
                     self._format_size_class_summary(class_summaries["Unused"]),
                     estimated_wontons,
                 ),

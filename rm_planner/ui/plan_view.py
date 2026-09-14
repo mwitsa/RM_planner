@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+import calendar
 import tkinter as tk
 from tkinter import ttk, messagebox
 from uuid import uuid4
@@ -36,27 +37,28 @@ class PlanViewMixin:
         top = ttk.Frame(self.plan_tab)
         top.pack(fill='x')
         ttk.Label(top, text='เปรียบเทียบ ก่อนเปลี่ยนแผน', font=('Segoe UI', 15, 'bold')).pack(side='left')
-        ttk.Button(top, text='คำนวณทางเลือก', command=self._calculate_proposals).pack(side='right')
         control = ttk.Frame(self.plan_tab)
         control.pack(fill='x', pady=8)
-        ttk.Label(control, text='วันเริ่ม YYYY-MM-DD').pack(side='left')
-        self.plan_start_date_combo = ttk.Combobox(control, textvariable=self.plan_start_date_var, width=12)
-        self.plan_start_date_combo.pack(side='left', padx=6)
+        ttk.Label(control, text='วันเริ่ม').pack(side='left')
+        self.plan_start_date_entry = ttk.Entry(control, textvariable=self.plan_start_date_var, width=12,
+                                                state='readonly')
+        self.plan_start_date_entry.pack(side='left', padx=(6, 0))
+        ttk.Button(control, text='📅', width=3, command=self._open_plan_date_picker).pack(side='left', padx=(2, 6))
         for key, title in [('lookahead', 'มองล่วงหน้า (วัน)'), ('adjustment', 'ช่วงปรับ (วัน)')]:
             ttk.Label(control, text=title).pack(side='left', padx=(8, 4))
             ttk.Entry(control, textvariable=self._proposal_vars[key], width=5).pack(side='left')
         ttk.Button(control, text='ต้นทุน / สมมติฐาน', command=self._proposal_settings_dialog).pack(side='right')
-        ttk.Label(self.plan_tab, text='ฐาน: Order วันที่ผลิตเดิม • RM: Stock + น้ำหนักเกี๊ยว (ไม่ใช่ HO) • S/SS ใช้กอง S+ ร่วมกัน', wraplength=1050).pack(anchor='w')
+        ttk.Label(self.plan_tab, text='ฐาน: Order วันที่ผลิตเดิม • RM: Stock + น้ำหนักเกี๊ยว (ไม่ใช่ HO) • M, S และ SS แยกกองกัน', wraplength=1050).pack(anchor='w')
         self._proposal_cards = ttk.Frame(self.plan_tab)
         self._proposal_cards.pack(fill='x', pady=8)
-        self._proposal_detail = tk.StringVar(value='กดคำนวณเพื่อเปรียบเทียบแผนจาก Order และ RM ที่โหลดอยู่')
+        self._proposal_detail = tk.StringVar(value='กำลังแสดงแผนเดิมจาก Prod.Date ของ Order')
         ttk.Label(self.plan_tab, textvariable=self._proposal_detail, wraplength=1050).pack(fill='x', pady=(0, 6))
         notebook = ttk.Notebook(self.plan_tab)
         notebook.pack(fill='both', expand=True)
         self._proposal_tables = {}
         for key, title, columns in [
             ('jobs', 'แผน / ความพร้อม / ล็อกงาน', ('Order', 'วันเดิม', 'วันเสนอ', 'ไลน์', 'RM', 'จำนวนเกี๊ยว', 'ความพร้อม', 'ล็อก')),
-            ('daily', 'ผลกระทบรายวัน', ('วันที่', 'M เหลือ kg', 'S+ เหลือ kg', 'Unused kg', 'เปลี่ยน SKU', 'ดิบ ชม.', 'สุก ชม.'))]:
+            ('daily', 'ผลกระทบรายวัน', ('วันที่', 'M เหลือ kg', 'S เหลือ kg', 'SS เหลือ kg', 'Unused kg', 'เปลี่ยน SKU', 'ดิบ ชม.', 'สุก ชม.'))]:
             frame = ttk.Frame(notebook)
             notebook.add(frame, text=title)
             tree = ttk.Treeview(frame, columns=columns, show='headings', height=8)
@@ -86,9 +88,14 @@ class PlanViewMixin:
         ttk.Button(actions, text='ตรวจและยืนยันแผนที่เลือก', command=self._approve_proposal).pack(side='right')
         self._proposal_tables['jobs'].bind('<Double-1>', lambda _: self._proposal_job_dialog())
         ttk.Label(self.plan_tab, textvariable=self.plan_status_var, relief='sunken', padding=5).pack(fill='x')
-        self.plan_status_var.set(self._proposal_load_error or 'ยังไม่ได้คำนวณ • ใช้ Order ไม่ใช่ตาราง Data')
+        self.plan_status_var.set(self._proposal_load_error or 'แสดงแผนเดิมจาก Order • ยังไม่ได้ตรวจ RM หรือ Capacity')
         for var in [self.plan_start_date_var, *self._proposal_vars.values()]:
-            var.trace_add('write', lambda *_: self._invalidate_proposals())
+            var.trace_add('write', lambda *_: self._plan_inputs_changed())
+
+    def _plan_inputs_changed(self):
+        self._invalidate_proposals()
+        self.after_idle(self._render_baseline_preview)
+        self.after_idle(lambda: self._calculate_proposals(quiet=True))
 
     def _invalidate_proposals(self):
         self._proposals = []
@@ -105,11 +112,161 @@ class PlanViewMixin:
             self._proposal_issues.configure(state='disabled')
 
     def _refresh_plan_date_options(self):
-        self.plan_start_date_combo.configure(values=sorted({r[0] for r in self.raw_data_all_rows if r and r[0]}))
-        self._invalidate_proposals()
+        """Keep the selected date valid after orders are refreshed.
+
+        The date picker deliberately permits any future calendar date, rather
+        than limiting staff to dates which happen to have an Order already.
+        """
+        try:
+            selected = date.fromisoformat(self.plan_start_date_var.get().strip())
+        except ValueError:
+            selected = date.today()
+        if selected < date.today():
+            self.plan_start_date_var.set(date.today().isoformat())
+        self._plan_inputs_changed()
+
+    def _open_plan_date_picker(self):
+        """Open a small dependency-free calendar for selecting the plan start."""
+        try:
+            selected = date.fromisoformat(self.plan_start_date_var.get().strip())
+        except ValueError:
+            selected = date.today()
+        selected = max(selected, date.today())
+        picker = tk.Toplevel(self)
+        picker.title('เลือกวันเริ่ม')
+        picker.transient(self)
+        picker.resizable(False, False)
+        month_var = tk.StringVar(value=f'{selected.year:04d}-{selected.month:02d}')
+        body = ttk.Frame(picker, padding=10)
+        body.pack(fill='both', expand=True)
+
+        def current_month():
+            year_text, month_text = month_var.get().split('-')
+            return int(year_text), int(month_text)
+
+        days = ttk.Frame(body)
+
+        def select_day(day_number):
+            year, month = current_month()
+            chosen = date(year, month, day_number)
+            if chosen < date.today():
+                return
+            self.plan_start_date_var.set(chosen.isoformat())
+            picker.destroy()
+
+        def render_month():
+            for child in days.winfo_children():
+                child.destroy()
+            year, month = current_month()
+            month_var.set(f'{year:04d}-{month:02d}')
+            title.configure(text=f'{calendar.month_name[month]} {year}')
+            for column, name in enumerate(('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')):
+                ttk.Label(days, text=name, anchor='center', width=4).grid(row=0, column=column, pady=(0, 3))
+            for row, week in enumerate(calendar.monthcalendar(year, month), start=1):
+                for column, day_number in enumerate(week):
+                    if not day_number:
+                        ttk.Label(days, text='', width=4).grid(row=row, column=column)
+                        continue
+                    chosen = date(year, month, day_number)
+                    button = ttk.Button(days, text=str(day_number), width=4,
+                                        command=lambda value=day_number: select_day(value))
+                    if chosen < date.today():
+                        button.state(['disabled'])
+                    button.grid(row=row, column=column, padx=1, pady=1)
+
+        def move_month(delta):
+            year, month = current_month()
+            absolute = year * 12 + month - 1 + delta
+            target_year, target_month = divmod(absolute, 12)
+            if date(target_year, target_month + 1, 1) < date.today().replace(day=1):
+                return
+            month_var.set(f'{target_year:04d}-{target_month + 1:02d}')
+            render_month()
+
+        header = ttk.Frame(body)
+        header.pack(fill='x')
+        ttk.Button(header, text='‹', width=3, command=lambda: move_month(-1)).pack(side='left')
+        title = ttk.Label(header, anchor='center', font=('Segoe UI', 10, 'bold'))
+        title.pack(side='left', fill='x', expand=True)
+        ttk.Button(header, text='›', width=3, command=lambda: move_month(1)).pack(side='right')
+        days.pack(pady=(8, 0))
+        ttk.Button(body, text='วันนี้', command=lambda: (self.plan_start_date_var.set(date.today().isoformat()), picker.destroy())).pack(fill='x', pady=(8, 0))
+        render_month()
+        picker.grab_set()
 
     def _refresh_plan_table(self):
-        self._invalidate_proposals()
+        self._plan_inputs_changed()
+
+    @staticmethod
+    def _order_prod_date(order):
+        """Return the original scheduled production date, never a load/data date."""
+        try:
+            return date(int(order.prod_year), int(order.prod_month), int(order.prod_date)).isoformat()
+        except (TypeError, ValueError):
+            return ''
+
+    def _baseline_orders_in_window(self):
+        try:
+            start = date.fromisoformat(self.plan_start_date_var.get().strip())
+            lookahead = int(float(self._proposal_vars['lookahead'].get()))
+            if not 1 <= lookahead <= 31:
+                return (), None
+        except (TypeError, ValueError):
+            return (), None
+        end = start + timedelta(days=lookahead - 1)
+        records = self.result.records if self.result is not None else list(self.saved_order_records.values())
+        rows = []
+        for order in records:
+            planned = self._order_prod_date(order)
+            if not planned or not start <= date.fromisoformat(planned) <= end:
+                continue
+            quantity = order.total_wontons
+            rows.append((planned, order, quantity))
+        return tuple(sorted(rows, key=lambda row: (row[0], row[1].order_no, row[1].record_id))), end
+
+    def _render_baseline_preview(self):
+        """Show the imported production schedule without requiring planning inputs."""
+        if self._proposals or not hasattr(self, '_proposal_cards'):
+            return
+        rows, end = self._baseline_orders_in_window()
+        if end is None:
+            return
+        for child in self._proposal_cards.winfo_children():
+            child.destroy()
+        box = tk.Frame(self._proposal_cards, bg='white', highlightthickness=2,
+                       highlightbackground='#168078', padx=8, pady=8)
+        box.pack(fill='x')
+        total = sum(float(quantity or 0) for _, _, quantity in rows)
+        tk.Label(box, text='คงแผนเดิม', bg='white', anchor='w', font=('Segoe UI', 10, 'bold')).pack(fill='x')
+        tk.Label(box, text='แผนจาก Prod.Date ใน Order • ยังไม่ตรวจ RM / Capacity / ความพร้อม',
+                 bg='white', anchor='w', font=('Segoe UI', 9)).pack(fill='x', pady=(2, 4))
+        tk.Label(box, text=f'{len(rows):,} งาน  |  {fmt(total)} เกี๊ยว', bg='white', anchor='w',
+                 font=('Segoe UI', 16, 'bold')).pack(fill='x')
+        self._proposal_detail.set(
+            f'แผนเดิม {self.plan_start_date_var.get()} ถึง {end.isoformat()} • '
+            f'{len(rows):,} งาน • อ้างอิง Prod.Date ของ Order โดยตรง'
+        )
+        tree = self._proposal_tables['jobs']
+        tree.delete(*tree.get_children())
+        self._proposal_row_ids = {}
+        for index, (planned, order, quantity) in enumerate(rows):
+            iid = f'baseline:{index}'
+            self._proposal_row_ids[iid] = order.record_id
+            tree.insert('', 'end', iid=iid, values=(
+                order.order_no, planned, planned, order.group_2 or order.group_1,
+                order.rm_size or '—', fmt(quantity), 'ยังไม่ตรวจ', '—',
+            ))
+        self._proposal_tables['daily'].delete(*self._proposal_tables['daily'].get_children())
+        self._proposal_issues.configure(state='normal')
+        self._proposal_issues.delete('1.0', 'end')
+        self._proposal_issues.insert('1.0',
+            'นี่คือแผนเดิมจาก Order เท่านั้น จึงยังไม่หัก RM, ไม่ตรวจ Capacity, '
+            'และไม่ใช้ข้อมูลความพร้อมหรือล็อกงานจนกว่าการคำนวณอัตโนมัติจะเสร็จ.')
+        self._proposal_issues.configure(state='disabled')
+        self.plan_status_var.set(
+            f'คงแผนเดิม: {len(rows):,} งาน ระหว่าง {self.plan_start_date_var.get()}–{end.isoformat()} '
+            '• กำลังรอคำนวณทางเลือกอัตโนมัติ'
+        )
 
     def _proposal_context(self):
         records = self.result.records if self.result is not None else list(self.saved_order_records.values())
@@ -119,14 +276,15 @@ class PlanViewMixin:
             self.plan_start_date_var.get().strip(), {k: v.get() for k, v in self._proposal_vars.items()},
             self._proposal_preferences['profiles'])
 
-    def _calculate_proposals(self):
+    def _calculate_proposals(self, quiet=False):
         try:
             context = self._proposal_context()
             if not context['jobs']:
                 raise ValueError('ไม่พบ Order ที่มีวันที่ผลิตเดิมในช่วงนี้ ตรวจวันเริ่มและข้อมูล Order')
         except (ValueError, OSError, TypeError) as exc:
-            self._invalidate_proposals()
-            messagebox.showerror('คำนวณไม่ได้', str(exc), parent=self)
+            if not quiet:
+                self._invalidate_proposals()
+                messagebox.showerror('คำนวณไม่ได้', str(exc), parent=self)
             return
         self._invalidate_proposals()
         token = object()
@@ -195,7 +353,7 @@ class PlanViewMixin:
         tree = self._proposal_tables['daily']
         tree.delete(*tree.get_children())
         for d in p['daily']:
-            tree.insert('', 'end', values=(d['day'], *(fmt(d['by_size'][z]) for z in ('M', 'S+', 'Unused')),
+            tree.insert('', 'end', values=(d['day'], *(fmt(d['by_size'][z]) for z in ('M', 'S', 'SS', 'Unused')),
                                          d['changes'], fmt(d['hours']['RAW']), fmt(d['hours']['COOKED'])))
         notes = [*p['errors'], *p['pending'], *context['notices'],
             'ตรวจทั้งช่วงด้วย RM ที่บันทึกไว้เท่านั้น; ยังไม่มี ingredient/packaging รายตัวหรือ forecast ที่ยืนยัน',

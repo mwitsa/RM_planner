@@ -19,6 +19,7 @@ from openpyxl.utils import get_column_letter
 
 PRODUCTION_DATE_COLUMN = 3  # C (แผน LOAD Date)
 PRODUCTION_PLAN_DATE_COLUMN = 2  # B (แผนผลิต Date)
+ORDER_NUMBER_COLUMN = 7  # G (No. order)
 COUNTRY_COLUMN = 8  # H
 CUSTOMER_COLUMN = 10  # J
 GROUP_1_COLUMN = 11  # K
@@ -287,6 +288,7 @@ def extract_orders(
         ):
             raw_date = _cell_value(row, PRODUCTION_DATE_COLUMN)
             raw_prod_date = _cell_value(row, PRODUCTION_PLAN_DATE_COLUMN)
+            raw_order_no = _cell_value(row, ORDER_NUMBER_COLUMN)
             if _is_blank(raw_prod_date):
                 # Column B is often left blank for rows that repeat the
                 # production date above it (a visual grouping convention);
@@ -367,6 +369,7 @@ def extract_orders(
                         wontons_per_cup,
                         ho_weight_factor,
                     ),
+                    order_no=_clean_text(raw_order_no),
                     record_id=f"{selected_sheet}:{source_row}",
                 )
             )

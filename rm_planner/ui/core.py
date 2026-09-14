@@ -150,6 +150,9 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self._load_capacity_settings()
         self._load_saved_master_data()
         self._load_saved_assortment_upload()
+        # Use the selected workbook as the active Order/Plan source.  Saved
+        # orders are loaded first only to retain manual production entries.
+        self.after(0, self._start_extraction)
 
     def _configure_style(self) -> None:
         style = ttk.Style(self)

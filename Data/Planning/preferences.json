@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "lookahead": 7.0,
+    "adjustment": 3.0,
+    "shift_hours": 8.0,
+    "setup_minutes": 30.0,
+    "stop_cost": 80000.0,
+    "freeze_cost": 52.0,
+    "freeze_percent": 30.0
+  },
+  "profiles": {}
+}

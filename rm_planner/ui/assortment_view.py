@@ -113,7 +113,8 @@ class AssortmentViewMixin:
                 ) from exc
         return WontonWeightSettings(
             m_grams=values["M"],
-            s_plus_grams=values["S+"],
+            s_grams=values["S"],
+            ss_grams=values["SS"],
         )
 
     def _update_wonton_yield_previews(self) -> None:
@@ -241,7 +242,7 @@ class AssortmentViewMixin:
             )
         )
         range_note = (
-            " Initial M/S+ ranges are placeholders; drag and save them."
+            " Initial M/S/SS ranges are placeholders; drag and save them."
             if not self.assortment_size_range_file_path.exists()
             else ""
         )

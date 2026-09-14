@@ -26,9 +26,11 @@ class RmTimelineRow:
     incoming_kg: float
     cumulative_kg: float
     m_stock: SizeClassWeightSummary
-    s_plus_stock: SizeClassWeightSummary
+    s_stock: SizeClassWeightSummary
+    ss_stock: SizeClassWeightSummary
     m_wontons: float
-    s_plus_wontons: float
+    s_wontons: float
+    ss_wontons: float
     unused_stock: SizeClassWeightSummary
     incoming_wontons: float
     cumulative_wontons: float
@@ -89,9 +91,11 @@ def build_rm_timeline(
                 incoming_kg=incoming_kg,
                 cumulative_kg=cumulative_kg,
                 m_stock=_summary(cumulative_totals["M"]),
-                s_plus_stock=_summary(cumulative_totals["S+"]),
+                s_stock=_summary(cumulative_totals["S"]),
+                ss_stock=_summary(cumulative_totals["SS"]),
                 m_wontons=_number(cumulative_class_wontons["M"]),
-                s_plus_wontons=_number(cumulative_class_wontons["S+"]),
+                s_wontons=_number(cumulative_class_wontons["S"]),
+                ss_wontons=_number(cumulative_class_wontons["SS"]),
                 unused_stock=_summary(cumulative_totals["Unused"]),
                 incoming_wontons=incoming_wontons,
                 cumulative_wontons=cumulative_wontons,
@@ -102,17 +106,18 @@ def build_rm_timeline(
 
 def stock_distribution_percentages(
     m_stock: int | float,
-    s_plus_stock: int | float,
+    s_stock: int | float,
+    ss_stock: int | float,
     unused_stock: int | float,
-) -> tuple[float, float, float]:
-    """Return the M, S+, and Unused shares of total stock."""
+) -> tuple[float, float, float, float]:
+    """Return the M, S, SS, and Unused shares of total stock."""
 
-    weights = tuple(float(value) for value in (m_stock, s_plus_stock, unused_stock))
+    weights = tuple(float(value) for value in (m_stock, s_stock, ss_stock, unused_stock))
     if any(value < 0 for value in weights):
         raise ValueError("Stock distribution weights cannot be negative.")
     total = sum(weights)
     if total == 0:
-        return (0.0, 0.0, 0.0)
+        return (0.0, 0.0, 0.0, 0.0)
     return tuple(value / total * 100 for value in weights)
 
 
@@ -124,7 +129,8 @@ def _summarize_records(
         total = sum(record.total_weight for record in records)
         return {
             "M": SizeClassWeightSummary(0),
-            "S+": SizeClassWeightSummary(0),
+            "S": SizeClassWeightSummary(0),
+            "SS": SizeClassWeightSummary(0),
             "Unused": SizeClassWeightSummary(total),
         }
     entries: list[tuple[str, str, float]] = []

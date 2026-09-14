@@ -82,10 +82,10 @@ class StockOverviewMixin:
         self.rm_stock_as_of_var = tk.StringVar(value="—")
         self.rm_stock_total_var = tk.StringVar(value="0 kg")
         self.rm_stock_wontons_var = tk.StringVar(value="0")
-        self.rm_stock_distribution_weights = (0.0, 0.0, 0.0)
+        self.rm_stock_distribution_weights = (0.0, 0.0, 0.0, 0.0)
         self.rm_stock_distribution_vars = {
             size_class: tk.StringVar(value=f"{size_class} 0% | 0 kg")
-            for size_class in ("M", "S+", "Unused")
+            for size_class in ("M", "S", "SS", "Unused")
         }
         self.rm_stock_size_vars = {
             size_class: {
@@ -159,7 +159,7 @@ class StockOverviewMixin:
 
         distribution_legend = ttk.Frame(overview)
         distribution_legend.grid(row=3, column=0, columnspan=4, sticky="ew")
-        for column, size_class in enumerate(("M", "S+", "Unused")):
+        for column, size_class in enumerate(("M", "S", "SS", "Unused")):
             distribution_legend.columnconfigure(column, weight=1)
             legend_item = ttk.Frame(distribution_legend)
             legend_item.grid(row=0, column=column, sticky=tk.W)
@@ -178,7 +178,8 @@ class StockOverviewMixin:
         size_sections.pack(fill=tk.X, pady=(0, 8))
         stock_card_colors = {
             "M": ("#eaf3fb", "#8bb8dd", "#174f78"),
-            "S+": ("#edf7ee", "#97c79b", "#285f2d"),
+            "S": ("#fff4e6", "#e1ac62", "#87520c"),
+            "SS": ("#edf7ee", "#97c79b", "#285f2d"),
         }
         for column, size_class in enumerate(SIZE_CLASSES):
             size_sections.columnconfigure(column, weight=1)
@@ -297,7 +298,8 @@ class StockOverviewMixin:
             "incoming",
             "stock",
             "M",
-            "S+",
+            "S",
+            "SS",
             "unused",
         )
         self.rm_timeline_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
@@ -307,7 +309,8 @@ class StockOverviewMixin:
             "incoming": "RM in (kg)",
             "stock": "Stock (kg)",
             "M": "M stock (kg)",
-            "S+": "S+ stock (kg)",
+            "S": "S stock (kg)",
+            "SS": "SS stock (kg)",
             "unused": "Unused stock (kg)",
         }
         widths = {
@@ -316,7 +319,8 @@ class StockOverviewMixin:
             "incoming": 100,
             "stock": 100,
             "M": 110,
-            "S+": 110,
+            "S": 110,
+            "SS": 110,
             "unused": 125,
         }
         numeric = set(columns) - {"date", "sources"}
@@ -364,14 +368,15 @@ class StockOverviewMixin:
     def _set_rm_stock_distribution(
         self,
         m_stock: int | float,
-        s_plus_stock: int | float,
+        s_stock: int | float,
+        ss_stock: int | float,
         unused_stock: int | float,
     ) -> None:
-        weights = (float(m_stock), float(s_plus_stock), float(unused_stock))
+        weights = (float(m_stock), float(s_stock), float(ss_stock), float(unused_stock))
         percentages = stock_distribution_percentages(*weights)
         self.rm_stock_distribution_weights = weights
         for size_class, weight, percentage in zip(
-            ("M", "S+", "Unused"),
+            ("M", "S", "SS", "Unused"),
             weights,
             percentages,
         ):
@@ -401,7 +406,7 @@ class StockOverviewMixin:
             return
 
         left = 1.0
-        size_classes = ("M", "S+", "Unused")
+        size_classes = ("M", "S", "SS", "Unused")
         for index, (size_class, percentage) in enumerate(zip(size_classes, percentages)):
             right = (
                 width + 1.0
@@ -454,7 +459,7 @@ class StockOverviewMixin:
             self.rm_stock_as_of_var.set("Unavailable")
             self.rm_stock_total_var.set("—")
             self.rm_stock_wontons_var.set("—")
-            self._set_rm_stock_distribution(0, 0, 0)
+            self._set_rm_stock_distribution(0, 0, 0, 0)
             for variables in self.rm_stock_size_vars.values():
                 for variable in variables.values():
                     variable.set("—")
@@ -473,7 +478,8 @@ class StockOverviewMixin:
                     self._format_optional_number(row.incoming_kg),
                     self._format_optional_number(row.cumulative_kg),
                     self._format_size_class_summary(row.m_stock),
-                    self._format_size_class_summary(row.s_plus_stock),
+                    self._format_size_class_summary(row.s_stock),
+                    self._format_size_class_summary(row.ss_stock),
                     self._format_size_class_summary(row.unused_stock),
                 ),
             )
@@ -489,12 +495,14 @@ class StockOverviewMixin:
             )
             self._set_rm_stock_distribution(
                 final.m_stock.total,
-                final.s_plus_stock.total,
+                final.s_stock.total,
+                final.ss_stock.total,
                 final.unused_stock.total,
             )
             size_summaries = {
                 "M": final.m_stock,
-                "S+": final.s_plus_stock,
+                "S": final.s_stock,
+                "SS": final.ss_stock,
             }
             for size_class, summary in size_summaries.items():
                 variables = self.rm_stock_size_vars[size_class]
@@ -505,17 +513,9 @@ class StockOverviewMixin:
                     market_total = 0.0
                     if filtered_rows:
                         market_final = filtered_rows[-1]
-                        market_summary = (
-                            market_final.m_stock
-                            if size_class == "M"
-                            else market_final.s_plus_stock
-                        )
+                        market_summary = getattr(market_final, f"{size_class.lower()}_stock")
                         market_total = market_summary.total
-                        market_wontons = (
-                            market_final.m_wontons
-                            if size_class == "M"
-                            else market_final.s_plus_wontons
-                        )
+                        market_wontons = getattr(market_final, f"{size_class.lower()}_wontons")
                     else:
                         market_wontons = 0
                     variables[market].set(
@@ -532,7 +532,7 @@ class StockOverviewMixin:
             self.rm_stock_as_of_var.set("—")
             self.rm_stock_total_var.set("0 kg")
             self.rm_stock_wontons_var.set("0")
-            self._set_rm_stock_distribution(0, 0, 0)
+            self._set_rm_stock_distribution(0, 0, 0, 0)
             for variables in self.rm_stock_size_vars.values():
                 variables["stock"].set("0 kg")
                 for market in ("domestic", "export"):

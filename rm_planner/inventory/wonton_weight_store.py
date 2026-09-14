@@ -13,17 +13,19 @@ from rm_planner.inventory.range_store import SIZE_CLASSES, normalize_size_class
 STORE_VERSION = 1
 DEFAULT_WONTON_WEIGHT_GRAMS = {
     "M": 1000 / 53,
-    "S+": 1000 / 69.25,
+    "S": 1000 / 69.25,
+    "SS": 1000 / 69.25,
 }
 
 
 @dataclass(frozen=True, slots=True)
 class WontonWeightSettings:
     m_grams: float = DEFAULT_WONTON_WEIGHT_GRAMS["M"]
-    s_plus_grams: float = DEFAULT_WONTON_WEIGHT_GRAMS["S+"]
+    s_grams: float = DEFAULT_WONTON_WEIGHT_GRAMS["S"]
+    ss_grams: float = DEFAULT_WONTON_WEIGHT_GRAMS["SS"]
 
     def __post_init__(self) -> None:
-        for size_class, value in (("M", self.m_grams), ("S+", self.s_plus_grams)):
+        for size_class, value in (("M", self.m_grams), ("S", self.s_grams), ("SS", self.ss_grams)):
             try:
                 numeric = float(value)
             except (TypeError, ValueError) as exc:
@@ -34,7 +36,7 @@ class WontonWeightSettings:
                 )
             object.__setattr__(
                 self,
-                "m_grams" if size_class == "M" else "s_plus_grams",
+                {"M": "m_grams", "S": "s_grams", "SS": "ss_grams"}[size_class],
                 numeric,
             )
 
@@ -42,8 +44,10 @@ class WontonWeightSettings:
         normalized = normalize_size_class(size_class)
         if normalized == "M":
             return self.m_grams
-        if normalized == "S+":
-            return self.s_plus_grams
+        if normalized == "S":
+            return self.s_grams
+        if normalized == "SS":
+            return self.ss_grams
         raise ValueError(f"Wonton weight is not defined for RM class {size_class}.")
 
     def wontons_per_kg(self, size_class: object) -> float:
@@ -73,7 +77,8 @@ def load_wonton_weight_settings(store_path: str | Path) -> WontonWeightSettings:
     weights = payload["weights_g"]
     return WontonWeightSettings(
         m_grams=weights.get("M"),
-        s_plus_grams=weights.get("S+"),
+        s_grams=weights.get("S", weights.get("S+")),
+        ss_grams=weights.get("SS", weights.get("S+")),
     )
 
 

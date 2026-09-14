@@ -2,7 +2,7 @@
 
 Keep the imported production dates as baseline. Only pull unblocked quantities
 forward into the adjustment window. Inspect the entire lookahead after each move.
-RM is usable kg (configured wonton yield), not workbook HO kg. S/SS share S+ stock.
+RM is usable kg (configured wonton yield), not workbook HO kg.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
         seen.add(order.record_id)
         p = profiles.get(order.record_id, {})
         size = normalize_size_class(order.rm_size)
-        supported = size in ('M', 'S+')
+        supported = size in ('M', 'S', 'SS')
         ready = p.get('status', 'unknown')
         if ready not in ('unknown', 'ready', 'partial', 'blocked'):
             raise ValueError("สถานะความพร้อมไม่ถูกต้อง")
@@ -193,7 +193,7 @@ def evaluate(context, rows):
         for (market, size), qty in balances.items():
             if qty < -EPS:
                 errors.append(f"{day}: RM {market} {size} ขาด {-qty:,.1f} kg")
-        by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size) for size in ('M', 'S+', 'Unused')}
+        by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size) for size in ('M', 'S', 'SS', 'Unused')}
         daily.append(dict(day=day, remaining=sum(by_size.values()), by_size=by_size,
                           changes=changes, hours=hours))
     active = daily[:int(s['adjustment'])]

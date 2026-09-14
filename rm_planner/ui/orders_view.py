@@ -66,17 +66,19 @@ class OrdersViewMixin:
                 auto_save_note = f" Orders could not be auto-saved: {exc}"
             else:
                 existing = len(merged_records) - added
-                result = ExtractionResult(
-                    records=merged_records,
-                    issues=result.issues,
-                    sheet_name=result.sheet_name,
-                    header_row=result.header_row,
-                )
                 self.saved_order_records = {
                     record.record_id: record for record in merged_records
                 }
+                # The current workbook is the active planning source.  Saved
+                # records preserve only user-entered production against a stable
+                # source row; they must not add historical orders to this run.
+                saved_by_id = self.saved_order_records
+                for record in result.records:
+                    saved = saved_by_id.get(record.record_id)
+                    if saved is not None:
+                        record.production = saved.production
                 auto_save_note = (
-                    f" Auto-saved {added:,} new orders; kept {existing:,} existing orders."
+                    f" Saved {added:,} new rows; matched {existing:,} saved rows."
                 )
         self._sync_order_classes(result.records)
         self.result = result
@@ -96,6 +98,8 @@ class OrdersViewMixin:
                 f"{auto_save_note}"
             )
         self._refresh_preview()
+        # Plan's baseline is driven by the Order production schedule, not Data.
+        self._refresh_plan_date_options()
 
     def _show_error(self, exc: Exception) -> None:
         self.extract_button.configure(state=tk.NORMAL)

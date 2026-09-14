@@ -1,4 +1,4 @@
-"""Persistence for M/S+ output-size ranges used by Assortment STD."""
+"""Persistence for M/S/SS output-size ranges used by Assortment STD."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Iterable
 
 
-STORE_VERSION = 2
-SIZE_CLASSES = ("M", "S+")
-LEGACY_SIZE_CLASSES = ("M", "S", "SS")
+STORE_VERSION = 3
+SIZE_CLASSES = ("M", "S", "SS")
+LEGACY_SIZE_CLASSES = ("M", "S+")
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,11 +28,13 @@ class SizeClassWeightSummary:
 
 
 def normalize_size_class(value: object) -> str:
-    """Return the current RM class while accepting legacy S and SS values."""
+    """Return the current RM class, mapping legacy combined S+ stock to S."""
 
     normalized = str(value or "").strip().upper()
-    if normalized in {"S", "SS", "S+"}:
-        return "S+"
+    if normalized == "S+":
+        return "S"
+    if normalized in {"M", "S", "SS"}:
+        return normalized
     if normalized == "UNUSED":
         return "Unused"
     return normalized
@@ -43,7 +45,7 @@ def classify_size_range(
     size_end: str | int | float,
     ranges: Iterable[AssortmentSizeRange],
 ) -> tuple[str, ...]:
-    """Return one matching M/S+ class, or Unused when none/ambiguous."""
+    """Return one matching M/S/SS class, or Unused when none/ambiguous."""
 
     actual_start = _parse_size_number(size_start)
     actual_end = _parse_size_number(size_end)
@@ -156,16 +158,20 @@ def load_size_ranges(
         raw_ranges.append(size_range)
 
     parsed = {item.size_class: item for item in raw_ranges}
+    # A former S+ range has no known S/SS boundary.  Split it into two adjacent
+    # ranges so the user can immediately see and adjust the provisional boundary.
     if set(parsed) == set(LEGACY_SIZE_CLASSES):
-        small_ranges = (parsed["S"], parsed["SS"])
-        start = min(sizes.index(item.start_size) for item in small_ranges)
-        end = max(sizes.index(item.end_size) for item in small_ranges)
+        legacy_small = parsed["S+"]
+        start = sizes.index(legacy_small.start_size)
+        end = sizes.index(legacy_small.end_size)
+        midpoint = start + (end - start) // 2
         parsed = {
             "M": parsed["M"],
-            "S+": AssortmentSizeRange("S+", sizes[start], sizes[end]),
+            "S": AssortmentSizeRange("S", sizes[start], sizes[midpoint]),
+            "SS": AssortmentSizeRange("SS", sizes[min(midpoint + 1, end)], sizes[end]),
         }
     if set(parsed) != set(SIZE_CLASSES):
-        raise ValueError("Assortment size ranges must contain M and S+.")
+        raise ValueError("Assortment size ranges must contain M, S, and SS.")
     for size_range in parsed.values():
         _validate_range(size_range, sizes)
     ordered = tuple(parsed[size_class] for size_class in SIZE_CLASSES)
@@ -184,7 +190,7 @@ def save_size_ranges(
     for size_range in range_list:
         _validate_range(size_range, sizes)
     if tuple(size_range.size_class for size_range in range_list) != SIZE_CLASSES:
-        raise ValueError("Assortment size ranges must be ordered M and S+.")
+        raise ValueError("Assortment size ranges must be ordered M, S, and SS.")
     _validate_non_overlapping_ranges(range_list, sizes)
 
     payload = {
@@ -241,7 +247,7 @@ def _validate_non_overlapping_ranges(
         end_index = output_sizes.index(size_range.end_size)
         rows = set(range(start_index, end_index + 1))
         if occupied_rows.intersection(rows):
-            raise ValueError("M and S+ assortment ranges must not overlap.")
+            raise ValueError("M, S, and SS assortment ranges must not overlap.")
         occupied_rows.update(rows)
 
 

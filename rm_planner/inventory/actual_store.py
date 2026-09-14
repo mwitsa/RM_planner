@@ -126,7 +126,7 @@ def aggregate_entries_by_size_class(
     entries: Iterable[ActualAssortmentEntry],
     ranges: Iterable[AssortmentSizeRange],
 ) -> tuple[ActualAssortmentEntry, ...]:
-    """Combine physical size rows and class rows into M, S+, and Unused totals."""
+    """Combine physical size rows and class rows into M, S, SS, and Unused totals."""
 
     direct_totals = {size_class: 0.0 for size_class in STOCK_SIZE_CLASSES}
     physical_entries: list[tuple[str, str, float]] = []
@@ -145,7 +145,8 @@ def aggregate_entries_by_size_class(
         unused_total = sum(float(weight) for _, _, weight in physical_entries)
         summarized = {
             "M": SizeClassWeightSummary(0),
-            "S+": SizeClassWeightSummary(0),
+            "S": SizeClassWeightSummary(0),
+            "SS": SizeClassWeightSummary(0),
             "Unused": SizeClassWeightSummary(unused_total),
         }
 
@@ -370,10 +371,10 @@ def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
         raise ValueError(f"Weight for size {size} must be greater than zero.")
     pieces_per_kg = entry.pieces_per_kg
     if size_class and size_class not in STOCK_SIZE_CLASSES:
-        raise ValueError("Stock class must be M, S+, or Unused.")
+        raise ValueError("Stock class must be M, S, SS, or Unused.")
     if pieces_per_kg is not None:
         if size_class not in SIZE_CLASSES:
-            raise ValueError("Legacy pieces/kg is supported only for M or S+ stock.")
+            raise ValueError("Legacy pieces/kg is supported only for M, S, or SS stock.")
         try:
             pieces_per_kg = float(pieces_per_kg)
         except (TypeError, ValueError) as exc:

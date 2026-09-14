@@ -15,7 +15,7 @@ class ExistingStockMixin:
         ttk.Label(
             self.existing_stock_tab,
             text=(
-                "Enter old/opening stock directly by M and S+ class. "
+                "Enter old/opening stock directly by M, S, and SS class. "
                 "Average pieces/kg is used to estimate how many wontons the stock can produce."
             ),
         ).pack(anchor=tk.W, pady=(2, 10))
@@ -119,8 +119,10 @@ class ExistingStockMixin:
             "market",
             "m_kg",
             "m_ppkg",
-            "s_plus_kg",
-            "s_plus_ppkg",
+            "s_kg",
+            "s_ppkg",
+            "ss_kg",
+            "ss_ppkg",
             "total_kg",
             "wontons",
         )
@@ -131,8 +133,10 @@ class ExistingStockMixin:
             "market": "Use for",
             "m_kg": "M (kg)",
             "m_ppkg": "M pcs/kg",
-            "s_plus_kg": "S+ (kg)",
-            "s_plus_ppkg": "S+ pcs/kg",
+            "s_kg": "S (kg)",
+            "s_ppkg": "S pcs/kg",
+            "ss_kg": "SS (kg)",
+            "ss_ppkg": "SS pcs/kg",
             "total_kg": "Total (kg)",
             "wontons": "Est. wonton",
         }
