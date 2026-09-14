@@ -427,6 +427,10 @@ class PlanViewMixin:
         if not hasattr(self, '_proposal_timeline_canvas'):
             return
         canvas = self._proposal_timeline_canvas
+        existing_tip = getattr(self, '_timeline_hover_tip', None)
+        if existing_tip is not None and existing_tip.winfo_exists():
+            existing_tip.destroy()
+        self._timeline_hover_tip = None
         canvas.delete('all')
         if not self._proposals:
             canvas.configure(scrollregion=(0, 0, max(canvas.winfo_width(), 1), max(canvas.winfo_height(), 1)))
@@ -441,6 +445,31 @@ class PlanViewMixin:
         for entry in plan['schedule']:
             entries_by_day.setdefault(entry['day'], {}).setdefault(entry['line'], []).append(entry)
         colours = {'M': '#4f83cc', 'S': '#2f9d8f', 'SS': '#8268bd'}
+
+        def hide_timeline_tip(_event=None):
+            tip = getattr(self, '_timeline_hover_tip', None)
+            if tip is not None and tip.winfo_exists():
+                tip.destroy()
+            self._timeline_hover_tip = None
+
+        def show_timeline_tip(event, detail):
+            hide_timeline_tip()
+            tip = tk.Toplevel(self)
+            tip.overrideredirect(True)
+            tip.attributes('-topmost', True)
+            tk.Label(
+                tip,
+                text=detail,
+                justify=tk.LEFT,
+                background='#18324a',
+                foreground='white',
+                font=('Segoe UI', 9),
+                padx=9,
+                pady=6,
+            ).pack()
+            tip.geometry(f'+{event.x_root + 12}+{event.y_root + 14}')
+            self._timeline_hover_tip = tip
+
         y = 12
         for day in sorted(entries_by_day):
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
@@ -477,7 +506,24 @@ class PlanViewMixin:
                         x2 = max(x2, entry_start + max(duration * hour_width, 3))
                     x2 = min(left + timeline_hours * hour_width, x2)
                     colour = colours.get(job['size'], '#98a6b3')
-                    canvas.create_rectangle(x1, y + 4, x2, y + row_height - 12, fill=colour, outline='')
+                    order_numbers = list(dict.fromkeys(jobs[entry['job']]['order'] for entry in entries))
+                    code = period['operation'] or '—'
+                    total_quantity = sum(entry['qty'] for entry in entries)
+                    detail = (
+                        f"Order No.: {', '.join(order_numbers)}\n"
+                        f"CODE: {code}\n"
+                        f"{line} • {fmt(total_quantity)} เกี๊ยว"
+                    )
+                    rectangle = canvas.create_rectangle(
+                        x1, y + 4, x2, y + row_height - 12,
+                        fill=colour, outline='',
+                    )
+                    canvas.tag_bind(
+                        rectangle,
+                        '<Enter>',
+                        lambda event, tooltip_text=detail: show_timeline_tip(event, tooltip_text),
+                    )
+                    canvas.tag_bind(rectangle, '<Leave>', hide_timeline_tip)
                     if x2 - x1 > 65:
                         canvas.create_text(x1 + 6, y + 17, text=job['order'], anchor='w', fill='white', font=('Segoe UI', 9, 'bold'))
                     if x2 - x1 > 115:
