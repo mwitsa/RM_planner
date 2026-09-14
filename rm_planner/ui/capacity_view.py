@@ -8,9 +8,9 @@ from .common import *  # shared UI types and domain services
 class CapacityViewMixin:
     def _build_capacity_tab(self) -> None:
         self.work_hours_per_day_var = tk.StringVar(value="8")
-        self.raw_wonton_per_hour_var = tk.StringVar()
-        self.cooked_wonton_per_hour_var = tk.StringVar()
-        self.cooked_wonton_noodle_per_hour_var = tk.StringVar()
+        self.raw_cups_per_hour_var = tk.StringVar()
+        self.cooked_cups_per_hour_var = tk.StringVar()
+        self.cooked_noodle_cups_per_hour_var = tk.StringVar()
         self.raw_wonton_daily_var = tk.StringVar(value="—")
         self.cooked_wonton_daily_var = tk.StringVar(value="—")
         self.cooked_wonton_noodle_daily_var = tk.StringVar(value="—")
@@ -34,9 +34,9 @@ class CapacityViewMixin:
         for column in range(3):
             inputs.columnconfigure(column, weight=1)
         for column, (label, variable) in enumerate((
-            ("Raw wonton", self.raw_wonton_per_hour_var),
-            ("Cooked wonton", self.cooked_wonton_per_hour_var),
-            ("Cooked wonton + noodle", self.cooked_wonton_noodle_per_hour_var),
+            ("Raw wonton", self.raw_cups_per_hour_var),
+            ("Cooked wonton", self.cooked_cups_per_hour_var),
+            ("Cooked wonton + noodle", self.cooked_noodle_cups_per_hour_var),
         )):
             field = ttk.Frame(inputs, padding=(0 if column == 0 else 8, 0, 8 if column < 2 else 0, 0))
             field.grid(row=0, column=column, sticky="ew")
@@ -44,7 +44,7 @@ class CapacityViewMixin:
             ttk.Label(field, text=label, font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky=tk.W)
             entry = ttk.Entry(field, textvariable=variable, font=("Segoe UI", 14))
             entry.grid(row=1, column=0, sticky="ew", pady=(6, 0))
-            ttk.Label(field, text="wontons / hr").grid(row=2, column=0, sticky=tk.W, pady=(3, 0))
+            ttk.Label(field, text="ถ้วย / ชั่วโมง").grid(row=2, column=0, sticky=tk.W, pady=(3, 0))
             entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
         hours_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
 
@@ -62,7 +62,7 @@ class CapacityViewMixin:
             tk.Label(card, text=label, bg="#edf6fb", anchor="w", font=("Segoe UI", 10, "bold")).pack(fill=tk.X)
             tk.Label(card, textvariable=variable, bg="#edf6fb", anchor="w", font=("Segoe UI", 17, "bold")).pack(
                 fill=tk.X, pady=(5, 0))
-            tk.Label(card, text="wontons / day", bg="#edf6fb", anchor="w").pack(fill=tk.X)
+            tk.Label(card, text="ถ้วย / วัน", bg="#edf6fb", anchor="w").pack(fill=tk.X)
 
         action_frame = ttk.Frame(page)
         action_frame.pack(fill=tk.X, pady=(18, 0))
@@ -82,9 +82,9 @@ class CapacityViewMixin:
 
     def _update_capacity_preview(self) -> None:
         work_hours = self._preview_capacity_number(self.work_hours_per_day_var.get())
-        raw_rate = self._preview_capacity_number(self.raw_wonton_per_hour_var.get())
-        cooked_rate = self._preview_capacity_number(self.cooked_wonton_per_hour_var.get())
-        noodle_rate = self._preview_capacity_number(self.cooked_wonton_noodle_per_hour_var.get())
+        raw_rate = self._preview_capacity_number(self.raw_cups_per_hour_var.get())
+        cooked_rate = self._preview_capacity_number(self.cooked_cups_per_hour_var.get())
+        noodle_rate = self._preview_capacity_number(self.cooked_noodle_cups_per_hour_var.get())
         raw_base = self._daily_capacity_preview(raw_rate, work_hours)
         cooked_base = self._daily_capacity_preview(cooked_rate, work_hours)
         noodle_base = self._daily_capacity_preview(noodle_rate, work_hours)
@@ -114,15 +114,15 @@ class CapacityViewMixin:
         self.capacity_settings = settings
         self.capacity_settings = CapacitySettings(
             raw_percentage=100, cooked_percentage=100,
-            raw_wonton_per_hour=settings.raw_wonton_per_hour,
-            cooked_wonton_per_hour=settings.cooked_wonton_per_hour,
-            cooked_wonton_noodle_per_hour=settings.cooked_wonton_noodle_per_hour,
+            raw_cups_per_hour=settings.raw_cups_per_hour,
+            cooked_cups_per_hour=settings.cooked_cups_per_hour,
+            cooked_noodle_cups_per_hour=settings.cooked_noodle_cups_per_hour,
             work_hours_per_day=settings.work_hours_per_day,
         )
-        self.raw_wonton_per_hour_var.set(self._format_optional_number(settings.raw_wonton_per_hour))
-        self.cooked_wonton_per_hour_var.set(self._format_optional_number(settings.cooked_wonton_per_hour))
-        self.cooked_wonton_noodle_per_hour_var.set(
-            self._format_optional_number(settings.cooked_wonton_noodle_per_hour))
+        self.raw_cups_per_hour_var.set(self._format_optional_number(settings.raw_cups_per_hour))
+        self.cooked_cups_per_hour_var.set(self._format_optional_number(settings.cooked_cups_per_hour))
+        self.cooked_noodle_cups_per_hour_var.set(
+            self._format_optional_number(settings.cooked_noodle_cups_per_hour))
         self.work_hours_per_day_var.set(self._format_optional_number(settings.work_hours_per_day))
         self._update_capacity_preview()
         if self.capacity_file_path.exists():
@@ -132,29 +132,29 @@ class CapacityViewMixin:
     def _save_all_capacity_settings(self) -> None:
         try:
             work_hours_per_day = self._parse_work_hours(self.work_hours_per_day_var.get())
-            raw_wonton_per_hour = self._parse_capacity_number(
-                self.raw_wonton_per_hour_var.get(), "Raw wonton / hr")
-            cooked_wonton_per_hour = self._parse_capacity_number(
-                self.cooked_wonton_per_hour_var.get(), "Cooked wonton / hr")
-            cooked_wonton_noodle_per_hour = self._parse_capacity_number(
-                self.cooked_wonton_noodle_per_hour_var.get(), "Cooked wonton + noodle / hr")
+            raw_cups_per_hour = self._parse_capacity_number(
+                self.raw_cups_per_hour_var.get(), "Raw cups / hr")
+            cooked_cups_per_hour = self._parse_capacity_number(
+                self.cooked_cups_per_hour_var.get(), "Cooked cups / hr")
+            cooked_noodle_cups_per_hour = self._parse_capacity_number(
+                self.cooked_noodle_cups_per_hour_var.get(), "Cooked noodle cups / hr")
             settings = CapacitySettings(
                 raw_percentage=100,
                 cooked_percentage=100,
                 raw_wonton=None,
                 cooked_wonton=None,
-                raw_wonton_per_hour=raw_wonton_per_hour,
-                cooked_wonton_per_hour=cooked_wonton_per_hour,
-                cooked_wonton_noodle_per_hour=cooked_wonton_noodle_per_hour,
+                raw_cups_per_hour=raw_cups_per_hour,
+                cooked_cups_per_hour=cooked_cups_per_hour,
+                cooked_noodle_cups_per_hour=cooked_noodle_cups_per_hour,
                 work_hours_per_day=work_hours_per_day,
             )
             self.capacity_settings = save_capacity_settings(self.capacity_file_path, settings)
         except ValueError as exc:
             messagebox.showerror("Save capacity", str(exc))
             return
-        self.raw_wonton_per_hour_var.set(self._format_optional_number(raw_wonton_per_hour))
-        self.cooked_wonton_per_hour_var.set(self._format_optional_number(cooked_wonton_per_hour))
-        self.cooked_wonton_noodle_per_hour_var.set(self._format_optional_number(cooked_wonton_noodle_per_hour))
+        self.raw_cups_per_hour_var.set(self._format_optional_number(raw_cups_per_hour))
+        self.cooked_cups_per_hour_var.set(self._format_optional_number(cooked_cups_per_hour))
+        self.cooked_noodle_cups_per_hour_var.set(self._format_optional_number(cooked_noodle_cups_per_hour))
         self.work_hours_per_day_var.set(self._format_optional_number(work_hours_per_day))
         self._update_capacity_preview()
         self.capacity_status_var.set(

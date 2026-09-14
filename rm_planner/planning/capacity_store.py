@@ -17,9 +17,9 @@ class CapacitySettings:
     cooked_percentage: int = 50
     raw_wonton: int | float | None = None
     cooked_wonton: int | float | None = None
-    raw_wonton_per_hour: int | float | None = None
-    cooked_wonton_per_hour: int | float | None = None
-    cooked_wonton_noodle_per_hour: int | float | None = None
+    raw_cups_per_hour: int | float | None = None
+    cooked_cups_per_hour: int | float | None = None
+    cooked_noodle_cups_per_hour: int | float | None = None
     work_hours_per_day: int | float = 8
 
 
@@ -41,8 +41,8 @@ def capacities_at_percentage(
         if cooked_percentage is None
         else _required_percentage(cooked_percentage, "Cooked")
     )
-    raw_rate = normalized.raw_wonton_per_hour
-    cooked_rate = normalized.cooked_wonton_per_hour
+    raw_rate = normalized.raw_cups_per_hour
+    cooked_rate = normalized.cooked_cups_per_hour
     # Keep programmatic callers and existing tests that still provide legacy
     # daily numbers working while the UI migrates to hourly inputs.
     if raw_rate is None:
@@ -82,9 +82,10 @@ def load_capacity_settings(store_path: str | Path) -> CapacitySettings:
             cooked_percentage=cooked_percentage,
             raw_wonton=payload.get("raw_wonton"),
             cooked_wonton=payload.get("cooked_wonton"),
-            raw_wonton_per_hour=payload.get("raw_wonton_per_hour"),
-            cooked_wonton_per_hour=payload.get("cooked_wonton_per_hour"),
-            cooked_wonton_noodle_per_hour=payload.get("cooked_wonton_noodle_per_hour"),
+            raw_cups_per_hour=payload.get("raw_cups_per_hour", payload.get("raw_wonton_per_hour")),
+            cooked_cups_per_hour=payload.get("cooked_cups_per_hour", payload.get("cooked_wonton_per_hour")),
+            cooked_noodle_cups_per_hour=payload.get(
+                "cooked_noodle_cups_per_hour", payload.get("cooked_wonton_noodle_per_hour")),
             work_hours_per_day=payload.get("work_hours_per_day", 8),
         )
     )
@@ -95,11 +96,11 @@ def load_capacity_settings(store_path: str | Path) -> CapacitySettings:
         cooked_percentage=settings.cooked_percentage,
         raw_wonton=settings.raw_wonton,
         cooked_wonton=settings.cooked_wonton,
-        raw_wonton_per_hour=(settings.raw_wonton_per_hour if settings.raw_wonton_per_hour is not None
+        raw_cups_per_hour=(settings.raw_cups_per_hour if settings.raw_cups_per_hour is not None
                              else _per_hour(settings.raw_wonton, settings.work_hours_per_day)),
-        cooked_wonton_per_hour=(settings.cooked_wonton_per_hour if settings.cooked_wonton_per_hour is not None
+        cooked_cups_per_hour=(settings.cooked_cups_per_hour if settings.cooked_cups_per_hour is not None
                                 else _per_hour(settings.cooked_wonton, settings.work_hours_per_day)),
-        cooked_wonton_noodle_per_hour=settings.cooked_wonton_noodle_per_hour,
+        cooked_noodle_cups_per_hour=settings.cooked_noodle_cups_per_hour,
         work_hours_per_day=settings.work_hours_per_day,
     )
 
@@ -117,9 +118,9 @@ def save_capacity_settings(
         "cooked_percentage": normalized.cooked_percentage,
         "raw_wonton": normalized.raw_wonton,
         "cooked_wonton": normalized.cooked_wonton,
-        "raw_wonton_per_hour": normalized.raw_wonton_per_hour,
-        "cooked_wonton_per_hour": normalized.cooked_wonton_per_hour,
-        "cooked_wonton_noodle_per_hour": normalized.cooked_wonton_noodle_per_hour,
+        "raw_cups_per_hour": normalized.raw_cups_per_hour,
+        "cooked_cups_per_hour": normalized.cooked_cups_per_hour,
+        "cooked_noodle_cups_per_hour": normalized.cooked_noodle_cups_per_hour,
         "work_hours_per_day": normalized.work_hours_per_day,
     }
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
@@ -139,10 +140,10 @@ def _validate_settings(settings: CapacitySettings) -> CapacitySettings:
         cooked_percentage=_required_percentage(settings.cooked_percentage, "Cooked"),
         raw_wonton=_optional_nonnegative_number(settings.raw_wonton, "เกี๊ยวดิบ"),
         cooked_wonton=_optional_nonnegative_number(settings.cooked_wonton, "เกี๊ยวสุก"),
-        raw_wonton_per_hour=_optional_nonnegative_number(settings.raw_wonton_per_hour, "Raw wonton / hr"),
-        cooked_wonton_per_hour=_optional_nonnegative_number(settings.cooked_wonton_per_hour, "Cooked wonton / hr"),
-        cooked_wonton_noodle_per_hour=_optional_nonnegative_number(
-            settings.cooked_wonton_noodle_per_hour, "Cooked wonton + noodle / hr"),
+        raw_cups_per_hour=_optional_nonnegative_number(settings.raw_cups_per_hour, "Raw cups / hr"),
+        cooked_cups_per_hour=_optional_nonnegative_number(settings.cooked_cups_per_hour, "Cooked cups / hr"),
+        cooked_noodle_cups_per_hour=_optional_nonnegative_number(
+            settings.cooked_noodle_cups_per_hour, "Cooked noodle cups / hr"),
         work_hours_per_day=_required_work_hours(settings.work_hours_per_day),
     )
 

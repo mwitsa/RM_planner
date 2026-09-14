@@ -74,8 +74,11 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             continue
         if not start <= planned <= end:
             continue
-        qty = outstanding_order_quantities(order)[2]
+        _, cups, qty = outstanding_order_quantities(order)
         if qty <= EPS:
+            continue
+        if cups <= EPS:
+            notices.append(f"{order.order_no}: ไม่มีจำนวนถ้วย จึงคำนวณ Capacity ถ้วย/วันไม่ได้")
             continue
         if not order.record_id or order.record_id in seen:
             raise ValueError("Order ต้องมี record_id ไม่ซ้ำกัน กรุณาบันทึก Order ก่อน")
@@ -97,7 +100,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             sku=' | '.join((order.group_1, order.group_2, order.packaging, order.soup, order.rm_size)),
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
-            day=planned.isoformat(), qty=qty, yield_rate=weights.wontons_per_kg(size) if supported else 0,
+            day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
             locked=bool(p.get('locked', False)), egg=p.get('egg', ''), soup_rank=rank,
             earliest=earliest, status=ready, ready_date=ready_date,
             max_qty=number(p.get('max_qty', 0), 'จำนวนที่พร้อม'), reviewer=p.get('reviewer', '').strip()))
@@ -183,7 +186,8 @@ def evaluate(context, rows):
                     changes += 1
                     elapsed += s['setup_minutes'] / 60
                 previous = j['sku']
-                duration = r['qty'] / context['capacity'][line] * s['shift_hours'] if context['capacity'][line] else float('inf')
+                planned_cups = r['qty'] / j['qty'] * j['cups']
+                duration = planned_cups / context['capacity'][line] * s['shift_hours'] if context['capacity'][line] else float('inf')
                 if not math.isfinite(duration):
                     errors.append(f"{day} {line}: capacity เป็นศูนย์")
                     duration = 0
