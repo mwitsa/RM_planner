@@ -345,27 +345,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             label: tk.BooleanVar(value=True)
             for label, _members, _background, _foreground in self.order_column_groups
         }
-        self.order_columns_menu = tk.Menu(controls, tearoff=False)
-        for label, _members, _background, _foreground in self.order_column_groups:
-            self.order_columns_menu.add_checkbutton(
-                label=label,
-                variable=self.order_group_visibility[label],
-                command=self._apply_order_group_visibility,
-            )
-        self.order_columns_button = ttk.Menubutton(
-            controls, text="Columns", menu=self.order_columns_menu
-        )
-        self.order_columns_button.pack(side=tk.RIGHT, padx=(0, 8))
-
-        x = 0
-        for label, members, background, foreground in self.order_column_groups:
-            group_width = sum(widths[column] for column in members)
-            self.order_group_header.create_rectangle(x, 1, x + group_width, 29,
-                                                    fill=background, outline="#ffffff")
-            self.order_group_header.create_text(x + group_width / 2, 15, text=label,
-                                                fill=foreground, font=("Segoe UI", 10, "bold"))
-            x += group_width
-        self.order_group_header.configure(scrollregion=(0, 0, x, 30))
+        self._refresh_order_group_header(tuple(columns))
 
         vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree.xview)

@@ -461,23 +461,65 @@ class OrdersViewMixin:
         self._refresh_order_group_header(visible_columns)
         self.tree.xview_moveto(0)
 
+    def _toggle_order_group_visibility(self, label: str) -> None:
+        self.order_group_visibility[label].set(
+            not self.order_group_visibility[label].get()
+        )
+        self._apply_order_group_visibility()
+
     def _refresh_order_group_header(self, visible_columns: tuple[str, ...] | None = None) -> None:
         if not hasattr(self, "order_group_header"):
             return
-        visible = set(visible_columns or self.tree.cget("displaycolumns"))
+        visible = set(
+            self.tree.cget("displaycolumns")
+            if visible_columns is None
+            else visible_columns
+        )
         self.order_group_header.delete("all")
         x = 0
+        hidden_groups = []
         for label, members, background, foreground in self.order_column_groups:
             shown_members = tuple(column for column in members if column in visible)
             if not shown_members:
+                hidden_groups.append((label, background, foreground))
                 continue
             group_width = sum(self.order_column_widths[column] for column in shown_members)
             self.order_group_header.create_rectangle(
                 x, 1, x + group_width, 29, fill=background, outline="#ffffff"
             )
             self.order_group_header.create_text(
-                x + group_width / 2, 15, text=label, fill=foreground,
+                x + group_width / 2 - 13, 15, text=label, fill=foreground,
                 font=("Segoe UI", 10, "bold"),
+            )
+            tag = f"order-group-toggle:{label}"
+            self.order_group_header.create_rectangle(
+                x + group_width - 26, 4, x + group_width - 5, 26,
+                fill="#ffffff", outline=foreground, tags=(tag,),
+            )
+            self.order_group_header.create_text(
+                x + group_width - 15, 15, text="−", fill=foreground,
+                font=("Segoe UI", 12, "bold"), tags=(tag,),
+            )
+            self.order_group_header.tag_bind(
+                tag, "<Button-1>",
+                lambda _event, group_label=label: self._toggle_order_group_visibility(group_label),
+            )
+            x += group_width
+        # Keep a compact, coloured handle in the same component bar for each
+        # hidden group.  It can restore the group without a separate control.
+        for label, background, foreground in hidden_groups:
+            group_width = 118
+            tag = f"order-group-toggle:{label}"
+            self.order_group_header.create_rectangle(
+                x, 1, x + group_width, 29, fill=background, outline="#ffffff", tags=(tag,)
+            )
+            self.order_group_header.create_text(
+                x + group_width / 2, 15, text=f"▶ {label}", fill=foreground,
+                font=("Segoe UI", 9, "bold"), tags=(tag,),
+            )
+            self.order_group_header.tag_bind(
+                tag, "<Button-1>",
+                lambda _event, group_label=label: self._toggle_order_group_visibility(group_label),
             )
             x += group_width
         self.order_group_header.configure(scrollregion=(0, 0, x, 30))
