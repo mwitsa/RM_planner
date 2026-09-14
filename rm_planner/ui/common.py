@@ -45,18 +45,12 @@ from rm_planner.planning.capacity_store import (
     save_capacity_settings,
 )
 from rm_planner.orders.extractor import (
-    RAW_DATA_EXCLUDED_COLUMNS,
-    RAW_DATA_FIRST_COLUMN,
-    RAW_DATA_LAST_COLUMN,
     ExtractionResult,
     OrderRecord,
-    RawDataResult,
     choose_default_sheet,
     extract_orders,
-    extract_raw_data,
     list_sheets,
 )
-from openpyxl.utils import get_column_letter
 from rm_planner.master.store import (
     MasterComponentRecord,
     extract_master_data,

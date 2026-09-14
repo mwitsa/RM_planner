@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from .common import *  # shared UI types, domain services, and display constants
-from .data_view import DataViewMixin
 from .master_view import MasterViewMixin
 from .shipment_view import ShipmentViewMixin
 from .summary_view import SummaryViewMixin
@@ -18,7 +17,7 @@ from .assortment_view import AssortmentViewMixin
 from .orders_view import OrdersViewMixin
 
 
-class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, StockOverviewMixin, ExistingStockMixin, StockEditorMixin, PlanViewMixin, ClassDefineMixin, CapacityViewMixin, RuleViewMixin, AssortmentViewMixin, OrdersViewMixin, tk.Tk):
+class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, StockOverviewMixin, ExistingStockMixin, StockEditorMixin, PlanViewMixin, ClassDefineMixin, CapacityViewMixin, RuleViewMixin, AssortmentViewMixin, OrdersViewMixin, tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Production Plan Extractor / โปรแกรมดึงข้อมูลแผนผลิต")
@@ -51,20 +50,11 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.class_group_filter_var = tk.StringVar(value=ALL_CLASS_FILTER)
         self.class_filter_count_var = tk.StringVar(value="Showing 0 classes")
         self.capacity_status_var = tk.StringVar(value="Capacity settings have not been saved yet.")
-        self.plan_status_var = tk.StringVar(value="Load data on the Data tab first.")
+        self.plan_status_var = tk.StringVar(value="Load orders on the Order tab first.")
         self.plan_start_date_var = tk.StringVar()
         self.plan_end_date_var = tk.StringVar()
         self.plan_columns: list[str] = []
         self.plan_tree: ttk.Treeview | None = None
-        self.data_status_var = tk.StringVar(value="Load a workbook on the Order tab, then load raw data here.")
-        self.raw_data_result: RawDataResult | None = None
-        self.raw_data_all_rows: list[tuple[str, ...]] = []
-        self.raw_data_headers: list[str] = []
-        self.raw_data_filter_selections: dict[str, str | frozenset[str]] = {}
-        self.raw_data_sort_column: str | None = None
-        self.raw_data_sort_descending = False
-        self._data_filter_popup: tk.Toplevel | None = None
-        self._data_filter_outside_binding: str | None = None
         self.result: ExtractionResult | None = None
         self.saved_order_records: dict[str, OrderRecord] = {}
         self.order_records_by_id: dict[str, OrderRecord] = {}
@@ -176,10 +166,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
 
         self.order_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.order_tab, text="Order")
-
-        self.data_tab = ttk.Frame(self.notebook, padding=14)
-        self.notebook.add(self.data_tab, text="Data")
-        self._build_data_tab()
 
         self.plan_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.plan_tab, text="Plan")
