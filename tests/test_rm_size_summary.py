@@ -4,10 +4,13 @@ import unittest
 
 from rm_planner.inventory.upload_store import AssortmentShipmentRecord
 from rm_planner.inventory.size_summary import (
+    build_order_summary_rows,
     build_summary_rows,
     summarize_assortment_supply,
     summarize_data_usage,
+    summarize_order_usage,
 )
+from rm_planner.orders.extractor import OrderRecord
 
 
 def shipment(record_date: str, **buckets: str) -> AssortmentShipmentRecord:
@@ -17,6 +20,39 @@ def shipment(record_date: str, **buckets: str) -> AssortmentShipmentRecord:
 
 
 class RmSizeSummaryTests(unittest.TestCase):
+    def test_summarize_order_usage_uses_production_date_and_ho_weight(self) -> None:
+        orders = [
+            OrderRecord("", "", "", "", "", "", "", "", "", 0, None, None,
+                        rm_size="m", ho_weight_kg=100, prod_date="16", prod_month="9", prod_year="2026"),
+            OrderRecord("", "", "", "", "", "", "", "", "", 0, None, None,
+                        rm_size="HC", ho_weight_kg=25.5, prod_date="16", prod_month="09", prod_year="2026"),
+            OrderRecord("", "", "", "", "", "", "", "", "", 0, None, None,
+                        rm_size="SS", ho_weight_kg=50, prod_date="17", prod_month="9", prod_year="2026"),
+            OrderRecord("", "", "", "", "", "", "", "", "", 0, None, None,
+                        rm_size="BK", ho_weight_kg=None, prod_date="17", prod_month="9", prod_year="2026"),
+        ]
+
+        totals = summarize_order_usage(orders)
+
+        self.assertAlmostEqual(totals[("2026-09-16", "M/HC (51-75)")], 125.5)
+        self.assertAlmostEqual(totals[("2026-09-17", "S/SS (76-100)")], 50.0)
+        self.assertNotIn(("2026-09-17", "BK (101+)"), totals)
+
+    def test_build_order_summary_rows_compares_assortment_to_orders(self) -> None:
+        orders = [
+            OrderRecord("", "", "", "", "", "", "", "", "", 0, None, None,
+                        rm_size="S", ho_weight_kg=80, prod_date="16", prod_month="9", prod_year="2026"),
+        ]
+
+        rows = build_order_summary_rows(
+            [shipment("2026-09-16", **{"76-80": "100"})],
+            orders,
+        )
+
+        row = next(row for row in rows if row.group_label == "S/SS (76-100)")
+        self.assertAlmostEqual(row.assortment_kg, 100.0)
+        self.assertAlmostEqual(row.data_used_kg, 80.0)
+        self.assertAlmostEqual(row.difference_kg, 20.0)
     def test_summarize_assortment_supply_sums_buckets_by_group_and_date(self) -> None:
         records = [
             shipment(

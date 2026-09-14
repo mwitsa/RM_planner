@@ -69,7 +69,7 @@ from rm_planner.inventory.upload_store import (
     load_assortment_shipments,
     save_assortment_shipments,
 )
-from rm_planner.inventory.size_summary import RM_SIZE_GROUPS, build_summary_rows
+from rm_planner.inventory.size_summary import RM_SIZE_GROUPS, build_order_summary_rows, build_summary_rows
 from rm_planner.orders.store import load_order_records, merge_order_records, save_order_records
 from rm_planner.planning.market_labels import MARKET_DISPLAY_OPTIONS, market_display_label
 from rm_planner.orders.filters import (

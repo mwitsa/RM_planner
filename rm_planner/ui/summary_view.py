@@ -10,7 +10,7 @@ class SummaryViewMixin:
         ttk.Label(
             self.summary_tab,
             text=(
-                "เทียบปริมาณกุ้งต่อวัน: Assortment (จับได้) เทียบกับ Data (ใช้จริง, "
+                "เทียบปริมาณกุ้งต่อวัน: Assortment (จับได้) เทียบกับ Order (ใช้จริง, "
                 "น้ำหนัก HO) แยกตามไซซ์ RM — 51-75=M/HC, 76-100=S/SS, 101+=BK"
             ),
             wraplength=900,
@@ -19,13 +19,13 @@ class SummaryViewMixin:
 
         table_frame = ttk.Frame(self.summary_tab)
         table_frame.pack(fill=tk.BOTH, expand=True)
-        summary_columns = ("date", "group", "assortment_kg", "data_used_kg", "difference_kg")
+        summary_columns = ("date", "group", "assortment_kg", "order_used_kg", "difference_kg")
         self.summary_columns = summary_columns
         self.summary_headings = {
             "date": "วันที่",
             "group": "ไซซ์ RM",
             "assortment_kg": "Assortment (กก.)",
-            "data_used_kg": "Data ใช้จริง (กก.)",
+            "order_used_kg": "Order WT/HO (กก.)",
             "difference_kg": "ขาด/เหลือ (กก.)",
         }
         tree = ttk.Treeview(table_frame, columns=summary_columns, show="headings")
@@ -33,7 +33,7 @@ class SummaryViewMixin:
             "date": 100,
             "group": 150,
             "assortment_kg": 140,
-            "data_used_kg": 140,
+            "order_used_kg": 140,
             "difference_kg": 140,
         }
         for column in summary_columns:
@@ -63,12 +63,10 @@ class SummaryViewMixin:
         if self.summary_tree is None:
             return
         self.summary_tree.delete(*self.summary_tree.get_children())
+        records = self.result.records if self.result is not None else list(self.saved_order_records.values())
         missing_sources = [
             name
-            for name, loaded in (
-                ("Data", bool(self.raw_data_all_rows)),
-                ("Assortment", bool(self.assortment_upload_records)),
-            )
+            for name, loaded in (("Order", bool(records)), ("Assortment", bool(self.assortment_upload_records)))
             if not loaded
         ]
         if missing_sources:
@@ -77,21 +75,7 @@ class SummaryViewMixin:
                 f"Load data on the {' and '.join(missing_sources)} {tab_word} first."
             )
             return
-        if "RM" not in self.raw_data_headers:
-            self.summary_status_var.set(
-                "Could not find the 'RM' column in the Data tab's loaded columns."
-            )
-            return
-        date_index = 0
-        rm_size_index = self.raw_data_headers.index("RM")
-        ho_weight_index = len(self.raw_data_columns) - 1
-        rows = build_summary_rows(
-            self.assortment_upload_records,
-            self.raw_data_all_rows,
-            date_index=date_index,
-            rm_size_index=rm_size_index,
-            ho_weight_index=ho_weight_index,
-        )
+        rows = build_order_summary_rows(self.assortment_upload_records, records)
         plan_start = self.plan_start_date_var.get()
         plan_end = self.plan_end_date_var.get()
         date_range_note = ""

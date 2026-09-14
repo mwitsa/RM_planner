@@ -123,7 +123,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.assortment_upload_sort_column: str | None = None
         self.assortment_upload_sort_descending = False
         self.summary_status_var = tk.StringVar(
-            value="Load data on the Data and Assortment tabs first."
+            value="Load data on the Order and Assortment tabs first."
         )
         self.summary_tree: ttk.Treeview | None = None
         self.capacity_settings = CapacitySettings()

@@ -1,4 +1,4 @@
-"""Compare Assortment (supply) against Data (usage) per day, by RM size group.
+"""Compare Assortment (supply) against Order demand per day, by RM size group.
 
 Three RM size groups are recognized, based on the shrimp count-per-kg size
 buckets recorded in the Assortment upload sheet and the RM size codes used
@@ -9,10 +9,10 @@ in the Data sheet's "RM" column:
     101+    ->  RM size BK (Broken)
 
 Assortment supply for a date is the sum of its shipment(s)' size-bucket
-weights (kg) for that group. Data usage for a date is the sum of the
-"น้ำหนัก HO" column for rows whose RM size falls in that group. The
-"ฝอยคัดทิ้ง >140" waste row is excluded from the 101+ group since it is
-culled material, not usable Broken-grade RM.
+weights (kg) for that group. Order demand is the sum of each order's
+``ho_weight_kg`` on its production date. The "ฝอยคัดทิ้ง >140" waste row is
+excluded from the 101+ group since it is culled material, not usable
+Broken-grade RM.
 """
 
 from __future__ import annotations
@@ -112,6 +112,44 @@ def summarize_data_usage(
     return totals
 
 
+def _order_production_date(order: object) -> str:
+    """Return an ISO production date from an OrderRecord-like object."""
+
+    day = str(getattr(order, "prod_date", "")).strip()
+    month = str(getattr(order, "prod_month", "")).strip()
+    year = str(getattr(order, "prod_year", "")).strip()
+    if not day or not month or not year:
+        return ""
+    try:
+        return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
+    except ValueError:
+        return ""
+
+
+def summarize_order_usage(orders: Iterable[object]) -> dict[tuple[str, str], float]:
+    """Sum Order WT/HO demand per production date and RM size group.
+
+    The summary intentionally uses the Order schedule instead of raw Data
+    rows.  Orders without a complete production date, recognized RM size, or
+    calculated WT/HO value are not included.
+    """
+
+    size_to_group = _rm_size_to_group()
+    totals: dict[tuple[str, str], float] = {}
+    for order in orders:
+        record_date = _order_production_date(order)
+        rm_size = str(getattr(order, "rm_size", "")).strip().upper()
+        group_label = size_to_group.get(rm_size)
+        if not record_date or group_label is None:
+            continue
+        weight = getattr(order, "ho_weight_kg", None)
+        if weight is None:
+            continue
+        key = (record_date, group_label)
+        totals[key] = totals.get(key, 0.0) + _parse_number(weight)
+    return totals
+
+
 def build_summary_rows(
     assortment_records: Iterable[AssortmentShipmentRecord],
     data_rows: Iterable[tuple[str, ...]],
@@ -131,6 +169,29 @@ def build_summary_rows(
             group_label=group_label,
             assortment_kg=assortment_totals.get((record_date, group_label), 0.0),
             data_used_kg=data_totals.get((record_date, group_label), 0.0),
+        )
+        for record_date, group_label in all_keys
+    ]
+    group_order = {label: index for index, (label, _sizes, _buckets) in enumerate(RM_SIZE_GROUPS)}
+    rows.sort(key=lambda row: (row.record_date, group_order.get(row.group_label, len(RM_SIZE_GROUPS))))
+    return rows
+
+
+def build_order_summary_rows(
+    assortment_records: Iterable[AssortmentShipmentRecord],
+    orders: Iterable[object],
+) -> list[RmSizeSummaryRow]:
+    """Build Summary rows from Assortment supply and Order WT/HO demand."""
+
+    assortment_totals = summarize_assortment_supply(assortment_records)
+    order_totals = summarize_order_usage(orders)
+    all_keys = set(assortment_totals) | set(order_totals)
+    rows = [
+        RmSizeSummaryRow(
+            record_date=record_date,
+            group_label=group_label,
+            assortment_kg=assortment_totals.get((record_date, group_label), 0.0),
+            data_used_kg=order_totals.get((record_date, group_label), 0.0),
         )
         for record_date, group_label in all_keys
     ]

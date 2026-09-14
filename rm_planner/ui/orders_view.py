@@ -98,6 +98,7 @@ class OrdersViewMixin:
         self._refresh_preview()
         # Plan's baseline is driven by the Order production schedule, not Data.
         self._refresh_plan_date_options()
+        self._refresh_summary_table()
 
     def _show_error(self, exc: Exception) -> None:
         self.extract_button.configure(state=tk.NORMAL)
