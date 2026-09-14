@@ -176,6 +176,7 @@ class PlanViewMixin:
         selected = max(selected, minimum)
         if maximum_date:
             selected = min(selected, maximum_date)
+        highlight_adjustable_days = target_var is self.adjust_from_var and maximum_date is not None
         picker = tk.Toplevel(self)
         picker.title(dialog_title)
         picker.transient(self)
@@ -212,10 +213,18 @@ class PlanViewMixin:
                         ttk.Label(days, text='', width=4).grid(row=row, column=column)
                         continue
                     chosen = date(year, month, day_number)
-                    button = ttk.Button(days, text=str(day_number), width=4,
-                                        command=lambda value=day_number: select_day(value))
-                    if chosen < minimum or (maximum_date and chosen > maximum_date):
-                        button.state(['disabled'])
+                    unavailable = chosen < minimum or (maximum_date and chosen > maximum_date)
+                    highlighted = highlight_adjustable_days and selected <= chosen <= maximum_date
+                    button = tk.Button(
+                        days, text=str(day_number), width=3,
+                        command=lambda value=day_number: select_day(value),
+                        relief='flat', borderwidth=0,
+                        background='#d9eefb' if highlighted else '#ffffff',
+                        activebackground='#b9def5' if highlighted else '#ececec',
+                        disabledforeground='#a0a0a0',
+                    )
+                    if unavailable:
+                        button.configure(state='disabled', background='#f3f3f3')
                     button.grid(row=row, column=column, padx=1, pady=1)
 
         def move_month(delta):
