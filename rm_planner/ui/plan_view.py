@@ -42,14 +42,11 @@ class PlanViewMixin:
             for key, value in options.items()
         }
         self.adjust_from_var = tk.StringVar(value=self._proposal_vars['adjust_from'].get() or date.today().isoformat())
-        top = ttk.Frame(self.plan_tab)
-        top.pack(fill='x')
-        ttk.Label(top, text='เปรียบเทียบ ก่อนเปลี่ยนแผน', font=('Segoe UI', 15, 'bold')).pack(side='left')
         control = ttk.Frame(self.plan_tab)
         control.pack(fill='x', pady=8)
         ttk.Label(control, text='วันเริ่ม').pack(side='left')
-        self.plan_start_date_entry = ttk.Entry(control, textvariable=self.plan_start_date_var, width=12,
-                                                state='readonly')
+        self.plan_start_date_entry = ttk.Entry(control, textvariable=self.plan_start_date_var, width=14,
+                                                state='readonly', font=('Segoe UI', 12))
         self.plan_start_date_entry.pack(side='left', padx=(6, 0))
         ttk.Button(control, text='📅', width=3, command=self._open_plan_date_picker).pack(side='left', padx=(2, 6))
         ttk.Label(control, text='มองล่วงหน้า (วัน)').pack(side='left', padx=(8, 4))
@@ -57,7 +54,8 @@ class PlanViewMixin:
         ttk.Spinbox(control, textvariable=self._proposal_vars['lookahead'], from_=1, to=31, increment=1,
                     width=5, validate='key', validatecommand=validate_integer).pack(side='left')
         ttk.Label(control, text='เริ่มปรับแผน').pack(side='left', padx=(8, 4))
-        ttk.Entry(control, textvariable=self.adjust_from_var, width=12, state='readonly').pack(side='left')
+        ttk.Entry(control, textvariable=self.adjust_from_var, width=14, state='readonly',
+                  font=('Segoe UI', 12)).pack(side='left')
         ttk.Button(control, text='📅', width=3,
                    command=lambda: self._open_plan_date_picker(
                        self.adjust_from_var, self.plan_start_date_var.get(), 'เลือกวันเริ่มปรับแผน',
