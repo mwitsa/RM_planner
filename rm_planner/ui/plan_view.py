@@ -33,7 +33,13 @@ class PlanViewMixin:
         self._proposal_selected = 0
         self.plan_start_date_var.set(date.today().isoformat())
         options = dict(settings_defaults(), **self._proposal_preferences['settings'])
-        self._proposal_vars = {k: tk.StringVar(value='' if v is None else str(v)) for k, v in options.items()}
+        self._proposal_vars = {
+            key: tk.StringVar(value=(
+                str(int(float(value))) if key in ('lookahead', 'adjustment') and value not in (None, '')
+                else '' if value is None else str(value)
+            ))
+            for key, value in options.items()
+        }
         top = ttk.Frame(self.plan_tab)
         top.pack(fill='x')
         ttk.Label(top, text='เปรียบเทียบ ก่อนเปลี่ยนแผน', font=('Segoe UI', 15, 'bold')).pack(side='left')
@@ -46,7 +52,9 @@ class PlanViewMixin:
         ttk.Button(control, text='📅', width=3, command=self._open_plan_date_picker).pack(side='left', padx=(2, 6))
         for key, title in [('lookahead', 'มองล่วงหน้า (วัน)'), ('adjustment', 'ช่วงปรับ (วัน)')]:
             ttk.Label(control, text=title).pack(side='left', padx=(8, 4))
-            ttk.Entry(control, textvariable=self._proposal_vars[key], width=5).pack(side='left')
+            validate_integer = (self.register(self._is_day_integer), '%P')
+            ttk.Spinbox(control, textvariable=self._proposal_vars[key], from_=1, to=31, increment=1,
+                        width=5, validate='key', validatecommand=validate_integer).pack(side='left')
         ttk.Button(control, text='ต้นทุน / สมมติฐาน', command=self._proposal_settings_dialog).pack(side='right')
         ttk.Label(self.plan_tab, text='ฐาน: Order วันที่ผลิตเดิม • RM: Stock + น้ำหนักเกี๊ยว (ไม่ใช่ HO) • M, S และ SS แยกกองกัน', wraplength=1050).pack(anchor='w')
         self._proposal_cards = ttk.Frame(self.plan_tab)
@@ -96,6 +104,11 @@ class PlanViewMixin:
         self._invalidate_proposals()
         self.after_idle(self._render_baseline_preview)
         self.after_idle(lambda: self._calculate_proposals(quiet=True))
+
+    @staticmethod
+    def _is_day_integer(value):
+        """Allow only whole days in the planning horizon controls."""
+        return value == '' or value.isdigit()
 
     def _invalidate_proposals(self):
         self._proposals = []
