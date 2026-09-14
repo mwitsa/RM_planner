@@ -1,5 +1,10 @@
 # RM Planner — production plan extractor
 
+The Plan tab now compares baseline and three production alternatives over a
+configurable lookahead (default 7 days; adjust the first 3 days), with RM residual,
+cost estimates, readiness/lock controls and saved approval history.
+See [Plan comparison workflow](docs/plan_comparison.md) for setup and boundaries.
+
 RM Planner converts the selected worksheet in `Data/Order/แผน.xlsx` into a
 stable order dataset and provides a Windows desktop UI for stock and production
 planning.

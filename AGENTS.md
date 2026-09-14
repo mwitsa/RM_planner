@@ -13,6 +13,9 @@ Tkinter app. Import application code directly from its `rm_planner` package.
 - `rm_planner/inventory/` handles assortment, stock records, sizes, and timeline.
 - `rm_planner/planning/` handles capacity, classes, market labels, rules, and
   plan calculations.
+- Plan comparison: `planning/alternatives.py` (engine), `planning/proposal_store.py`
+  (saved reviews), `ui/plan_view.py` (screen). Read `docs/plan_comparison.md` for
+  the 7-day / 3-day workflow and calculation boundaries before changing it.
 - `rm_planner/master/` handles master workbook data.
 
 Keep app data files in `Data/`, including `Data/Rules/plan_rules.json`. Run tests
