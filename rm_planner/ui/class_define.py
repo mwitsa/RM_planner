@@ -184,7 +184,7 @@ class ClassDefineMixin:
             saved_frame,
             columns=("class", "name", "group", "value"),
             show="headings",
-            selectmode="browse",
+            selectmode="extended",
         )
         self.class_tree.heading("class", text="Class")
         self.class_tree.heading("name", text="Name")
@@ -316,6 +316,9 @@ class ClassDefineMixin:
         if not selected:
             messagebox.showwarning("No class selected", "Select a saved class to edit.")
             return
+        if len(selected) > 1:
+            self._bulk_edit_selected_classes(selected)
+            return
         item = self.class_definitions.get(selected[0])
         if not item:
             messagebox.showerror("Class error", "The selected class could not be found.")
@@ -329,3 +332,68 @@ class ClassDefineMixin:
         self._editing_class_id = item.class_id
         self.save_class_button.configure(text="บันทึกการแก้ไข")
         self.class_status_var.set(f"Editing class {item.class_value}.")
+
+    def _bulk_edit_selected_classes(self, selected: tuple[str, ...]) -> None:
+        """Open a small bulk editor for the selected Class master rows."""
+
+        dialog = tk.Toplevel(self)
+        dialog.title(f"แก้ไข {len(selected):,} รายการ")
+        dialog.transient(self)
+        dialog.resizable(False, False)
+        body = ttk.Frame(dialog, padding=16)
+        body.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(body, text=f"แก้ไขพร้อมกัน {len(selected):,} รายการ", style="Summary.TLabel").grid(
+            row=0, column=0, columnspan=2, sticky=tk.W
+        )
+        ttk.Label(
+            body,
+            text="เลือก field ที่ต้องการเปลี่ยน ช่องที่ไม่ได้เลือกจะคงค่าเดิมไว้",
+        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(3, 12))
+
+        update_group = tk.BooleanVar(value=False)
+        update_value = tk.BooleanVar(value=False)
+        group_var = tk.StringVar()
+        value_var = tk.StringVar()
+        group_entry = ttk.Entry(body, textvariable=group_var, width=42, state=tk.DISABLED)
+        value_entry = ttk.Entry(body, textvariable=value_var, width=42, state=tk.DISABLED)
+
+        def sync_fields() -> None:
+            group_entry.configure(state=tk.NORMAL if update_group.get() else tk.DISABLED)
+            value_entry.configure(state=tk.NORMAL if update_value.get() else tk.DISABLED)
+
+        ttk.Checkbutton(body, text="อัปเดต Group", variable=update_group, command=sync_fields).grid(
+            row=2, column=0, sticky=tk.W, pady=(0, 5)
+        )
+        group_entry.grid(row=2, column=1, sticky=tk.EW, padx=(12, 0), pady=(0, 5))
+        ttk.Checkbutton(body, text="อัปเดต Value", variable=update_value, command=sync_fields).grid(
+            row=3, column=0, sticky=tk.W
+        )
+        value_entry.grid(row=3, column=1, sticky=tk.EW, padx=(12, 0))
+        ttk.Label(
+            body,
+            text="หากเลือก field แล้วปล่อยว่าง ระบบจะล้างค่านั้นจากทุกรายการที่เลือก",
+        ).grid(row=4, column=0, columnspan=2, sticky=tk.W, pady=(8, 0))
+
+        actions = ttk.Frame(body)
+        actions.grid(row=5, column=0, columnspan=2, sticky=tk.E, pady=(14, 0))
+        ttk.Button(actions, text="ยกเลิก", command=dialog.destroy).pack(side=tk.RIGHT)
+
+        def save_bulk_changes() -> None:
+            try:
+                updated = update_class_definitions(
+                    self.class_definitions_file_path,
+                    selected,
+                    group=group_var.get() if update_group.get() else None,
+                    value=value_var.get() if update_value.get() else None,
+                )
+            except ValueError as exc:
+                messagebox.showerror("แก้ไขหลายรายการ", str(exc), parent=dialog)
+                return
+            dialog.destroy()
+            self._load_saved_class_definitions()
+            self.class_status_var.set(f"Updated {len(updated):,} classes.")
+
+        ttk.Button(actions, text="บันทึกทั้งหมด", command=save_bulk_changes).pack(
+            side=tk.RIGHT, padx=(0, 8)
+        )
+        dialog.grab_set()

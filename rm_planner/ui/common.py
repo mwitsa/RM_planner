@@ -37,6 +37,7 @@ from rm_planner.planning.class_store import (
     load_class_definitions,
     order_class_names,
     upsert_class_definition,
+    update_class_definitions,
 )
 from rm_planner.planning.capacity_store import (
     CapacitySettings,

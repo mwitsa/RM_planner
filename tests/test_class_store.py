@@ -14,6 +14,7 @@ from rm_planner.planning.class_store import (
     load_class_definitions,
     order_class_names,
     upsert_class_definition,
+    update_class_definitions,
 )
 from rm_planner.orders.extractor import OrderRecord
 
@@ -165,6 +166,25 @@ class ClassStoreTests(unittest.TestCase):
             class_filter_options(definitions, "group"),
             ["Europe", "North America", BLANK_CLASS_FILTER],
         )
+
+    def test_bulk_update_changes_only_selected_fields_and_rows(self) -> None:
+        usa = upsert_class_definition(self.store_path, "Country", "USA", "Old", value="A")
+        uk = upsert_class_definition(self.store_path, "Country", "UK", "Old", value="B")
+        soup = upsert_class_definition(self.store_path, "Soup", "Regular", "Kitchen", value="C")
+
+        updated = update_class_definitions(
+            self.store_path,
+            [usa.class_id, uk.class_id],
+            group="Export",
+        )
+        by_id = {item.class_id: item for item in load_class_definitions(self.store_path)}
+
+        self.assertEqual({item.class_id for item in updated}, {usa.class_id, uk.class_id})
+        self.assertEqual(by_id[usa.class_id].group, "Export")
+        self.assertEqual(by_id[uk.class_id].group, "Export")
+        self.assertEqual(by_id[usa.class_id].value, "A")
+        self.assertEqual(by_id[soup.class_id].group, "Kitchen")
+        self.assertEqual(by_id[soup.class_id].value, "C")
 
 
 if __name__ == "__main__":

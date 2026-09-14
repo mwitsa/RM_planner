@@ -150,6 +150,56 @@ def upsert_class_definition(
     return saved
 
 
+def update_class_definitions(
+    store_path: str | Path,
+    class_ids: Iterable[str],
+    *,
+    group: str | None = None,
+    value: str | None = None,
+) -> list[ClassDefinition]:
+    """Apply Group and/or Value to multiple saved classes in one write.
+
+    ``None`` preserves a field while an empty string intentionally clears it.
+    Class and Name are never changed by this operation, avoiding duplicate
+    Class + Name pairs during a bulk edit.
+    """
+
+    selected_ids = {str(class_id).strip() for class_id in class_ids if str(class_id).strip()}
+    if not selected_ids:
+        raise ValueError("Select at least one saved class.")
+    if group is None and value is None:
+        raise ValueError("Choose Group and/or Value to update.")
+
+    path = Path(store_path)
+    definitions = load_class_definitions(path)
+    available_ids = {item.class_id for item in definitions}
+    missing_ids = selected_ids - available_ids
+    if missing_ids:
+        raise ValueError("One or more selected classes no longer exist.")
+
+    now = datetime.now(timezone.utc).isoformat()
+    updated: list[ClassDefinition] = []
+    replacements: list[ClassDefinition] = []
+    for item in definitions:
+        if item.class_id not in selected_ids:
+            replacements.append(item)
+            continue
+        replacement = ClassDefinition(
+            class_id=item.class_id,
+            class_value=item.class_value,
+            name=item.name,
+            group=item.group if group is None else group.strip(),
+            value=item.value if value is None else value.strip(),
+            created_at=item.created_at,
+            updated_at=now,
+        )
+        replacements.append(replacement)
+        updated.append(replacement)
+
+    _write_definitions(path, replacements)
+    return updated
+
+
 def add_missing_class_definitions(
     store_path: str | Path,
     class_names: Iterable[tuple[str, str]],
