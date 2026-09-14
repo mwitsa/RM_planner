@@ -249,17 +249,17 @@ class OrderFilterTests(unittest.TestCase):
         self.assertEqual(order_effective_date(self.records[0]), date(2026, 2, 28))
 
     def test_hides_past_orders_and_keeps_today_and_future(self) -> None:
-        self.records[0].year, self.records[0].month, self.records[0].date = (
+        self.records[0].prod_year, self.records[0].prod_month, self.records[0].prod_date = (
             "2026",
             "08",
             "29",
         )
-        self.records[1].year, self.records[1].month, self.records[1].date = (
+        self.records[1].prod_year, self.records[1].prod_month, self.records[1].prod_date = (
             "2026",
             "08",
             "30",
         )
-        self.records[2].year, self.records[2].month, self.records[2].date = (
+        self.records[2].prod_year, self.records[2].prod_month, self.records[2].prod_date = (
             "2026",
             "09",
             "",

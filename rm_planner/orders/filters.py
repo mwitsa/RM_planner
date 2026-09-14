@@ -237,12 +237,16 @@ def current_and_future_orders(
     records: Iterable[OrderRecord],
     today: date,
 ) -> list[OrderRecord]:
-    """Hide dated orders before today while retaining rows with invalid dates."""
+    """Hide orders with a production date before today.
+
+    Rows without a usable production date stay visible so incomplete source data
+    is not silently hidden from the order screen.
+    """
 
     return [
         record
         for record in records
-        if (effective_date := order_effective_date(record)) is None
+        if (effective_date := prod_effective_date(record)) is None
         or effective_date >= today
     ]
 
