@@ -20,6 +20,10 @@ from rm_planner.inventory.range_store import normalize_size_class
 
 EPS = 1e-6
 TITLES = {"baseline": "แผนเดิม", "material": "ลดการเก็บ RM", "balanced": "สมดุล"}
+# The factory is closed every Monday and Tuesday.  Keep this rule in the
+# calculation layer as well as the date picker so a saved or imported plan
+# cannot accidentally schedule production on a closed day.
+FACTORY_HOLIDAY_WEEKDAYS = frozenset((0, 1))
 
 
 def number(value, name, optional=False):
@@ -140,6 +144,14 @@ def evaluate(context, rows):
     start = date.fromisoformat(context['start'])
     adjust_from = s['adjust_from']
     errors, pending = [], [f'RM {label}: เป็นยอด prediction ต้องยืนยันผลจริงก่อน' for label in context.get('forecasts', [])]
+    for row in rows:
+        try:
+            planned_day = date.fromisoformat(row['day'])
+        except (KeyError, TypeError, ValueError):
+            errors.append('แถวแผนมีวันที่ผลิตไม่ถูกต้อง')
+            continue
+        if planned_day.weekday() in FACTORY_HOLIDAY_WEEKDAYS:
+            errors.append(f"{row['day']}: โรงงานหยุดผลิตวันจันทร์และวันอังคาร")
     totals = defaultdict(float)
     moved = defaultdict(float)
     for row in rows:
@@ -170,7 +182,9 @@ def evaluate(context, rows):
         for lot in context['lots']:
             if lot['day'] == day or (offset == 0 and lot['day'] < day):
                 balances[(lot['market'], lot['size'])] += lot['kg']
-        selected = [r for r in rows if r['day'] == day]
+        # Do not put work on a closed day even while displaying an invalid
+        # imported/manual plan.  The error above tells the user what to fix.
+        selected = [] if date.fromisoformat(day).weekday() in FACTORY_HOLIDAY_WEEKDAYS else [r for r in rows if r['day'] == day]
         changes = 0
         hours = {}
         for line in ('RAW', 'COOKED'):

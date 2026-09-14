@@ -42,6 +42,28 @@ class AlternativeTests(unittest.TestCase):
         rows[1]['day'] = c['start']
         self.assertTrue(evaluate(c,rows)['errors'])
 
+    def test_factory_holidays_cannot_be_scheduled(self):
+        c = {
+            'start': '2026-09-15',  # Tuesday
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-15', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                {'id': 'holiday-job', 'order': 'HOLIDAY', 'qty': 100, 'day': '2026-09-15',
+                 'locked': False, 'earliest': '', 'status': 'unknown', 'ready_date': '',
+                 'reviewer': '', 'max_qty': 0, 'line': 'RAW', 'market': 'domestic',
+                 'egg': '', 'soup_rank': None, 'sku': 'SKU', 'cups': 10,
+                 'yield_rate': 10, 'stock_size': 'M', 'size': 'M', 'due': '2026-09-15'},
+            ],
+            'lots': [], 'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [],
+        }
+        rows = [{'job': 'holiday-job', 'day': '2026-09-15', 'qty': 100}]
+
+        result = evaluate(c, rows)
+
+        self.assertTrue(any('หยุดผลิตวันจันทร์และวันอังคาร' in error for error in result['errors']))
+        self.assertFalse(any(item['day'] == '2026-09-15' for item in result['schedule']))
+
     def test_partial_readiness_caps_total_pulled_quantity(self):
         c = self.context()
         c['jobs'][1].update(status='partial', max_qty=300)

@@ -9,11 +9,20 @@ from uuid import uuid4
 import threading
 import json
 from .common import PROJECT_ROOT
-from rm_planner.planning.alternatives import build_context, compare, settings_defaults, signature, number
+from rm_planner.planning.alternatives import (FACTORY_HOLIDAY_WEEKDAYS, build_context,
+                                               compare, settings_defaults, signature, number)
 from rm_planner.planning.proposal_store import load_preferences, save_preferences, save_approval
 
 STATUS = {'invalid': 'ติดข้อจำกัด', 'conditional': 'รอตรวจข้อมูล', 'review': 'รอยืนยันทั้งชุด'}
 READY = {'unknown': 'ยังไม่ทราบ', 'ready': 'พร้อม', 'partial': 'พร้อมบางส่วน', 'blocked': 'ไม่พร้อม'}
+
+
+def next_factory_workday(value):
+    """Return the first non-holiday day on or after ``value``."""
+
+    while value.weekday() in FACTORY_HOLIDAY_WEEKDAYS:
+        value += timedelta(days=1)
+    return value
 
 
 def fmt(value):
@@ -31,7 +40,7 @@ class PlanViewMixin:
             self._proposal_load_error = str(exc)
         self._proposals = []
         self._proposal_selected = 0
-        self.plan_start_date_var.set(date.today().isoformat())
+        self.plan_start_date_var.set(next_factory_workday(date.today()).isoformat())
         options = dict(settings_defaults(), **self._proposal_preferences['settings'])
         options.pop('adjustment', None)  # Legacy duration; replaced by an explicit date.
         self._proposal_vars = {
@@ -41,7 +50,12 @@ class PlanViewMixin:
             ))
             for key, value in options.items()
         }
-        self.adjust_from_var = tk.StringVar(value=self._proposal_vars['adjust_from'].get() or date.today().isoformat())
+        saved_adjust_from = self._proposal_vars['adjust_from'].get()
+        try:
+            saved_adjust_from = next_factory_workday(date.fromisoformat(saved_adjust_from)).isoformat()
+        except (TypeError, ValueError):
+            saved_adjust_from = self.plan_start_date_var.get()
+        self.adjust_from_var = tk.StringVar(value=saved_adjust_from)
         control = ttk.Frame(self.plan_tab)
         control.pack(fill='x', pady=8)
         ttk.Label(control, text='วันเริ่ม').pack(side='left')
@@ -148,9 +162,9 @@ class PlanViewMixin:
         try:
             selected = date.fromisoformat(self.plan_start_date_var.get().strip())
         except ValueError:
-            selected = date.today()
+            selected = next_factory_workday(date.today())
         if selected < date.today():
-            self.plan_start_date_var.set(date.today().isoformat())
+            self.plan_start_date_var.set(next_factory_workday(date.today()).isoformat())
         self._plan_inputs_changed()
 
     def _plan_horizon_end(self):
@@ -193,7 +207,8 @@ class PlanViewMixin:
         def select_day(day_number):
             year, month = current_month()
             chosen = date(year, month, day_number)
-            if chosen < minimum or (maximum_date and chosen > maximum_date):
+            if (chosen < minimum or (maximum_date and chosen > maximum_date)
+                    or chosen.weekday() in FACTORY_HOLIDAY_WEEKDAYS):
                 return
             target_var.set(chosen.isoformat())
             picker.destroy()
@@ -205,25 +220,27 @@ class PlanViewMixin:
             month_var.set(f'{year:04d}-{month:02d}')
             title.configure(text=f'{calendar.month_name[month]} {year}')
             for column, name in enumerate(('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')):
-                ttk.Label(days, text=name, anchor='center', width=4).grid(row=0, column=column, pady=(0, 3))
+                tk.Label(days, text=name, anchor='center', width=4,
+                         foreground='#b22222' if column in FACTORY_HOLIDAY_WEEKDAYS else '#000000').grid(row=0, column=column, pady=(0, 3))
             for row, week in enumerate(calendar.monthcalendar(year, month), start=1):
                 for column, day_number in enumerate(week):
                     if not day_number:
                         ttk.Label(days, text='', width=4).grid(row=row, column=column)
                         continue
                     chosen = date(year, month, day_number)
-                    unavailable = chosen < minimum or (maximum_date and chosen > maximum_date)
+                    holiday = chosen.weekday() in FACTORY_HOLIDAY_WEEKDAYS
+                    unavailable = holiday or chosen < minimum or (maximum_date and chosen > maximum_date)
                     highlighted = highlight_adjustable_days and selected <= chosen <= maximum_date
                     button = tk.Button(
                         days, text=str(day_number), width=3,
                         command=lambda value=day_number: select_day(value),
                         relief='flat', borderwidth=0,
-                        background='#d9eefb' if highlighted else '#ffffff',
-                        activebackground='#b9def5' if highlighted else '#ececec',
-                        disabledforeground='#a0a0a0',
+                        background='#fde4e4' if holiday else '#d9eefb' if highlighted else '#ffffff',
+                        activebackground='#f5caca' if holiday else '#b9def5' if highlighted else '#ececec',
+                        disabledforeground='#b22222' if holiday else '#a0a0a0',
                     )
                     if unavailable:
-                        button.configure(state='disabled', background='#f3f3f3')
+                        button.configure(state='disabled', background='#fde4e4' if holiday else '#f3f3f3')
                     button.grid(row=row, column=column, padx=1, pady=1)
 
         def move_month(delta):
@@ -244,7 +261,10 @@ class PlanViewMixin:
         title.pack(side='left', fill='x', expand=True)
         ttk.Button(header, text='›', width=3, command=lambda: move_month(1)).pack(side='right')
         days.pack(pady=(8, 0))
-        ttk.Button(body, text='วันแรกที่เลือกได้', command=lambda: (target_var.set(minimum.isoformat()), picker.destroy())).pack(fill='x', pady=(8, 0))
+        first_selectable = next_factory_workday(minimum)
+        ttk.Button(body, text='วันแรกที่เลือกได้',
+                   command=lambda: (target_var.set(first_selectable.isoformat()), picker.destroy()),
+                   state=tk.NORMAL if not maximum_date or first_selectable <= maximum_date else tk.DISABLED).pack(fill='x', pady=(8, 0))
         render_month()
         picker.grab_set()
 
