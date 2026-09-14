@@ -488,6 +488,19 @@ class PlanViewMixin:
             canvas.tag_bind(swatch, '<Leave>', hide_timeline_tip)
             legend_x += 54 if label != 'อื่น ๆ' else 70
 
+        for label, dashed, detail in (
+            ('ในประเทศ', True, 'ขอบเส้นปะ = ใช้ RM สำหรับในประเทศ'),
+            ('ต่างประเทศ', False, 'ขอบเส้นทึบ = ใช้ RM สำหรับต่างประเทศ'),
+        ):
+            border_options = {'fill': '#f2f6fa', 'outline': '#40566b', 'width': 2}
+            if dashed:
+                border_options['dash'] = (4, 2)
+            sample = canvas.create_rectangle(legend_x, 8, legend_x + 16, 20, **border_options)
+            canvas.create_text(legend_x + 21, 14, text=label, anchor='w', fill='#40566b', font=('Segoe UI', 8))
+            canvas.tag_bind(sample, '<Enter>', lambda event, tooltip_text=detail: show_timeline_tip(event, tooltip_text))
+            canvas.tag_bind(sample, '<Leave>', hide_timeline_tip)
+            legend_x += 74
+
         y = 30
         for day in sorted(entries_by_day):
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
@@ -530,15 +543,31 @@ class PlanViewMixin:
                     rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
                     size_text = ', '.join(rm_sizes)
                     colour_meaning = colour_meanings.get(job['size'], 'สีเทา = RM Size อื่น เช่น HC หรือ BK')
+                    market = job.get('market', 'unassigned')
+                    market_label = {
+                        'domestic': 'ในประเทศ',
+                        'export': 'ต่างประเทศ',
+                    }.get(market, 'ยังไม่กำหนดตลาด')
+                    border_meaning = (
+                        'ขอบเส้นปะ = ในประเทศ'
+                        if market == 'domestic'
+                        else 'ขอบเส้นทึบ = ต่างประเทศ'
+                        if market == 'export'
+                        else 'ขอบเส้นทึบ = ยังไม่กำหนดตลาด'
+                    )
                     detail = (
                         f"Order No.: {', '.join(order_numbers)}\n"
                         f"CODE: {code}\n"
                         f"RM Size: {size_text} ({colour_meaning})\n"
+                        f"ตลาด: {market_label} ({border_meaning})\n"
                         f"{line} • {fmt(total_quantity)} เกี๊ยว"
                     )
+                    border_options = {'outline': '#18324a', 'width': 2}
+                    if market == 'domestic':
+                        border_options['dash'] = (4, 2)
                     rectangle = canvas.create_rectangle(
                         x1, y + 4, x2, y + row_height - 12,
-                        fill=colour, outline='',
+                        fill=colour, **border_options,
                     )
                     canvas.tag_bind(
                         rectangle,
