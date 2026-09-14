@@ -1,7 +1,7 @@
 """Rolling plan proposals. Pure calculations; never reserves or writes inventory.
 
-Keep the imported production dates as baseline. Only pull unblocked quantities
-forward into the adjustment window. Inspect the entire lookahead after each move.
+Keep the imported production dates as baseline. Orders before ``adjust_from``
+are frozen; only later dates may be pulled forward. Inspect the full horizon.
 RM is usable kg (configured wonton yield), not workbook HO kg.
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ def number(value, name, optional=False):
 
 
 def settings_defaults():
-    return dict(lookahead=7, adjustment=3, shift_hours=8, setup_minutes=30,
+    return dict(lookahead=7, adjust_from=None, shift_hours=8, setup_minutes=30,
                 stop_cost=None, freeze_cost=None, freeze_percent=None)
 
 
@@ -44,11 +44,13 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     """Adapt saved application records without mutating those records."""
     start = date.fromisoformat(start)
     s = dict(settings_defaults(), **settings)
+    s.pop('adjustment', None)  # Legacy adjustment duration; replaced by a date.
     for key in s:
+        if key == 'adjust_from':
+            continue
         s[key] = number(s[key], key, key in ("stop_cost", "freeze_cost", "freeze_percent"))
-    if not (1 <= s['adjustment'] <= s['lookahead'] <= 31) or any(
-            s[k] != int(s[k]) for k in ('adjustment', 'lookahead')):
-        raise ValueError("ช่วงปรับต้อง 1–31 วัน และไม่เกินช่วงมองล่วงหน้า")
+    if not 1 <= s['lookahead'] <= 31 or s['lookahead'] != int(s['lookahead']):
+        raise ValueError("มองล่วงหน้าต้องเป็นจำนวนเต็ม 1–31 วัน")
     if not 0 < s['shift_hours'] <= 24 or s['setup_minutes'] > s['shift_hours'] * 60:
         raise ValueError("ตรวจชั่วโมงทำงานและเวลาเปลี่ยน SKU")
     if s['freeze_percent'] is not None and s['freeze_percent'] > 100:
@@ -57,6 +59,13 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     if raw is None or cooked is None:
         raise ValueError("กรุณาตั้ง Capacity ดิบและสุกก่อน")
     end = start + timedelta(days=int(s['lookahead']) - 1)
+    try:
+        adjust_from = date.fromisoformat(str(s['adjust_from'] or start.isoformat()))
+    except (TypeError, ValueError):
+        raise ValueError("วันเริ่มปรับแผนไม่ถูกต้อง") from None
+    if not start <= adjust_from <= end:
+        raise ValueError("วันเริ่มปรับแผนต้องอยู่ระหว่างวันเริ่มและวันสุดท้ายที่มองล่วงหน้า")
+    s['adjust_from'] = adjust_from.isoformat()
     jobs, notices, seen = [], [], set()
     for order in orders:
         try:
@@ -124,7 +133,7 @@ def evaluate(context, rows):
     jobs = {j['id']: j for j in context['jobs']}
     s = context['settings']
     start = date.fromisoformat(context['start'])
-    active_end = (start + timedelta(days=int(s['adjustment']) - 1)).isoformat()
+    adjust_from = s['adjust_from']
     errors, pending = [], [f'RM {label}: เป็นยอด prediction ต้องยืนยันผลจริงก่อน' for label in context.get('forecasts', [])]
     totals = defaultdict(float)
     moved = defaultdict(float)
@@ -135,7 +144,7 @@ def evaluate(context, rows):
         totals[j['id']] += row['qty']
         if row['day'] != j['day']:
             moved[j['id']] += row['qty']
-            if j['locked'] or not context['start'] <= row['day'] <= active_end or row['day'] >= j['day']:
+            if j['locked'] or row['day'] < adjust_from or row['day'] >= j['day']:
                 errors.append(f"{j['order']}: ย้ายงานนอกช่วงหรือเป็นงานล็อก")
             if not j['earliest'] or row['day'] < j['earliest']:
                 errors.append(f"{j['order']}: ยังไม่อนุญาตให้ผลิตเร็วในวันนี้")
@@ -196,7 +205,7 @@ def evaluate(context, rows):
         by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size) for size in ('M', 'S', 'SS', 'Unused')}
         daily.append(dict(day=day, remaining=sum(by_size.values()), by_size=by_size,
                           changes=changes, hours=hours))
-    active = daily[:int(s['adjustment'])]
+    active = [day for day in daily if day['day'] >= adjust_from]
     residual = active[-1]['remaining']
     freeze_kg = None if s['freeze_percent'] is None else residual * s['freeze_percent'] / 100
     freeze_cost = None if freeze_kg is None or s['freeze_cost'] is None else freeze_kg * s['freeze_cost']
@@ -221,7 +230,8 @@ def compare(context):
         if not base['errors'] and (policy != 'balanced' or base['cost'] is not None):
             # Start earliest; a moved job is considered only once, preserving readiness caps.
             used = set()
-            for offset in range(int(context['settings']['adjustment'])):
+            first_adjustable = (date.fromisoformat(context['settings']['adjust_from']) - date.fromisoformat(context['start'])).days
+            for offset in range(first_adjustable, int(context['settings']['lookahead'])):
                 target = (date.fromisoformat(context['start']) + timedelta(days=offset)).isoformat()
                 available = sorted(context['jobs'], key=lambda j: (-j['qty'] / max(j['yield_rate'], EPS), j['due'], j['id']))
                 for j in available[:60]:

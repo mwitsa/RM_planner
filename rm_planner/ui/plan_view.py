@@ -33,13 +33,15 @@ class PlanViewMixin:
         self._proposal_selected = 0
         self.plan_start_date_var.set(date.today().isoformat())
         options = dict(settings_defaults(), **self._proposal_preferences['settings'])
+        options.pop('adjustment', None)  # Legacy duration; replaced by an explicit date.
         self._proposal_vars = {
             key: tk.StringVar(value=(
-                str(int(float(value))) if key in ('lookahead', 'adjustment') and value not in (None, '')
+                str(int(float(value))) if key == 'lookahead' and value not in (None, '')
                 else '' if value is None else str(value)
             ))
             for key, value in options.items()
         }
+        self.adjust_from_var = tk.StringVar(value=self._proposal_vars['adjust_from'].get() or date.today().isoformat())
         top = ttk.Frame(self.plan_tab)
         top.pack(fill='x')
         ttk.Label(top, text='เปรียบเทียบ ก่อนเปลี่ยนแผน', font=('Segoe UI', 15, 'bold')).pack(side='left')
@@ -50,11 +52,16 @@ class PlanViewMixin:
                                                 state='readonly')
         self.plan_start_date_entry.pack(side='left', padx=(6, 0))
         ttk.Button(control, text='📅', width=3, command=self._open_plan_date_picker).pack(side='left', padx=(2, 6))
-        for key, title in [('lookahead', 'มองล่วงหน้า (วัน)'), ('adjustment', 'ช่วงปรับ (วัน)')]:
-            ttk.Label(control, text=title).pack(side='left', padx=(8, 4))
-            validate_integer = (self.register(self._is_day_integer), '%P')
-            ttk.Spinbox(control, textvariable=self._proposal_vars[key], from_=1, to=31, increment=1,
-                        width=5, validate='key', validatecommand=validate_integer).pack(side='left')
+        ttk.Label(control, text='มองล่วงหน้า (วัน)').pack(side='left', padx=(8, 4))
+        validate_integer = (self.register(self._is_day_integer), '%P')
+        ttk.Spinbox(control, textvariable=self._proposal_vars['lookahead'], from_=1, to=31, increment=1,
+                    width=5, validate='key', validatecommand=validate_integer).pack(side='left')
+        ttk.Label(control, text='เริ่มปรับแผน').pack(side='left', padx=(8, 4))
+        ttk.Entry(control, textvariable=self.adjust_from_var, width=12, state='readonly').pack(side='left')
+        ttk.Button(control, text='📅', width=3,
+                   command=lambda: self._open_plan_date_picker(
+                       self.adjust_from_var, self.plan_start_date_var.get(), 'เลือกวันเริ่มปรับแผน',
+                       self._plan_horizon_end())).pack(side='left', padx=(2, 6))
         ttk.Button(control, text='ต้นทุน / สมมติฐาน', command=self._proposal_settings_dialog).pack(side='right')
         ttk.Label(self.plan_tab, text='ฐาน: Order วันที่ผลิตเดิม • RM: Stock + น้ำหนักเกี๊ยว (ไม่ใช่ HO) • M, S และ SS แยกกองกัน', wraplength=1050).pack(anchor='w')
         self._proposal_cards = ttk.Frame(self.plan_tab)
@@ -97,10 +104,19 @@ class PlanViewMixin:
         self._proposal_tables['jobs'].bind('<Double-1>', lambda _: self._proposal_job_dialog())
         ttk.Label(self.plan_tab, textvariable=self.plan_status_var, relief='sunken', padding=5).pack(fill='x')
         self.plan_status_var.set(self._proposal_load_error or 'แสดงแผนเดิมจาก Order • ยังไม่ได้ตรวจ RM หรือ Capacity')
-        for var in [self.plan_start_date_var, *self._proposal_vars.values()]:
+        for var in [self.plan_start_date_var, self.adjust_from_var, *self._proposal_vars.values()]:
             var.trace_add('write', lambda *_: self._plan_inputs_changed())
 
     def _plan_inputs_changed(self):
+        try:
+            start = date.fromisoformat(self.plan_start_date_var.get())
+            adjust_from = date.fromisoformat(self.adjust_from_var.get())
+            end = self._plan_horizon_end()
+            normalized = min(max(adjust_from, start), end) if end else max(adjust_from, start)
+            if normalized != adjust_from:
+                self.adjust_from_var.set(normalized.isoformat())
+        except ValueError:
+            self.adjust_from_var.set(self.plan_start_date_var.get())
         self._invalidate_proposals()
         self.after_idle(self._render_baseline_preview)
         self.after_idle(lambda: self._calculate_proposals(quiet=True))
@@ -138,15 +154,30 @@ class PlanViewMixin:
             self.plan_start_date_var.set(date.today().isoformat())
         self._plan_inputs_changed()
 
-    def _open_plan_date_picker(self):
-        """Open a small dependency-free calendar for selecting the plan start."""
+    def _plan_horizon_end(self):
         try:
-            selected = date.fromisoformat(self.plan_start_date_var.get().strip())
+            start = date.fromisoformat(self.plan_start_date_var.get())
+            lookahead = int(self._proposal_vars['lookahead'].get())
+            return start + timedelta(days=lookahead - 1) if 1 <= lookahead <= 31 else None
+        except (TypeError, ValueError):
+            return None
+
+    def _open_plan_date_picker(self, target_var=None, minimum_date=None, dialog_title='เลือกวันเริ่ม', maximum_date=None):
+        """Open a small dependency-free calendar for selecting a plan date."""
+        target_var = target_var or self.plan_start_date_var
+        try:
+            selected = date.fromisoformat(target_var.get().strip())
         except ValueError:
             selected = date.today()
-        selected = max(selected, date.today())
+        try:
+            minimum = date.fromisoformat(minimum_date) if minimum_date else date.today()
+        except ValueError:
+            minimum = date.today()
+        selected = max(selected, minimum)
+        if maximum_date:
+            selected = min(selected, maximum_date)
         picker = tk.Toplevel(self)
-        picker.title('เลือกวันเริ่ม')
+        picker.title(dialog_title)
         picker.transient(self)
         picker.resizable(False, False)
         month_var = tk.StringVar(value=f'{selected.year:04d}-{selected.month:02d}')
@@ -162,9 +193,9 @@ class PlanViewMixin:
         def select_day(day_number):
             year, month = current_month()
             chosen = date(year, month, day_number)
-            if chosen < date.today():
+            if chosen < minimum or (maximum_date and chosen > maximum_date):
                 return
-            self.plan_start_date_var.set(chosen.isoformat())
+            target_var.set(chosen.isoformat())
             picker.destroy()
 
         def render_month():
@@ -183,7 +214,7 @@ class PlanViewMixin:
                     chosen = date(year, month, day_number)
                     button = ttk.Button(days, text=str(day_number), width=4,
                                         command=lambda value=day_number: select_day(value))
-                    if chosen < date.today():
+                    if chosen < minimum or (maximum_date and chosen > maximum_date):
                         button.state(['disabled'])
                     button.grid(row=row, column=column, padx=1, pady=1)
 
@@ -191,7 +222,9 @@ class PlanViewMixin:
             year, month = current_month()
             absolute = year * 12 + month - 1 + delta
             target_year, target_month = divmod(absolute, 12)
-            if date(target_year, target_month + 1, 1) < date.today().replace(day=1):
+            if date(target_year, target_month + 1, 1) < minimum.replace(day=1):
+                return
+            if maximum_date and date(target_year, target_month + 1, 1) > maximum_date.replace(day=1):
                 return
             month_var.set(f'{target_year:04d}-{target_month + 1:02d}')
             render_month()
@@ -203,7 +236,7 @@ class PlanViewMixin:
         title.pack(side='left', fill='x', expand=True)
         ttk.Button(header, text='›', width=3, command=lambda: move_month(1)).pack(side='right')
         days.pack(pady=(8, 0))
-        ttk.Button(body, text='วันนี้', command=lambda: (self.plan_start_date_var.set(date.today().isoformat()), picker.destroy())).pack(fill='x', pady=(8, 0))
+        ttk.Button(body, text='วันแรกที่เลือกได้', command=lambda: (target_var.set(minimum.isoformat()), picker.destroy())).pack(fill='x', pady=(8, 0))
         render_month()
         picker.grab_set()
 
@@ -286,7 +319,10 @@ class PlanViewMixin:
         return build_context(records, self.assortment_actual_records.values(),
             self._current_assortment_size_range_definitions(), self.capacity_settings,
             tuple(self.class_definitions.values()), self.wonton_weight_settings,
-            self.plan_start_date_var.get().strip(), {k: v.get() for k, v in self._proposal_vars.items()},
+            self.plan_start_date_var.get().strip(), {
+                **{k: v.get() for k, v in self._proposal_vars.items()},
+                'adjust_from': self.adjust_from_var.get(),
+            },
             self._proposal_preferences['profiles'])
 
     def _calculate_proposals(self, quiet=False):
@@ -344,7 +380,7 @@ class PlanViewMixin:
             box.grid(row=0, column=i, sticky='nsew', padx=3)
             for title, font in [(plan['title'], ('Segoe UI', 10, 'bold')), (STATUS[plan['status']], ('Segoe UI', 9)),
                                 (fmt(plan['remaining'])+' kg', ('Segoe UI', 19, 'bold')),
-                                ('เหลือสิ้นช่วงปรับ '+str(int(context['settings']['adjustment']))+' วัน', ('Segoe UI', 9)),
+                                ('เริ่มปรับแผน '+context['settings']['adjust_from'], ('Segoe UI', 9)),
                                 ('ต้นทุน ฿ '+fmt(plan['cost']), ('Segoe UI', 10, 'bold')),
                                 (f"เปลี่ยน SKU {plan['changes']} ครั้ง • ย้าย {plan['moved']} งาน", ('Segoe UI', 9))]:
                 tk.Label(box, text=title, bg='white', anchor='w', font=font).pack(fill='x', pady=2)
@@ -371,7 +407,7 @@ class PlanViewMixin:
         notes = [*p['errors'], *p['pending'], *context['notices'],
             'ตรวจทั้งช่วงด้วย RM ที่บันทึกไว้เท่านั้น; ยังไม่มี ingredient/packaging รายตัวหรือ forecast ที่ยืนยัน',
             'Stock คือยอดบันทึกก่อนเบิก ต้องตรวจยอดคงเหลือจริงก่อนยืนยัน kg ใช้น้ำหนักเกี๊ยวที่ตั้งไว้ ไม่ใช่ HO',
-            'Freeze คิดครั้งเดียวจากสัดส่วน RM เหลือสิ้นช่วงปรับ; ยังไม่รวมอายุ RM, OT, ค่าเก็บสินค้า หรือค่าเร่งวัสดุ',
+            'Freeze คิดครั้งเดียวจากสัดส่วน RM เหลือสิ้นช่วงแผน; ยังไม่รวมอายุ RM, OT, ค่าเก็บสินค้า หรือค่าเร่งวัสดุ',
             'ทางเลือกค้นหาแบบจำกัด อาจเหมือนกันได้ ถ้าฐานติดข้อจำกัดต้องแก้ข้อมูลก่อน',
             'ค้นหาผู้สมัครสูงสุด 60 งานต่อวันตามปริมาณ RM; ยังไม่ใช่การหาคำตอบที่ดีที่สุดทั้งหมด',
             'ไม่มีวันผลิตเดิมจะไม่เดาวันให้ วันถัดไปหักจำนวนที่ดึงมา; ค่า Freeze เป็นประมาณการ ไม่ได้หัก stock จริง']
