@@ -83,7 +83,7 @@ class PlanViewMixin:
         notebook.pack(fill='both', expand=True)
         self._proposal_tables = {}
         for key, title, columns in [
-            ('jobs', 'แผนผลิต (Excel format)', ('Order', 'วันเดิม', 'วันเสนอ', 'ไลน์', 'RM', 'จำนวนเกี๊ยว', 'ความพร้อม', 'ล็อก'))]:
+            ('jobs', 'แผนผลิต (Excel format)', ('Order', 'แผนเดิม', 'แผนใหม่', 'ไลน์', 'RM', 'จำนวนเกี๊ยว', 'ความพร้อม', 'ล็อก'))]:
             frame = ttk.Frame(notebook)
             notebook.add(frame, text=title)
             tree = ttk.Treeview(frame, columns=columns, show='headings', height=8)
