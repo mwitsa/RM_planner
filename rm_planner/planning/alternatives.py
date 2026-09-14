@@ -106,6 +106,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
         jobs.append(dict(id=order.record_id, order=order.order_no, customer=order.customer_name,
             sku=' | '.join((order.group_1, order.group_2, order.packaging, order.soup, order.rm_size)),
             code=order.code.strip(),
+            product=order.product.strip(),
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
             day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,

@@ -574,10 +574,18 @@ class PlanViewMixin:
                         lambda event, tooltip_text=detail: show_timeline_tip(event, tooltip_text),
                     )
                     canvas.tag_bind(rectangle, '<Leave>', hide_timeline_tip)
-                    if x2 - x1 > 65:
-                        canvas.create_text(x1 + 6, y + 17, text=job['order'], anchor='w', fill='white', font=('Segoe UI', 9, 'bold'))
-                    if x2 - x1 > 115:
-                        canvas.create_text(x1 + 6, y + 34, text=job['size'], anchor='w', fill='white', font=('Segoe UI', 8))
+                    product = job.get('product', '')
+                    if product and x2 - x1 > 65:
+                        maximum_characters = max(5, int((x2 - x1 - 12) / 7))
+                        label = product if len(product) <= maximum_characters else f"{product[:maximum_characters - 1]}…"
+                        canvas.create_text(
+                            x1 + 6,
+                            y + 22,
+                            text=label,
+                            anchor='w',
+                            fill='white',
+                            font=('Segoe UI', 9, 'bold'),
+                        )
                 y += row_height
             y += 14
         canvas.configure(scrollregion=(0, 0, width, max(y, canvas.winfo_height())))
