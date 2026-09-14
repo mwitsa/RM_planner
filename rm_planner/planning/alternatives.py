@@ -19,8 +19,7 @@ from .capacity_store import capacities_at_percentage
 from rm_planner.inventory.range_store import normalize_size_class
 
 EPS = 1e-6
-TITLES = {"baseline": "คงแผนเดิม", "minimal": "ปรับน้อย / วัสดุยืนยันแล้ว",
-          "material": "ลด RM เหลือ", "balanced": "สมดุลต้นทุน"}
+TITLES = {"baseline": "แผนเดิม", "material": "ลดการเก็บ RM", "balanced": "สมดุล"}
 
 
 def number(value, name, optional=False):
@@ -225,7 +224,7 @@ def compare(context):
     base = evaluate(context, baseline_rows(context))
     results = [dict(base, id='baseline', title=TITLES['baseline'])]
     jobs = {j['id']: j for j in context['jobs']}
-    for policy in ('minimal', 'material', 'balanced'):
+    for policy in ('material', 'balanced'):
         current = deepcopy(base)
         if not base['errors'] and (policy != 'balanced' or base['cost'] is not None):
             # Start earliest; a moved job is considered only once, preserving readiness caps.
@@ -238,8 +237,6 @@ def compare(context):
                     if (j['id'] in used or j['locked'] or j['day'] <= target or not j['earliest']
                             or j['earliest'] > target or not j['egg'] or j['soup_rank'] is None
                             or j['status'] == 'blocked' or j['yield_rate'] <= 0):
-                        continue
-                    if policy == 'minimal' and j['status'] not in ('ready', 'partial'):
                         continue
                     cap = j['qty']
                     if j['status'] in ('ready', 'partial'):
@@ -265,8 +262,6 @@ def compare(context):
                             if attempt == 0:
                                 break
                     if best is None:
-                        continue
-                    if policy == 'minimal' and best['changes'] > current['changes']:
                         continue
                     if policy == 'balanced' and best['cost'] >= current['cost'] - EPS:
                         continue
