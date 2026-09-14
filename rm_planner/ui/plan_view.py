@@ -69,8 +69,7 @@ class PlanViewMixin:
         notebook.pack(fill='both', expand=True)
         self._proposal_tables = {}
         for key, title, columns in [
-            ('jobs', 'แผน / ความพร้อม / ล็อกงาน', ('Order', 'วันเดิม', 'วันเสนอ', 'ไลน์', 'RM', 'จำนวนเกี๊ยว', 'ความพร้อม', 'ล็อก')),
-            ('daily', 'ผลกระทบรายวัน', ('วันที่', 'M เหลือ kg', 'S เหลือ kg', 'SS เหลือ kg', 'Unused kg', 'เปลี่ยน SKU', 'ดิบ ชม.', 'สุก ชม.'))]:
+            ('jobs', 'แผนผลิต (Excel format)', ('Order', 'วันเดิม', 'วันเสนอ', 'ไลน์', 'RM', 'จำนวนเกี๊ยว', 'ความพร้อม', 'ล็อก'))]:
             frame = ttk.Frame(notebook)
             notebook.add(frame, text=title)
             tree = ttk.Treeview(frame, columns=columns, show='headings', height=8)
@@ -86,13 +85,8 @@ class PlanViewMixin:
             frame.columnconfigure(0, weight=1)
             frame.rowconfigure(0, weight=1)
             self._proposal_tables[key] = tree
-        issues = ttk.Frame(notebook)
-        notebook.add(issues, text='ข้อจำกัด / ข้อมูลที่ยังขาด')
-        self._proposal_issues = tk.Text(issues, wrap='word', height=8)
-        self._proposal_issues.pack(side='left', fill='both', expand=True)
-        scroll = ttk.Scrollbar(issues, command=self._proposal_issues.yview)
-        scroll.pack(side='right', fill='y')
-        self._proposal_issues.configure(yscrollcommand=scroll.set)
+        timeline = ttk.Frame(notebook)
+        notebook.add(timeline, text='แผนผลิต (Timeline format)')
         actions = ttk.Frame(self.plan_tab)
         actions.pack(fill='x', pady=8)
         ttk.Button(actions, text='แก้ความพร้อม / วันผลิตเร็วที่สุด / ล็อกงาน', command=self._proposal_job_dialog).pack(side='left')
@@ -133,9 +127,6 @@ class PlanViewMixin:
                 tree.delete(*tree.get_children())
             self._proposal_detail.set('ข้อมูลเปลี่ยนแล้ว กรุณาคำนวณใหม่')
             self.plan_status_var.set('กรุณาคำนวณใหม่ก่อนตรวจหรือยืนยัน')
-            self._proposal_issues.configure(state='normal')
-            self._proposal_issues.delete('1.0', 'end')
-            self._proposal_issues.configure(state='disabled')
 
     def _refresh_plan_date_options(self):
         """Keep the selected date valid after orders are refreshed.
@@ -308,13 +299,6 @@ class PlanViewMixin:
                 order.order_no, planned, planned, order.group_2 or order.group_1,
                 order.rm_size or '—', fmt(quantity), 'ยังไม่ตรวจ', '—',
             ))
-        self._proposal_tables['daily'].delete(*self._proposal_tables['daily'].get_children())
-        self._proposal_issues.configure(state='normal')
-        self._proposal_issues.delete('1.0', 'end')
-        self._proposal_issues.insert('1.0',
-            'นี่คือแผนเดิมจาก Order เท่านั้น จึงยังไม่หัก RM, ไม่ตรวจ Capacity, '
-            'และไม่ใช้ข้อมูลความพร้อมหรือล็อกงานจนกว่าการคำนวณอัตโนมัติจะเสร็จ.')
-        self._proposal_issues.configure(state='disabled')
         self.plan_status_var.set(
             f'คงแผนเดิม: {len(rows):,} งาน ระหว่าง {self.plan_start_date_var.get()}–{end.isoformat()} '
             '• กำลังรอคำนวณทางเลือกอัตโนมัติ'
@@ -405,22 +389,6 @@ class PlanViewMixin:
             self._proposal_row_ids[str(n)] = j['id']
             tree.insert('', 'end', iid=str(n), values=(j['order'], j['day'], r['day'], j['line'], j['size'],
                         fmt(r['qty']), READY[j['status']], 'ล็อก' if j['locked'] else 'ปรับได้'))
-        tree = self._proposal_tables['daily']
-        tree.delete(*tree.get_children())
-        for d in p['daily']:
-            tree.insert('', 'end', values=(d['day'], *(fmt(d['by_size'][z]) for z in ('M', 'S', 'SS', 'Unused')),
-                                         d['changes'], fmt(d['hours']['RAW']), fmt(d['hours']['COOKED'])))
-        notes = [*p['errors'], *p['pending'], *context['notices'],
-            'ตรวจทั้งช่วงด้วย RM ที่บันทึกไว้เท่านั้น; ยังไม่มี ingredient/packaging รายตัวหรือ forecast ที่ยืนยัน',
-            'Stock คือยอดบันทึกก่อนเบิก ต้องตรวจยอดคงเหลือจริงก่อนยืนยัน kg ใช้น้ำหนักเกี๊ยวที่ตั้งไว้ ไม่ใช่ HO',
-            'Freeze คิดครั้งเดียวจากสัดส่วน RM เหลือสิ้นช่วงแผน; ยังไม่รวมอายุ RM, OT, ค่าเก็บสินค้า หรือค่าเร่งวัสดุ',
-            'ทางเลือกค้นหาแบบจำกัด อาจเหมือนกันได้ ถ้าฐานติดข้อจำกัดต้องแก้ข้อมูลก่อน',
-            'ค้นหาผู้สมัครสูงสุด 60 งานต่อวันตามปริมาณ RM; ยังไม่ใช่การหาคำตอบที่ดีที่สุดทั้งหมด',
-            'ไม่มีวันผลิตเดิมจะไม่เดาวันให้ วันถัดไปหักจำนวนที่ดึงมา; ค่า Freeze เป็นประมาณการ ไม่ได้หัก stock จริง']
-        self._proposal_issues.configure(state='normal')
-        self._proposal_issues.delete('1.0', 'end')
-        self._proposal_issues.insert('1.0', '\n\n'.join(notes))
-        self._proposal_issues.configure(state='disabled')
         self.plan_status_var.set(f"{p['title']} • {len(context['jobs'])} งาน • {context['start']} ถึง {self.plan_end_date_var.get()} • ข้อมูล ณ รอบคำนวณล่าสุด ยังไม่ยืนยัน")
 
     def _proposal_history(self):
@@ -544,7 +512,7 @@ class PlanViewMixin:
             if signature(current) != plan['signature']:
                 raise ValueError('ข้อมูลเปลี่ยนแล้ว กรุณาคำนวณและตรวจใหม่')
             if plan['errors'] or plan['pending']:
-                raise ValueError('ยังมีข้อจำกัดหรือข้อมูลที่ต้องตรวจ ดูแท็บข้อจำกัดก่อนยืนยัน')
+                raise ValueError('ยังมีข้อจำกัดหรือข้อมูลที่ต้องตรวจในสถานะแผนก่อนยืนยัน')
         except (ValueError, OSError) as exc:
             messagebox.showwarning('ยังยืนยันไม่ได้', str(exc), parent=self)
             return
