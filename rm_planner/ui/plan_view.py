@@ -401,7 +401,6 @@ class PlanViewMixin:
             box.grid(row=0, column=i, sticky='nsew', padx=3)
             for title, font in [(plan['title'], ('Segoe UI', 10, 'bold')), (STATUS[plan['status']], ('Segoe UI', 9)),
                                 (fmt(plan['remaining'])+' kg', ('Segoe UI', 19, 'bold')),
-                                ('เริ่มปรับแผน '+context['settings']['adjust_from'], ('Segoe UI', 9)),
                                 ('ต้นทุน ฿ '+fmt(plan['cost']), ('Segoe UI', 10, 'bold')),
                                 (f"เปลี่ยน SKU {plan['changes']} ครั้ง • ย้าย {plan['moved']} งาน", ('Segoe UI', 9))]:
                 tk.Label(box, text=title, bg='white', anchor='w', font=font).pack(fill='x', pady=2)
