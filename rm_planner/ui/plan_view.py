@@ -63,7 +63,6 @@ class PlanViewMixin:
                        self.adjust_from_var, self.plan_start_date_var.get(), 'เลือกวันเริ่มปรับแผน',
                        self._plan_horizon_end())).pack(side='left', padx=(2, 6))
         ttk.Button(control, text='ต้นทุน / สมมติฐาน', command=self._proposal_settings_dialog).pack(side='right')
-        ttk.Label(self.plan_tab, text='ฐาน: Order วันที่ผลิตเดิม • RM: Stock + น้ำหนักเกี๊ยว (ไม่ใช่ HO) • M, S และ SS แยกกองกัน', wraplength=1050).pack(anchor='w')
         self._proposal_cards = ttk.Frame(self.plan_tab)
         self._proposal_cards.pack(fill='x', pady=8)
         self._proposal_detail = tk.StringVar(value='กำลังแสดงแผนเดิมจาก Prod.Date ของ Order')
