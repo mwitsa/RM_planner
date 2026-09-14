@@ -24,6 +24,7 @@ COUNTRY_COLUMN = 8  # H
 CUSTOMER_COLUMN = 10  # J
 GROUP_1_COLUMN = 11  # K
 GROUP_2_COLUMN = 12  # L
+PRODUCT_COLUMN = 13  # M
 CODE_COLUMN = 14  # N
 PACKAGING_COLUMN = 15  # O
 RAW_HO_WEIGHT_CUPS_COLUMN = 16  # P (cups)
@@ -46,6 +47,7 @@ ORDER_EXPORT_FIELDS = (
     "country",
     "customer_name",
     "code",
+    "product",
     "group_1",
     "group_2",
     "packaging",
@@ -84,6 +86,7 @@ class OrderRecord:
     cups_per_unit: float | None
     rm_size: str = ""
     code: str = ""
+    product: str = ""
     dip: str = ""
     cups: int | float | None = None
     pcs_per_cup: int | float | None = None
@@ -324,6 +327,7 @@ def extract_orders(
             raw_customer = _cell_value(row, CUSTOMER_COLUMN)
             raw_group_1 = _cell_value(row, GROUP_1_COLUMN)
             raw_group_2 = _cell_value(row, GROUP_2_COLUMN)
+            raw_product = _cell_value(row, PRODUCT_COLUMN)
             raw_code = _cell_value(row, CODE_COLUMN)
             raw_packaging = _cell_value(row, PACKAGING_COLUMN)
             raw_cups_per_order = _cell_value(row, RAW_HO_WEIGHT_CUPS_COLUMN)
@@ -390,6 +394,7 @@ def extract_orders(
                     country=_clean_text(raw_country),
                     customer_name=customer,
                     code=_clean_text(raw_code),
+                    product=_clean_text(raw_product),
                     group_1=_clean_text(raw_group_1),
                     group_2=_clean_text(raw_group_2),
                     packaging=_clean_text(raw_packaging),

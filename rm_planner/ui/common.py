@@ -123,6 +123,7 @@ ORDER_COLUMN_FILTER_KEYS = {
     "country": "country",
     "customer": "customer",
     "code": "code",
+    "product": "product",
     "group_1": "group_1",
     "group_2": "group_2",
     "packaging": "packaging",

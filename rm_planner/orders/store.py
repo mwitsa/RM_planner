@@ -111,6 +111,7 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                     country=str(raw["country"]),
                     customer_name=str(raw["customer_name"]),
                     code=str(raw.get("code", "")),
+                    product=str(raw.get("product", "")),
                     group_1=str(raw["group_1"]),
                     group_2=str(raw["group_2"]),
                     packaging=str(raw["packaging"]),
@@ -221,6 +222,9 @@ def _backfill_new_source_fields(
             changed = True
         if not existing.code and incoming.code:
             existing.code = incoming.code
+            changed = True
+        if not existing.product and incoming.product:
+            existing.product = incoming.product
             changed = True
         if not existing.dip and incoming.dip:
             existing.dip = incoming.dip

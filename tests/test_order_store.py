@@ -20,6 +20,7 @@ def sample_order(production: int | float | None = None) -> OrderRecord:
         group_2="Group 2",
         packaging="130g*24",
         rm_size="M",
+        product="Product A",
         soup="Regular",
         order_unit=500,
         order_cups=8000,
@@ -51,6 +52,7 @@ class OrderStoreTests(unittest.TestCase):
         self.assertEqual(loaded[0].order_cups, 8000)
         self.assertEqual(loaded[0].cups_per_unit, 16)
         self.assertEqual(loaded[0].wontons_per_cup, 8)
+        self.assertEqual(loaded[0].product, "Product A")
         self.assertEqual(loaded[0].total_wontons, 64000)
         self.assertEqual(loaded[0].ho_weight_kg, 1600)
         self.assertEqual(loaded[0].production, 420.5)

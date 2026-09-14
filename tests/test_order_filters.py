@@ -143,10 +143,11 @@ class OrderFilterTests(unittest.TestCase):
         )
 
     def test_code_and_dip_columns_are_filterable(self) -> None:
-        self.records[0].code, self.records[0].dip = "CODE-A", "Soy"
-        self.records[1].code, self.records[1].dip = "CODE-B", "Chili"
+        self.records[0].code, self.records[0].product, self.records[0].dip = "CODE-A", "Product A", "Soy"
+        self.records[1].code, self.records[1].product, self.records[1].dip = "CODE-B", "Product B", "Chili"
 
         self.assertEqual(filter_options(self.records, "code"), ["CODE-A", "CODE-B", BLANK_FILTER])
+        self.assertEqual(filter_options(self.records, "product"), ["Product A", "Product B", BLANK_FILTER])
         self.assertEqual(
             [record.record_id for record in filter_orders(self.records, {"dip": "Chili"})],
             ["2"],
