@@ -57,6 +57,9 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     raw, cooked = capacities_at_percentage(capacity)
     if raw is None or cooked is None:
         raise ValueError("กรุณาตั้ง Capacity ดิบและสุกก่อน")
+    # Capacity is entered as cups/hour; its configured work-day length is the
+    # production shift used by both the feasibility check and the timeline.
+    s['shift_hours'] = float(capacity.work_hours_per_day)
     end = start + timedelta(days=int(s['lookahead']) - 1)
     try:
         adjust_from = date.fromisoformat(str(s['adjust_from'] or start.isoformat()))

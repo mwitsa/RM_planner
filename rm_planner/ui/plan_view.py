@@ -87,6 +87,17 @@ class PlanViewMixin:
             self._proposal_tables[key] = tree
         timeline = ttk.Frame(notebook)
         notebook.add(timeline, text='แผนผลิต (Timeline format)')
+        timeline.rowconfigure(0, weight=1)
+        timeline.columnconfigure(0, weight=1)
+        self._proposal_timeline_canvas = tk.Canvas(timeline, bg='white', highlightthickness=0)
+        self._proposal_timeline_canvas.grid(row=0, column=0, sticky='nsew')
+        timeline_vertical = ttk.Scrollbar(timeline, orient='vertical', command=self._proposal_timeline_canvas.yview)
+        timeline_vertical.grid(row=0, column=1, sticky='ns')
+        timeline_horizontal = ttk.Scrollbar(timeline, orient='horizontal', command=self._proposal_timeline_canvas.xview)
+        timeline_horizontal.grid(row=1, column=0, sticky='ew')
+        self._proposal_timeline_canvas.configure(xscrollcommand=timeline_horizontal.set, yscrollcommand=timeline_vertical.set)
+        self._proposal_timeline_canvas.bind('<Configure>', lambda _event: self._render_plan_timeline())
+        notebook.bind('<<NotebookTabChanged>>', lambda _event: self._render_plan_timeline())
         actions = ttk.Frame(self.plan_tab)
         actions.pack(fill='x', pady=8)
         ttk.Button(actions, text='แก้ความพร้อม / วันผลิตเร็วที่สุด / ล็อกงาน', command=self._proposal_job_dialog).pack(side='left')
@@ -390,6 +401,57 @@ class PlanViewMixin:
             tree.insert('', 'end', iid=str(n), values=(j['order'], j['day'], r['day'], j['line'], j['size'],
                         fmt(r['qty']), READY[j['status']], 'ล็อก' if j['locked'] else 'ปรับได้'))
         self.plan_status_var.set(f"{p['title']} • {len(context['jobs'])} งาน • {context['start']} ถึง {self.plan_end_date_var.get()} • ข้อมูล ณ รอบคำนวณล่าสุด ยังไม่ยืนยัน")
+        self._render_plan_timeline()
+
+    def _render_plan_timeline(self):
+        """Draw the selected plan in production-day time (12:00 to 08:00)."""
+        if not hasattr(self, '_proposal_timeline_canvas'):
+            return
+        canvas = self._proposal_timeline_canvas
+        canvas.delete('all')
+        if not self._proposals:
+            canvas.configure(scrollregion=(0, 0, max(canvas.winfo_width(), 1), max(canvas.winfo_height(), 1)))
+            return
+        plan = self._proposals[self._proposal_selected]
+        jobs = {job['id']: job for job in self._proposal_context_used['jobs']}
+        hours = tuple(range(12, 24)) + tuple(range(0, 9))
+        label_width, hour_width, row_height, left = 140, 70, 58, 140
+        timeline_hours = len(hours) - 1  # 12:00 through 08:00 next morning = 20 hours.
+        width = left + timeline_hours * hour_width + 20
+        entries_by_day = {}
+        for entry in plan['schedule']:
+            entries_by_day.setdefault(entry['day'], {}).setdefault(entry['line'], []).append(entry)
+        colours = {'M': '#4f83cc', 'S': '#2f9d8f', 'SS': '#8268bd'}
+        y = 12
+        for day in sorted(entries_by_day):
+            canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
+            for offset, hour in enumerate(hours):
+                x = left + offset * hour_width
+                canvas.create_text(x + hour_width / 2, y + 14, text=f'{hour:02d}:00', fill='#557188', font=('Segoe UI', 9))
+                canvas.create_line(x, y + 28, x, y + 28 + row_height * 2, fill='#d9e3eb', dash=(2, 3))
+            y += 30
+            for line, start_hour, thai_label in (('COOKED', 18, 'เกี๊ยวสุก'), ('RAW', 19, 'เกี๊ยวดิบ')):
+                canvas.create_rectangle(left, y, left + timeline_hours * hour_width, y + row_height - 8,
+                                        fill='#f2f6fa', outline='')
+                canvas.create_text(12, y + 13, text=line, anchor='w', fill='#18324a', font=('Segoe UI', 10, 'bold'))
+                canvas.create_text(12, y + 31, text=thai_label, anchor='w', fill='#6b7d8d', font=('Segoe UI', 8))
+                for entry in entries_by_day[day].get(line, []):
+                    job = jobs[entry['job']]
+                    capacity = self._proposal_context_used['capacity'][line]
+                    cup_quantity = entry['qty'] / job['qty'] * job['cups'] if job['qty'] else 0
+                    duration = cup_quantity / capacity * self._proposal_context_used['settings']['shift_hours'] if capacity else 0
+                    start_offset = (start_hour - 12) + entry['start_hours']
+                    x1 = left + start_offset * hour_width
+                    x2 = min(left + timeline_hours * hour_width, x1 + max(duration * hour_width, 3))
+                    colour = colours.get(job['size'], '#98a6b3')
+                    canvas.create_rectangle(x1, y + 4, x2, y + row_height - 12, fill=colour, outline='')
+                    if x2 - x1 > 65:
+                        canvas.create_text(x1 + 6, y + 17, text=job['order'], anchor='w', fill='white', font=('Segoe UI', 9, 'bold'))
+                    if x2 - x1 > 115:
+                        canvas.create_text(x1 + 6, y + 34, text=job['size'], anchor='w', fill='white', font=('Segoe UI', 8))
+                y += row_height
+            y += 14
+        canvas.configure(scrollregion=(0, 0, width, max(y, canvas.winfo_height())))
 
     def _proposal_history(self):
         folder = PROJECT_ROOT / 'Data' / 'Planning' / 'approved'
