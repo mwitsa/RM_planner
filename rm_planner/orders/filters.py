@@ -279,10 +279,12 @@ def filter_value(record: OrderRecord, key: str) -> str:
     elif key in {
         "order_no",
         "country",
+        "code",
         "group_1",
         "group_2",
         "packaging",
         "rm_size",
+        "dip",
         "soup",
     }:
         value = getattr(record, key)
