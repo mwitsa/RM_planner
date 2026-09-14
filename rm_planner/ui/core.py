@@ -12,12 +12,11 @@ from .stock_editor import StockEditorMixin
 from .plan_view import PlanViewMixin
 from .class_define import ClassDefineMixin
 from .capacity_view import CapacityViewMixin
-from .rule_view import RuleViewMixin
 from .assortment_view import AssortmentViewMixin
 from .orders_view import OrdersViewMixin
 
 
-class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, StockOverviewMixin, ExistingStockMixin, StockEditorMixin, PlanViewMixin, ClassDefineMixin, CapacityViewMixin, RuleViewMixin, AssortmentViewMixin, OrdersViewMixin, tk.Tk):
+class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, StockOverviewMixin, ExistingStockMixin, StockEditorMixin, PlanViewMixin, ClassDefineMixin, CapacityViewMixin, AssortmentViewMixin, OrdersViewMixin, tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Production Plan Extractor / โปรแกรมดึงข้อมูลแผนผลิต")
@@ -38,7 +37,6 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self._order_filter_outside_binding: str | None = None
         self.summary_var = tk.StringVar(value="Select a workbook to begin.")
         self.status_var = tk.StringVar(value="Ready")
-        self.rule_status_var = tk.StringVar(value="Rules apply from top to bottom.")
         self.assortment_status_var = tk.StringVar(value="Assortment master has not been loaded.")
         self.assortment_actual_status_var = tk.StringVar(value="No saved stock records yet.")
         self.existing_stock_status_var = tk.StringVar(value="No saved existing stock yet.")
@@ -64,7 +62,6 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self.order_sort_descending = False
         self.hide_past_orders = True
         self.assortment_table: AssortmentTable | None = None
-        self.rule_file_path = PROJECT_ROOT / "Data" / "Rules" / "plan_rules.json"
         self.assortment_file_path = PROJECT_ROOT / "Data" / "RM" / "assortment.xlsx"
         self.assortment_size_range_file_path = (
             PROJECT_ROOT / "Data" / "RM" / "assortment_size_ranges.json"
@@ -128,14 +125,10 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self._assortment_range_drag_changed = False
         self._editing_actual_record_id: str | None = None
         self._editing_existing_stock_id: str | None = None
-        self._rule_text_by_item: dict[str, str] = {}
-        self._drag_rule_item: str | None = None
-        self._rule_drag_changed = False
 
         self._configure_style()
         self._build_ui()
         self._load_default_workbook()
-        self._load_saved_rules()
         self._load_assortment_data()
         self._load_wonton_weight_settings()
         self._load_assortment_actual_history()
