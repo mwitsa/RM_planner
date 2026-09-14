@@ -445,6 +445,11 @@ class PlanViewMixin:
         for entry in plan['schedule']:
             entries_by_day.setdefault(entry['day'], {}).setdefault(entry['line'], []).append(entry)
         colours = {'M': '#4f83cc', 'S': '#2f9d8f', 'SS': '#8268bd'}
+        colour_meanings = {
+            'M': 'สีน้ำเงิน = RM Size M',
+            'S': 'สีเขียว = RM Size S',
+            'SS': 'สีม่วง = RM Size SS',
+        }
 
         def hide_timeline_tip(_event=None):
             tip = getattr(self, '_timeline_hover_tip', None)
@@ -470,7 +475,20 @@ class PlanViewMixin:
             tip.geometry(f'+{event.x_root + 12}+{event.y_root + 14}')
             self._timeline_hover_tip = tip
 
-        y = 12
+        legend_x = left
+        for label, colour, detail in (
+            ('M', colours['M'], colour_meanings['M']),
+            ('S', colours['S'], colour_meanings['S']),
+            ('SS', colours['SS'], colour_meanings['SS']),
+            ('อื่น ๆ', '#98a6b3', 'สีเทา = RM Size อื่น เช่น HC หรือ BK'),
+        ):
+            swatch = canvas.create_rectangle(legend_x, 8, legend_x + 12, 20, fill=colour, outline='')
+            canvas.create_text(legend_x + 17, 14, text=label, anchor='w', fill='#40566b', font=('Segoe UI', 8))
+            canvas.tag_bind(swatch, '<Enter>', lambda event, tooltip_text=detail: show_timeline_tip(event, tooltip_text))
+            canvas.tag_bind(swatch, '<Leave>', hide_timeline_tip)
+            legend_x += 54 if label != 'อื่น ๆ' else 70
+
+        y = 30
         for day in sorted(entries_by_day):
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
             for offset, hour in enumerate(hours):
@@ -509,9 +527,13 @@ class PlanViewMixin:
                     order_numbers = list(dict.fromkeys(jobs[entry['job']]['order'] for entry in entries))
                     code = period['operation'] or '—'
                     total_quantity = sum(entry['qty'] for entry in entries)
+                    rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
+                    size_text = ', '.join(rm_sizes)
+                    colour_meaning = colour_meanings.get(job['size'], 'สีเทา = RM Size อื่น เช่น HC หรือ BK')
                     detail = (
                         f"Order No.: {', '.join(order_numbers)}\n"
                         f"CODE: {code}\n"
+                        f"RM Size: {size_text} ({colour_meaning})\n"
                         f"{line} • {fmt(total_quantity)} เกี๊ยว"
                     )
                     rectangle = canvas.create_rectangle(
