@@ -6,7 +6,7 @@ from calendar import monthrange
 from collections.abc import Collection, Iterable, Mapping
 from datetime import date
 
-from extractor import OrderRecord
+from rm_planner.orders.extractor import OrderRecord
 
 
 ALL_FILTER = "All"

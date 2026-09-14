@@ -3,13 +3,13 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
-from assortment_actual_store import ActualAssortmentEntry, ActualAssortmentRecord
-from assortment_range_store import AssortmentSizeRange
-from capacity_store import CapacitySettings
-from class_store import ClassDefinition
-from extractor import OrderRecord
-from plan_engine import generate_plan, market_type_for_order, order_due_date, priority_for_order
-from wonton_weight_store import WontonWeightSettings
+from rm_planner.inventory.actual_store import ActualAssortmentEntry, ActualAssortmentRecord
+from rm_planner.inventory.range_store import AssortmentSizeRange
+from rm_planner.planning.capacity_store import CapacitySettings
+from rm_planner.planning.class_store import ClassDefinition
+from rm_planner.orders.extractor import OrderRecord
+from rm_planner.planning.engine import generate_plan, market_type_for_order, order_due_date, priority_for_order
+from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
 RANGES = (

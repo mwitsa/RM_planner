@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
-from extractor import OrderRecord
+from rm_planner.orders.extractor import OrderRecord
 
 
 STORE_VERSION = 3

@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from extractor import OrderRecord
-from order_store import load_order_records, merge_order_records, save_order_records
+from rm_planner.orders.extractor import OrderRecord
+from rm_planner.orders.store import load_order_records, merge_order_records, save_order_records
 
 
 def sample_order(production: int | float | None = None) -> OrderRecord:

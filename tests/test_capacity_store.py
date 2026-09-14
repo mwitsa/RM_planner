@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from capacity_store import (
+from rm_planner.planning.capacity_store import (
     CapacitySettings,
     capacities_at_percentage,
     load_capacity_settings,

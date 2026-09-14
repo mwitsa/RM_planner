@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from assortment_upload_store import AssortmentShipmentRecord
-from rm_size_summary import (
+from rm_planner.inventory.upload_store import AssortmentShipmentRecord
+from rm_planner.inventory.size_summary import (
     build_summary_rows,
     summarize_assortment_supply,
     summarize_data_usage,

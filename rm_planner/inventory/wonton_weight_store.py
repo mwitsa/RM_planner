@@ -7,7 +7,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
-from assortment_range_store import SIZE_CLASSES, normalize_size_class
+from rm_planner.inventory.range_store import SIZE_CLASSES, normalize_size_class
 
 
 STORE_VERSION = 1

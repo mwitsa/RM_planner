@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from market_labels import market_display_label, market_internal_value
+from rm_planner.planning.market_labels import market_display_label, market_internal_value
 
 
 class MarketLabelTests(unittest.TestCase):

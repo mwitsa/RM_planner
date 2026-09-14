@@ -11,14 +11,14 @@ from pathlib import Path
 from typing import Iterable
 from uuid import uuid4
 
-from assortment_range_store import (
+from rm_planner.inventory.range_store import (
     AssortmentSizeRange,
     SIZE_CLASSES,
     SizeClassWeightSummary,
     normalize_size_class,
     summarize_size_class_weight_details,
 )
-from market_labels import market_internal_value
+from rm_planner.planning.market_labels import market_internal_value
 
 
 STORE_VERSION = 7

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
-from extractor import choose_default_sheet, export_csv, export_json, extract_orders
+from rm_planner.orders.extractor import choose_default_sheet, export_csv, export_json, extract_orders
 
 
 class ExtractorTests(unittest.TestCase):

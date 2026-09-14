@@ -6,7 +6,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
-from assortment import load_assortment, predict_assortment
+from rm_planner.inventory.assortment import load_assortment, predict_assortment
 
 
 class AssortmentTests(unittest.TestCase):

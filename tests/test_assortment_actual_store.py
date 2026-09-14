@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from assortment_actual_store import (
+from rm_planner.inventory.actual_store import (
     ActualAssortmentEntry,
     aggregate_entries_by_size_class,
     combine_size_range,
@@ -15,7 +15,7 @@ from assortment_actual_store import (
     split_size_range,
     upsert_actual_record,
 )
-from assortment_range_store import AssortmentSizeRange
+from rm_planner.inventory.range_store import AssortmentSizeRange
 
 
 class ActualAssortmentStoreTests(unittest.TestCase):

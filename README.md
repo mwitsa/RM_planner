@@ -1,8 +1,20 @@
 # RM Planner — production plan extractor
 
-This first project step converts the selected worksheet in
-`Data/Order/แผน.xlsx` into a stable order dataset through a small Windows
-desktop UI.
+RM Planner converts the selected worksheet in `Data/Order/แผน.xlsx` into a
+stable order dataset and provides a Windows desktop UI for stock and production
+planning.
+
+## Project layout
+
+The implementation is grouped under `rm_planner/`: `ui/` contains screen
+behavior and app assembly, `orders/` contains order extraction and storage,
+`inventory/` contains stock and assortment logic, `planning/` contains class,
+capacity, and plan logic, and `master/` handles the master workbook. See
+`AGENTS.md` for a short code map when navigating the project.
+
+`app.py` and `run_app.bat` remain the launchers. Import application code from
+`rm_planner`. Data files remain in `Data/`, including
+`Data/Rules/plan_rules.json`.
 
 ## Data mapping
 

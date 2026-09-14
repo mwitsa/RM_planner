@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 
 from app import ProductionPlanApp
-from assortment_actual_store import ActualAssortmentEntry, ActualAssortmentRecord
-from assortment_range_store import AssortmentSizeRange
+from rm_planner.inventory.actual_store import ActualAssortmentEntry, ActualAssortmentRecord
+from rm_planner.inventory.range_store import AssortmentSizeRange
 
 
 def stock(

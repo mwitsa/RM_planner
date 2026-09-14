@@ -5,18 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from assortment_actual_store import (
+from rm_planner.inventory.actual_store import (
     ActualAssortmentRecord,
     split_size_range,
 )
-from assortment_range_store import (
+from rm_planner.inventory.range_store import (
     AssortmentSizeRange,
     SIZE_CLASSES,
     SizeClassWeightSummary,
     normalize_size_class,
     summarize_size_class_weight_details,
 )
-from wonton_weight_store import WontonWeightSettings
+from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
 @dataclass(frozen=True, slots=True)

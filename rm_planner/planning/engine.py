@@ -14,17 +14,17 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Iterable
 
-from assortment_actual_store import ActualAssortmentRecord, split_size_range
-from assortment_range_store import (
+from rm_planner.inventory.actual_store import ActualAssortmentRecord, split_size_range
+from rm_planner.inventory.range_store import (
     AssortmentSizeRange,
     classify_size_range,
     normalize_size_class,
 )
-from capacity_store import CapacitySettings, capacities_at_percentage
-from class_store import ClassDefinition
-from extractor import OrderRecord
-from market_labels import market_display_label
-from wonton_weight_store import WontonWeightSettings
+from rm_planner.planning.capacity_store import CapacitySettings, capacities_at_percentage
+from rm_planner.planning.class_store import ClassDefinition
+from rm_planner.orders.extractor import OrderRecord
+from rm_planner.planning.market_labels import market_display_label
+from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
 SUPPORTED_RM_SIZES = {"M", "S+"}

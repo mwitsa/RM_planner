@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rule_store import load_rules, save_rules
+from rm_planner.planning.rule_store import load_rules, save_rules
 
 
 class RuleStoreTests(unittest.TestCase):

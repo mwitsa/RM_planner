@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from app import ProductionPlanApp
-from class_store import ClassDefinition
+from rm_planner.planning.class_store import ClassDefinition
 
 
 class AppNumberFormattingTests(unittest.TestCase):

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import unittest
 
-from assortment_actual_store import ActualAssortmentEntry, ActualAssortmentRecord
-from assortment_range_store import AssortmentSizeRange
-from rm_timeline import build_rm_timeline, stock_distribution_percentages
-from wonton_weight_store import WontonWeightSettings
+from rm_planner.inventory.actual_store import ActualAssortmentEntry, ActualAssortmentRecord
+from rm_planner.inventory.range_store import AssortmentSizeRange
+from rm_planner.inventory.timeline import build_rm_timeline, stock_distribution_percentages
+from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
 RANGES = (

@@ -11,7 +11,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Iterable
 
-from extractor import ORDER_EXPORT_FIELDS, OrderRecord
+from rm_planner.orders.extractor import ORDER_EXPORT_FIELDS, OrderRecord
 
 
 STORE_VERSION = 8

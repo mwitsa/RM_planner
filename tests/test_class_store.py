@@ -6,7 +6,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from class_store import (
+from rm_planner.planning.class_store import (
     BLANK_CLASS_FILTER,
     add_missing_class_definitions,
     class_filter_options,
@@ -15,7 +15,7 @@ from class_store import (
     order_class_names,
     upsert_class_definition,
 )
-from extractor import OrderRecord
+from rm_planner.orders.extractor import OrderRecord
 
 
 class ClassStoreTests(unittest.TestCase):

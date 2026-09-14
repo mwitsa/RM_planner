@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from wonton_weight_store import (
+from rm_planner.inventory.wonton_weight_store import (
     WontonWeightSettings,
     load_wonton_weight_settings,
     save_wonton_weight_settings,

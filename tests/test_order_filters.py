@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
-from extractor import OrderRecord
-from order_filters import (
+from rm_planner.orders.extractor import OrderRecord
+from rm_planner.orders.filters import (
     ALL_FILTER,
     BLANK_FILTER,
     PROD_SCHEDULE_DATE_COLUMN,

@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from assortment_upload_store import AssortmentShipmentRecord
+from rm_planner.inventory.upload_store import AssortmentShipmentRecord
 
 
 RM_SIZE_GROUPS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (

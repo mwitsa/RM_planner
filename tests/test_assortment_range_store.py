@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from assortment_range_store import (
+from rm_planner.inventory.range_store import (
     AssortmentSizeRange,
     classify_size_range,
     default_size_ranges,

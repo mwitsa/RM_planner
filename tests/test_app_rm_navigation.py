@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from app import RM_NAVIGATION_ITEMS, rm_navigation_section
+from rm_planner.ui.common import RM_NAVIGATION_ITEMS, rm_navigation_section
 
 
 class AppRmNavigationTests(unittest.TestCase):
