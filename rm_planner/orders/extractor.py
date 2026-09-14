@@ -30,6 +30,7 @@ RAW_HO_WEIGHT_CUPS_COLUMN = 16  # P (cups)
 WONTONS_PER_CUP_COLUMN = 17  # Q
 HO_WEIGHT_FACTOR_COLUMN = 18  # R
 RM_SIZE_COLUMN = 19  # S
+DIP_COLUMN = 20  # T
 SOUP_COLUMN = 21  # U
 ORDER_UNIT_COLUMN = 22  # V
 ORDER_CUPS_COLUMN = 35  # AI
@@ -48,6 +49,7 @@ ORDER_EXPORT_FIELDS = (
     "group_2",
     "packaging",
     "rm_size",
+    "dip",
     "soup",
     "cups",
     "pcs_per_cup",
@@ -80,6 +82,7 @@ class OrderRecord:
     cups_per_unit: float | None
     rm_size: str = ""
     code: str = ""
+    dip: str = ""
     cups: int | float | None = None
     pcs_per_cup: int | float | None = None
     wt_per_pcs: int | float | None = None
@@ -315,6 +318,7 @@ def extract_orders(
             raw_wontons_per_cup = _cell_value(row, WONTONS_PER_CUP_COLUMN)
             raw_ho_weight_factor = _cell_value(row, HO_WEIGHT_FACTOR_COLUMN)
             raw_rm_size = _cell_value(row, RM_SIZE_COLUMN)
+            raw_dip = _cell_value(row, DIP_COLUMN)
             raw_soup = _cell_value(row, SOUP_COLUMN)
             raw_unit = _cell_value(row, ORDER_UNIT_COLUMN)
             raw_cups = _cell_value(row, ORDER_CUPS_COLUMN)
@@ -374,6 +378,7 @@ def extract_orders(
                     group_2=_clean_text(raw_group_2),
                     packaging=_clean_text(raw_packaging),
                     rm_size=_clean_text(raw_rm_size),
+                    dip=_clean_text(raw_dip),
                     soup=_clean_text(raw_soup),
                     cups=cups_per_order,
                     pcs_per_cup=wontons_per_cup,

@@ -133,6 +133,7 @@ ORDER_COLUMN_FILTER_KEYS = {
     "group_2": "group_2",
     "packaging": "packaging",
     "rm_size": "rm_size",
+    "dip": "dip",
     "soup": "soup",
     "cups": "cups",
     "pcs_per_cup": "pcs_per_cup",

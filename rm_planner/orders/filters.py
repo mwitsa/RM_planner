@@ -44,6 +44,7 @@ FILTER_SPECS = (
     ("group_2", "Group 2"),
     ("packaging", "Packaging"),
     ("rm_size", "RM Size"),
+    ("dip", "Dip"),
     ("soup", "Soup"),
     ("cups", "cups"),
     ("pcs_per_cup", "Pcs./Cup"),

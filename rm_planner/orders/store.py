@@ -114,6 +114,7 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                     group_2=str(raw["group_2"]),
                     packaging=str(raw["packaging"]),
                     rm_size=str(raw.get("rm_size", "")),
+                    dip=str(raw.get("dip", "")),
                     soup=str(raw["soup"]),
                     cups=cups,
                     pcs_per_cup=pcs_per_cup,
@@ -218,6 +219,9 @@ def _backfill_new_source_fields(
             changed = True
         if not existing.code and incoming.code:
             existing.code = incoming.code
+            changed = True
+        if not existing.dip and incoming.dip:
+            existing.dip = incoming.dip
             changed = True
         if existing.wontons_per_cup is None and incoming.wontons_per_cup is not None:
             existing.wontons_per_cup = incoming.wontons_per_cup

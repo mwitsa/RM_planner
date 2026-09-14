@@ -263,6 +263,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "group_2",
             "packaging",
             "rm_size",
+            "dip",
             "soup",
             "cups",
             "pcs_per_cup",
@@ -286,6 +287,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "group_2": "Group 2",
             "packaging": "Packaging",
             "rm_size": "RM Size",
+            "dip": "Dip",
             "soup": "Soup",
             "cups": "cups",
             "pcs_per_cup": "Pcs./Cup",
@@ -308,6 +310,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "group_2": 210,
             "packaging": 140,
             "rm_size": 90,
+            "dip": 100,
             "soup": 130,
             "cups": 80,
             "pcs_per_cup": 95,
@@ -352,7 +355,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         )
         self.order_column_groups = (
             ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
-            ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "soup", "cups", "pcs_per_cup", "wt_per_pcs"), "#e8e0fb", "#513a87"),
+            ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "dip", "soup", "cups", "pcs_per_cup", "wt_per_pcs"), "#e8e0fb", "#513a87"),
             ("ปริมาณผลิต", ("wontons_per_cup", "order_unit", "order_cups", "cups_per_unit", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
         )
         self.order_column_widths = widths

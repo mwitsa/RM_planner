@@ -150,6 +150,7 @@ class OrdersViewMixin:
                     record.group_2,
                     record.packaging,
                     record.rm_size,
+                    record.dip,
                     record.soup,
                     self._format_optional_number(record.cups),
                     self._format_optional_number(record.pcs_per_cup),
