@@ -152,6 +152,12 @@ class OrderFilterTests(unittest.TestCase):
             ["2"],
         )
 
+    def test_weight_per_piece_filter_keeps_three_decimal_places(self) -> None:
+        self.records[0].wt_per_pcs = 0.0054
+        self.records[1].wt_per_pcs = 0.01
+
+        self.assertEqual(filter_options(self.records, "wt_per_pcs"), ["0.005", "0.010", BLANK_FILTER])
+
     def test_filters_rm_size(self) -> None:
         filtered_s = filter_orders(self.records, {"rm_size": "S"})
         filtered_ss = filter_orders(self.records, {"rm_size": "SS"})

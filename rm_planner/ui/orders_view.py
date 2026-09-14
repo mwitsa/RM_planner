@@ -152,7 +152,9 @@ class OrdersViewMixin:
                     record.soup,
                     self._format_optional_number(record.cups),
                     self._format_optional_number(record.pcs_per_cup),
-                    self._format_optional_number(record.wt_per_pcs),
+                    self._format_optional_number(
+                        record.wt_per_pcs, decimal_places=3, keep_trailing_zeroes=True
+                    ),
                     self._format_optional_number(record.order_unit),
                     self._format_optional_number(record.stock_unit),
                     self._format_optional_number(record.order_cups),
@@ -602,7 +604,12 @@ class OrdersViewMixin:
             )
 
     @staticmethod
-    def _format_optional_number(value: int | float | None) -> str:
+    def _format_optional_number(
+        value: int | float | None,
+        decimal_places: int = 2,
+        keep_trailing_zeroes: bool = False,
+    ) -> str:
         if value is None:
             return ""
-        return f"{value:,.2f}".rstrip("0").rstrip(".")
+        formatted = f"{value:,.{decimal_places}f}"
+        return formatted if keep_trailing_zeroes else formatted.rstrip("0").rstrip(".")

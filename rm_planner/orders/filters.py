@@ -275,7 +275,9 @@ def filter_value(record: OrderRecord, key: str) -> str:
         value = getattr(record, key)
         if value is None:
             return BLANK_FILTER
-        return f"{value:.2f}".rstrip("0").rstrip(".")
+        decimal_places = 3 if key == "wt_per_pcs" else 2
+        formatted = f"{value:.{decimal_places}f}"
+        return formatted if key == "wt_per_pcs" else formatted.rstrip("0").rstrip(".")
     elif key == "date":
         value = record.load_date_display
     elif key == "prod_date":
