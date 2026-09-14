@@ -530,6 +530,10 @@ class StockEditorMixin:
         self.assortment_actual_records = {record.record_id: record for record in records}
         self._refresh_assortment_actual_history_table()
         self._refresh_rm_timeline()
+        # Plan proposals consume these stock records directly. Refresh them
+        # whenever a stock record is saved, edited, deleted, or reloaded.
+        if hasattr(self, "_proposal_vars"):
+            self._plan_inputs_changed()
         assortment_count = len(records)
         if assortment_count:
             self.assortment_actual_status_var.set(

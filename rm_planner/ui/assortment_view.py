@@ -157,6 +157,7 @@ class AssortmentViewMixin:
         self._update_wonton_yield_previews()
         self._refresh_assortment_actual_history_table()
         self._refresh_rm_timeline()
+        self._plan_inputs_changed()
         summary = " | ".join(
             f"{size_class} {self._format_optional_number(settings.grams_for(size_class))} g "
             f"= {self._format_optional_number(settings.wontons_per_kg(size_class))} wontons/kg"
@@ -514,6 +515,7 @@ class AssortmentViewMixin:
         )
         self._refresh_assortment_actual_history_table()
         self._refresh_rm_timeline()
+        self._plan_inputs_changed()
         self.assortment_status_var.set(f"Saved assortment size ranges. {summary}")
 
     def _scroll_assortment_canvas(self, event: tk.Event) -> str:
