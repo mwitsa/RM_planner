@@ -36,6 +36,7 @@ FILTER_SPECS = (
     ("date", "Load.Date"),
     ("country", "Country"),
     ("customer", "Customer"),
+    ("code", "CODE"),
     ("group_1", "Group 1"),
     ("group_2", "Group 2"),
     ("packaging", "Packaging"),

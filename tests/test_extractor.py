@@ -35,6 +35,7 @@ class ExtractorTests(unittest.TestCase):
         plan["J5"] = "  ลูกค้า   ทดสอบ  "
         plan["K5"] = " Group A "
         plan["L5"] = "Cooked\nWonton"
+        plan["N5"] = " CODE-001 "
         plan["O5"] = "130g*24"
         plan["Q5"] = 8
         plan["S5"] = "M"
@@ -78,6 +79,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0].month_key, "2026-08")
         self.assertEqual(result.records[0].country, "Thailand")
         self.assertEqual(result.records[0].customer_name, "ลูกค้า ทดสอบ")
+        self.assertEqual(result.records[0].code, "CODE-001")
         self.assertEqual(result.records[0].group_1, "Group A")
         self.assertEqual(result.records[0].group_2, "Cooked Wonton")
         self.assertEqual(result.records[0].packaging, "130g*24")
@@ -143,6 +145,7 @@ class ExtractorTests(unittest.TestCase):
             "prod_year",
             "country",
             "customer_name",
+            "code",
             "group_1",
             "group_2",
             "packaging",

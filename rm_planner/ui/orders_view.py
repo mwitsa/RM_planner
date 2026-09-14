@@ -145,6 +145,7 @@ class OrdersViewMixin:
                     record.order_no,
                     record.country,
                     record.customer_name,
+                    record.code,
                     record.group_1,
                     record.group_2,
                     record.packaging,

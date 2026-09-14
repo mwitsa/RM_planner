@@ -258,6 +258,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "order_no",
             "country",
             "customer",
+            "code",
             "group_1",
             "group_2",
             "packaging",
@@ -277,6 +278,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "date": "Load.Date",
             "country": "Country",
             "customer": "Customer",
+            "code": "CODE",
             "group_1": "Group 1",
             "group_2": "Group 2",
             "packaging": "Packaging",
@@ -295,6 +297,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "date": 100,
             "country": 100,
             "customer": 260,
+            "code": 100,
             "group_1": 190,
             "group_2": 210,
             "packaging": 140,
@@ -337,7 +340,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         )
         self.order_column_groups = (
             ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
-            ("SKU detail", ("group_1", "group_2", "packaging", "rm_size", "soup"), "#e8e0fb", "#513a87"),
+            ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "soup"), "#e8e0fb", "#513a87"),
             ("ปริมาณผลิต", ("wontons_per_cup", "order_unit", "order_cups", "cups_per_unit", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
         )
         self.order_column_widths = widths

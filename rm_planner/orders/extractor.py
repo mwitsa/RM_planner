@@ -24,6 +24,7 @@ COUNTRY_COLUMN = 8  # H
 CUSTOMER_COLUMN = 10  # J
 GROUP_1_COLUMN = 11  # K
 GROUP_2_COLUMN = 12  # L
+CODE_COLUMN = 14  # N
 PACKAGING_COLUMN = 15  # O
 RAW_HO_WEIGHT_CUPS_COLUMN = 16  # P (cups)
 WONTONS_PER_CUP_COLUMN = 17  # Q
@@ -42,6 +43,7 @@ ORDER_EXPORT_FIELDS = (
     "prod_year",
     "country",
     "customer_name",
+    "code",
     "group_1",
     "group_2",
     "packaging",
@@ -74,6 +76,7 @@ class OrderRecord:
     order_cups: int | float | None
     cups_per_unit: float | None
     rm_size: str = ""
+    code: str = ""
     wontons_per_cup: int | float | None = None
     ho_weight_kg: int | float | None = None
     production: int | float | None = None
@@ -300,6 +303,7 @@ def extract_orders(
             raw_customer = _cell_value(row, CUSTOMER_COLUMN)
             raw_group_1 = _cell_value(row, GROUP_1_COLUMN)
             raw_group_2 = _cell_value(row, GROUP_2_COLUMN)
+            raw_code = _cell_value(row, CODE_COLUMN)
             raw_packaging = _cell_value(row, PACKAGING_COLUMN)
             raw_wontons_per_cup = _cell_value(row, WONTONS_PER_CUP_COLUMN)
             raw_ho_weight_factor = _cell_value(row, HO_WEIGHT_FACTOR_COLUMN)
@@ -355,6 +359,7 @@ def extract_orders(
                     prod_year=prod_period[2] if prod_period else "",
                     country=_clean_text(raw_country),
                     customer_name=customer,
+                    code=_clean_text(raw_code),
                     group_1=_clean_text(raw_group_1),
                     group_2=_clean_text(raw_group_2),
                     packaging=_clean_text(raw_packaging),
