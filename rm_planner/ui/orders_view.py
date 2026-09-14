@@ -156,7 +156,6 @@ class OrdersViewMixin:
                     self._format_optional_number(record.cups_per_unit),
                     self._format_optional_number(record.total_wontons),
                     self._format_optional_number(record.ho_weight_kg),
-                    self._format_optional_number(record.production),
                 ),
             )
         filters_active = any(

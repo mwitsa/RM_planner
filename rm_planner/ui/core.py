@@ -269,7 +269,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "cups_per_unit",
             "total_wontons",
             "ho_weight_kg",
-            "production",
         )
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         self.order_headings = {
@@ -289,7 +288,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "cups_per_unit": "ถ้วย/Unit",
             "total_wontons": "จำนวนเกี๊ยว",
             "ho_weight_kg": "น้ำหนัก HO (kg)",
-            "production": "Production",
         }
         widths = {
             "order_no": 105,
@@ -308,7 +306,6 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "cups_per_unit": 110,
             "total_wontons": 130,
             "ho_weight_kg": 130,
-            "production": 120,
         }
         for column in columns:
             self.tree.heading(
@@ -325,10 +322,8 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
                 "wontons_per_cup",
                 "total_wontons",
                 "ho_weight_kg",
-                "production",
             ) else tk.W
             self.tree.column(column, width=widths[column], minwidth=70, anchor=anchor)
-        self.tree.bind("<Double-1>", self._edit_production_cell)
 
         vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
