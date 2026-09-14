@@ -98,6 +98,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0].order_cups, 20000)
         self.assertEqual(result.records[0].cups_per_unit, 16)
         self.assertEqual(result.records[0].total_wontons, 160000)
+        self.assertEqual(result.records[0].wt_pd_kg, 864)
         self.assertEqual(result.records[0].ho_weight_kg, 1600)
         self.assertIsNone(result.records[0].production)
         self.assertTrue(result.records[0].record_id.endswith(":5"))

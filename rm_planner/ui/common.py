@@ -144,6 +144,7 @@ ORDER_COLUMN_FILTER_KEYS = {
     "order_cups": "order_cups",
     "cups_per_unit": "cups_per_unit",
     "total_wontons": "total_wontons",
+    "wt_pd_kg": "wt_pd_kg",
     "ho_weight_kg": "ho_weight_kg",
     "production": "production",
 }

@@ -122,6 +122,15 @@ class OrderRecord:
 
         return _multiply_optional(self.order_cups, self.wontons_per_cup)
 
+    @property
+    def wt_pd_kg(self) -> int | float | None:
+        """Return product weight before the HO yield conversion."""
+
+        return _multiply_optional(
+            _multiply_optional(self.order_cups, self.pcs_per_cup),
+            self.wt_per_pcs,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ExtractionIssue:

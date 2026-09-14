@@ -272,6 +272,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "stock_unit",
             "order_cups",
             "total_wontons",
+            "wt_pd_kg",
             "ho_weight_kg",
         )
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
@@ -295,7 +296,8 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "stock_unit": "Stock (unit)",
             "order_cups": "Order (ถ้วย)",
             "total_wontons": "จำนวนเกี๊ยว",
-            "ho_weight_kg": "น้ำหนัก HO (kg)",
+            "wt_pd_kg": "WT/PD (kg)",
+            "ho_weight_kg": "WT/HO (kg)",
         }
         widths = {
             "order_no": 105,
@@ -317,6 +319,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "stock_unit": 120,
             "order_cups": 120,
             "total_wontons": 130,
+            "wt_pd_kg": 120,
             "ho_weight_kg": 130,
         }
         for column in columns:
@@ -335,6 +338,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
                 "pcs_per_cup",
                 "wt_per_pcs",
                 "total_wontons",
+                "wt_pd_kg",
                 "ho_weight_kg",
             ) else tk.W
             self.tree.column(column, width=widths[column], minwidth=70, anchor=anchor)
@@ -352,7 +356,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.order_column_groups = (
             ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
             ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "dip", "soup", "cups", "pcs_per_cup", "wt_per_pcs"), "#e8e0fb", "#513a87"),
-            ("ปริมาณผลิต", ("order_unit", "stock_unit", "order_cups", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
+            ("ปริมาณผลิต", ("order_unit", "stock_unit", "order_cups", "total_wontons", "wt_pd_kg", "ho_weight_kg"), "#e1f3e8", "#24613c"),
         )
         self.order_column_widths = widths
         self.order_group_visibility = {
