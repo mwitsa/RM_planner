@@ -96,6 +96,18 @@ class CapacityStoreTests(unittest.TestCase):
         self.assertEqual(capacities_at_percentage(settings, 0, 100), (0, 80000))
         self.assertEqual(capacities_at_percentage(settings, 100, 0), (100000, 0))
 
+    def test_calculates_daily_capacity_from_hourly_rate_and_working_hours(self) -> None:
+        settings = CapacitySettings(
+            raw_percentage=100,
+            cooked_percentage=50,
+            raw_wonton_per_hour=10000,
+            cooked_wonton_per_hour=12000,
+            cooked_wonton_noodle_per_hour=8000,
+            work_hours_per_day=8,
+        )
+
+        self.assertEqual(capacities_at_percentage(settings), (80000, 48000))
+
     def test_calculated_capacity_remains_blank_without_base_number(self) -> None:
         self.assertEqual(
             capacities_at_percentage(CapacitySettings(), 50, 50),

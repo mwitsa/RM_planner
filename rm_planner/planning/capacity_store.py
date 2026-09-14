@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-STORE_VERSION = 4
+STORE_VERSION = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +20,7 @@ class CapacitySettings:
     raw_wonton_per_hour: int | float | None = None
     cooked_wonton_per_hour: int | float | None = None
     cooked_wonton_noodle_per_hour: int | float | None = None
+    work_hours_per_day: int | float = 8
 
 
 def capacities_at_percentage(
@@ -40,9 +41,17 @@ def capacities_at_percentage(
         if cooked_percentage is None
         else _required_percentage(cooked_percentage, "Cooked")
     )
+    raw_rate = normalized.raw_wonton_per_hour
+    cooked_rate = normalized.cooked_wonton_per_hour
+    # Keep programmatic callers and existing tests that still provide legacy
+    # daily numbers working while the UI migrates to hourly inputs.
+    if raw_rate is None:
+        raw_rate = _per_hour(normalized.raw_wonton, normalized.work_hours_per_day)
+    if cooked_rate is None:
+        cooked_rate = _per_hour(normalized.cooked_wonton, normalized.work_hours_per_day)
     return (
-        _scaled_number(normalized.raw_wonton, selected_raw / 100),
-        _scaled_number(normalized.cooked_wonton, selected_cooked / 100),
+        _scaled_number(raw_rate, normalized.work_hours_per_day * selected_raw / 100),
+        _scaled_number(cooked_rate, normalized.work_hours_per_day * selected_cooked / 100),
     )
 
 
@@ -67,7 +76,7 @@ def load_capacity_settings(store_path: str | Path) -> CapacitySettings:
             legacy_raw_percentage,
             "Raw",
         )
-    return _validate_settings(
+    settings = _validate_settings(
         CapacitySettings(
             raw_percentage=legacy_raw_percentage,
             cooked_percentage=cooked_percentage,
@@ -76,7 +85,22 @@ def load_capacity_settings(store_path: str | Path) -> CapacitySettings:
             raw_wonton_per_hour=payload.get("raw_wonton_per_hour"),
             cooked_wonton_per_hour=payload.get("cooked_wonton_per_hour"),
             cooked_wonton_noodle_per_hour=payload.get("cooked_wonton_noodle_per_hour"),
+            work_hours_per_day=payload.get("work_hours_per_day", 8),
         )
+    )
+    # Old files stored only daily capacity. Preserve a usable calculation by
+    # converting that value to an hourly rate using the configured/default day.
+    return CapacitySettings(
+        raw_percentage=settings.raw_percentage,
+        cooked_percentage=settings.cooked_percentage,
+        raw_wonton=settings.raw_wonton,
+        cooked_wonton=settings.cooked_wonton,
+        raw_wonton_per_hour=(settings.raw_wonton_per_hour if settings.raw_wonton_per_hour is not None
+                             else _per_hour(settings.raw_wonton, settings.work_hours_per_day)),
+        cooked_wonton_per_hour=(settings.cooked_wonton_per_hour if settings.cooked_wonton_per_hour is not None
+                                else _per_hour(settings.cooked_wonton, settings.work_hours_per_day)),
+        cooked_wonton_noodle_per_hour=settings.cooked_wonton_noodle_per_hour,
+        work_hours_per_day=settings.work_hours_per_day,
     )
 
 
@@ -96,6 +120,7 @@ def save_capacity_settings(
         "raw_wonton_per_hour": normalized.raw_wonton_per_hour,
         "cooked_wonton_per_hour": normalized.cooked_wonton_per_hour,
         "cooked_wonton_noodle_per_hour": normalized.cooked_wonton_noodle_per_hour,
+        "work_hours_per_day": normalized.work_hours_per_day,
     }
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
     try:
@@ -118,6 +143,7 @@ def _validate_settings(settings: CapacitySettings) -> CapacitySettings:
         cooked_wonton_per_hour=_optional_nonnegative_number(settings.cooked_wonton_per_hour, "Cooked wonton / hr"),
         cooked_wonton_noodle_per_hour=_optional_nonnegative_number(
             settings.cooked_wonton_noodle_per_hour, "Cooked wonton + noodle / hr"),
+        work_hours_per_day=_required_work_hours(settings.work_hours_per_day),
     )
 
 
@@ -151,3 +177,14 @@ def _scaled_number(
         return None
     result = value * multiplier
     return int(result) if float(result).is_integer() else result
+
+
+def _per_hour(value: int | float | None, work_hours: int | float) -> int | float | None:
+    return None if value is None else _scaled_number(value, 1 / work_hours)
+
+
+def _required_work_hours(value: object) -> int | float:
+    numeric = _optional_nonnegative_number(value, "ชั่วโมงทำงานต่อวัน")
+    if numeric is None or numeric <= 0 or numeric > 24:
+        raise ValueError("ชั่วโมงทำงานต่อวันต้องมากกว่า 0 และไม่เกิน 24")
+    return numeric
