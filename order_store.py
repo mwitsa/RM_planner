@@ -14,7 +14,7 @@ from typing import Iterable
 from extractor import ORDER_EXPORT_FIELDS, OrderRecord
 
 
-STORE_VERSION = 7
+STORE_VERSION = 8
 ORDER_NUMBER_PREFIX = "ORD-"
 ORDER_NUMBER_WIDTH = 6
 ORDER_NUMBER_PATTERN = re.compile(r"^ORD-(\d+)$", re.IGNORECASE)
@@ -99,6 +99,9 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                     date=str(raw["date"]),
                     month=str(raw["month"]),
                     year=str(raw["year"]),
+                    prod_date=str(raw.get("prod_date", "")),
+                    prod_month=str(raw.get("prod_month", "")),
+                    prod_year=str(raw.get("prod_year", "")),
                     country=str(raw["country"]),
                     customer_name=str(raw["customer_name"]),
                     group_1=str(raw["group_1"]),
@@ -211,6 +214,13 @@ def _backfill_new_source_fields(
             existing.ho_weight_kg != incoming.ho_weight_kg
         ):
             existing.ho_weight_kg = incoming.ho_weight_kg
+            changed = True
+        if not existing.prod_date and not existing.prod_month and not existing.prod_year and (
+            incoming.prod_date or incoming.prod_month or incoming.prod_year
+        ):
+            existing.prod_date = incoming.prod_date
+            existing.prod_month = incoming.prod_month
+            existing.prod_year = incoming.prod_year
             changed = True
         if changed:
             upgraded += 1

@@ -45,18 +45,39 @@ from capacity_store import (
     save_capacity_settings,
 )
 from extractor import (
+    RAW_DATA_EXCLUDED_COLUMNS,
+    RAW_DATA_FIRST_COLUMN,
+    RAW_DATA_LAST_COLUMN,
     ExtractionResult,
     OrderRecord,
+    RawDataResult,
     choose_default_sheet,
     extract_orders,
+    extract_raw_data,
     list_sheets,
 )
+from openpyxl.utils import get_column_letter
+from master_store import (
+    MasterComponentRecord,
+    extract_master_data,
+    load_master_data,
+    save_master_data,
+)
+from assortment_upload_store import (
+    AssortmentShipmentRecord,
+    extract_assortment_shipments,
+    load_assortment_shipments,
+    save_assortment_shipments,
+)
+from rm_size_summary import RM_SIZE_GROUPS, build_summary_rows
 from order_store import load_order_records, merge_order_records, save_order_records
 from market_labels import MARKET_DISPLAY_OPTIONS, market_display_label
 from order_filters import (
     ALL_FILTER,
+    BLANK_FILTER,
     FILTER_SPECS,
     NUMERIC_ORDER_COLUMNS,
+    PROD_SCHEDULE_DATE_COLUMN,
     SCHEDULE_DATE_COLUMN,
     cascading_filter_state,
     current_and_future_orders,
@@ -64,7 +85,6 @@ from order_filters import (
     filter_orders,
     sort_orders,
 )
-from plan_engine import PlanResult, generate_plan
 from rm_timeline import build_rm_timeline, stock_distribution_percentages
 from rule_store import load_rules, save_rules
 from wonton_weight_store import (
@@ -102,8 +122,7 @@ RM_STOCK_DISTRIBUTION_COLORS = {
 }
 ORDER_COLUMN_FILTER_KEYS = {
     "order_no": "order_no",
-    "year": "year",
-    "month": "month",
+    "prod_date": "prod_date",
     "date": "date",
     "country": "country",
     "customer": "customer",
@@ -157,8 +176,20 @@ class ProductionPlanApp(tk.Tk):
         self.class_group_filter_var = tk.StringVar(value=ALL_CLASS_FILTER)
         self.class_filter_count_var = tk.StringVar(value="Showing 0 classes")
         self.capacity_status_var = tk.StringVar(value="Capacity settings have not been saved yet.")
-        self.plan_summary_var = tk.StringVar(value="Generate a plan from the saved preparation data.")
-        self.plan_status_var = tk.StringVar(value="Ready to generate a production plan.")
+        self.plan_status_var = tk.StringVar(value="Load data on the Data tab first.")
+        self.plan_start_date_var = tk.StringVar()
+        self.plan_end_date_var = tk.StringVar()
+        self.plan_columns: list[str] = []
+        self.plan_tree: ttk.Treeview | None = None
+        self.data_status_var = tk.StringVar(value="Load a workbook on the Order tab, then load raw data here.")
+        self.raw_data_result: RawDataResult | None = None
+        self.raw_data_all_rows: list[tuple[str, ...]] = []
+        self.raw_data_headers: list[str] = []
+        self.raw_data_filter_selections: dict[str, str | frozenset[str]] = {}
+        self.raw_data_sort_column: str | None = None
+        self.raw_data_sort_descending = False
+        self._data_filter_popup: tk.Toplevel | None = None
+        self._data_filter_outside_binding: str | None = None
         self.result: ExtractionResult | None = None
         self.saved_order_records: dict[str, OrderRecord] = {}
         self.order_records_by_id: dict[str, OrderRecord] = {}
@@ -186,9 +217,42 @@ class ProductionPlanApp(tk.Tk):
         self.capacity_file_path = (
             Path(__file__).resolve().parent / "Data" / "Capacity" / "capacity.json"
         )
+        self.master_workbook_file_path = (
+            Path(__file__).resolve().parent / "Data" / "Master" / "Master PCK ING.xlsx"
+        )
+        self.master_store_file_path = (
+            Path(__file__).resolve().parent / "Data" / "Master" / "master_pck_ing.json"
+        )
+        self.master_file_var = tk.StringVar(value=str(self.master_workbook_file_path))
+        self.master_status_var = tk.StringVar(value="No master data loaded yet.")
+        self.master_records: list[MasterComponentRecord] = []
+        self.master_sort_column: str | None = None
+        self.master_sort_descending = False
+        self.assortment_upload_workbook_file_path = (
+            Path(__file__).resolve().parent
+            / "Data"
+            / "Assortment"
+            / "RM Plan เกี๊ยวตะวันออก.xlsx"
+        )
+        self.assortment_upload_store_file_path = (
+            Path(__file__).resolve().parent / "Data" / "Assortment" / "assortment_shipments.json"
+        )
+        self.assortment_upload_file_var = tk.StringVar(
+            value=str(self.assortment_upload_workbook_file_path)
+        )
+        self.assortment_upload_status_var = tk.StringVar(value="No assortment data loaded yet.")
+        self.assortment_upload_field_labels: list[str] = []
+        self.assortment_upload_records: list[AssortmentShipmentRecord] = []
+        self.assortment_upload_columns: list[str] = []
+        self.assortment_upload_tree: ttk.Treeview | None = None
+        self.assortment_upload_sort_column: str | None = None
+        self.assortment_upload_sort_descending = False
+        self.summary_status_var = tk.StringVar(
+            value="Load data on the Data and Assortment tabs first."
+        )
+        self.summary_tree: ttk.Treeview | None = None
         self.capacity_settings = CapacitySettings()
         self.wonton_weight_settings = WontonWeightSettings()
-        self.plan_result: PlanResult | None = None
         self.class_definitions: dict[str, ClassDefinition] = {}
         self._editing_class_id: str | None = None
         self.assortment_actual_records: dict[str, ActualAssortmentRecord] = {}
@@ -211,6 +275,8 @@ class ProductionPlanApp(tk.Tk):
         self._load_saved_orders()
         self._load_saved_class_definitions()
         self._load_capacity_settings()
+        self._load_saved_master_data()
+        self._load_saved_assortment_upload()
 
     def _configure_style(self) -> None:
         style = ttk.Style(self)
@@ -231,6 +297,10 @@ class ProductionPlanApp(tk.Tk):
         self.order_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.order_tab, text="Order")
 
+        self.data_tab = ttk.Frame(self.notebook, padding=14)
+        self.notebook.add(self.data_tab, text="Data")
+        self._build_data_tab()
+
         self.plan_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.plan_tab, text="Plan")
         self._build_plan_tab()
@@ -250,6 +320,18 @@ class ProductionPlanApp(tk.Tk):
         self.capacity_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.capacity_tab, text="Capacity")
         self._build_capacity_tab()
+
+        self.master_tab = ttk.Frame(self.notebook, padding=14)
+        self.notebook.add(self.master_tab, text="Master")
+        self._build_master_tab()
+
+        self.assortment_upload_tab = ttk.Frame(self.notebook, padding=14)
+        self.notebook.add(self.assortment_upload_tab, text="Assortment")
+        self._build_assortment_upload_tab()
+
+        self.summary_tab = ttk.Frame(self.notebook, padding=14)
+        self.notebook.add(self.summary_tab, text="Summary")
+        self._build_summary_tab()
 
         source = ttk.LabelFrame(self.order_tab, text="Source workbook", padding=12)
         source.pack(fill=tk.X)
@@ -293,10 +375,9 @@ class ProductionPlanApp(tk.Tk):
         table_frame = ttk.Frame(self.order_tab)
         table_frame.pack(fill=tk.BOTH, expand=True)
         columns = (
-            "order_no",
+            "prod_date",
             "date",
-            "month",
-            "year",
+            "order_no",
             "country",
             "customer",
             "group_1",
@@ -315,9 +396,8 @@ class ProductionPlanApp(tk.Tk):
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         self.order_headings = {
             "order_no": "Order No.",
-            "date": "Date",
-            "month": "Month",
-            "year": "Year",
+            "prod_date": "Prod.Date",
+            "date": "Load.Date",
             "country": "Country",
             "customer": "Customer",
             "group_1": "Group 1",
@@ -335,9 +415,8 @@ class ProductionPlanApp(tk.Tk):
         }
         widths = {
             "order_no": 105,
-            "date": 70,
-            "month": 70,
-            "year": 80,
+            "prod_date": 100,
+            "date": 100,
             "country": 100,
             "customer": 260,
             "group_1": 190,
@@ -390,6 +469,840 @@ class ProductionPlanApp(tk.Tk):
             padding=(6, 3),
         )
         status.pack(fill=tk.X, pady=(8, 0))
+
+    def _build_data_tab(self) -> None:
+        controls = ttk.Frame(self.data_tab)
+        controls.pack(fill=tk.X, pady=(0, 8))
+        ttk.Label(
+            controls,
+            text=(
+                "Raw column B:AI from the workbook and worksheet selected on the Order "
+                "tab, plus a computed น้ำหนัก HO column."
+            ),
+        ).pack(side=tk.LEFT)
+        self.load_raw_data_button = ttk.Button(
+            controls,
+            text="Load raw data",
+            command=self._start_raw_data_load,
+        )
+        self.load_raw_data_button.pack(side=tk.RIGHT)
+        self.clear_raw_data_filters_button = ttk.Button(
+            controls,
+            text="Clear column filters",
+            command=self._clear_raw_data_filters,
+            state=tk.DISABLED,
+        )
+        self.clear_raw_data_filters_button.pack(side=tk.RIGHT, padx=(0, 8))
+
+        table_frame = ttk.Frame(self.data_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True)
+        raw_columns = [f"col_{column:02d}" for column in range(RAW_DATA_FIRST_COLUMN, RAW_DATA_LAST_COLUMN + 1)
+                       if column not in RAW_DATA_EXCLUDED_COLUMNS]
+        raw_columns.append("ho_weight")
+        self.raw_data_columns = raw_columns
+        self.raw_data_tree = ttk.Treeview(table_frame, columns=raw_columns, show="headings")
+        column_letters = [
+            get_column_letter(index)
+            for index in range(RAW_DATA_FIRST_COLUMN, RAW_DATA_LAST_COLUMN + 1)
+            if index not in RAW_DATA_EXCLUDED_COLUMNS
+        ]
+        column_letters.append("น้ำหนัก HO")
+        self.raw_data_headers = column_letters
+        for column, letter in zip(raw_columns, column_letters):
+            self.raw_data_tree.heading(
+                column,
+                text=letter,
+                command=lambda selected_column=column: self._open_data_column_filter(selected_column),
+            )
+            self.raw_data_tree.column(column, width=110, minwidth=60, anchor=tk.W)
+
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.raw_data_tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.raw_data_tree.xview)
+        self.raw_data_tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        self.raw_data_tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+
+        status = ttk.Label(
+            self.data_tab,
+            textvariable=self.data_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        )
+        status.pack(fill=tk.X, pady=(8, 0))
+
+    def _start_raw_data_load(self) -> None:
+        if not self.file_var.get().strip() or not self.sheet_var.get():
+            messagebox.showwarning("Missing source", "Please select an Excel file and worksheet on the Order tab.")
+            return
+        self.load_raw_data_button.configure(state=tk.DISABLED)
+        self.data_status_var.set("Loading raw data…")
+        threading.Thread(target=self._raw_data_worker, daemon=True).start()
+
+    def _raw_data_worker(self) -> None:
+        try:
+            result = extract_raw_data(self.file_var.get().strip(), self.sheet_var.get())
+            self.after(0, self._show_raw_data_result, result)
+        except Exception as exc:
+            self.after(0, self._show_raw_data_error, exc)
+
+    def _show_raw_data_result(self, result: RawDataResult) -> None:
+        self.raw_data_result = result
+        self.raw_data_all_rows = result.rows
+        self.raw_data_headers = result.headers
+        self.raw_data_filter_selections = {key: ALL_FILTER for key in self.raw_data_columns}
+        self.raw_data_sort_column = None
+        self.raw_data_sort_descending = False
+        self.load_raw_data_button.configure(state=tk.NORMAL)
+        self._refresh_raw_data_table()
+        self._refresh_plan_date_options()
+
+    def _show_raw_data_error(self, exc: Exception) -> None:
+        self.load_raw_data_button.configure(state=tk.NORMAL)
+        self.data_status_var.set("Failed to load raw data.")
+        messagebox.showerror("Raw data error", str(exc))
+
+    def _raw_data_cell_value(self, row: tuple[str, ...], column_key: str) -> str:
+        value = row[self.raw_data_columns.index(column_key)]
+        return value if value else BLANK_FILTER
+
+    def _raw_data_filtered_rows(self, exclude_column: str | None = None) -> list[tuple[str, ...]]:
+        rows = self.raw_data_all_rows
+        for key, selection in self.raw_data_filter_selections.items():
+            if key == exclude_column or selection == ALL_FILTER:
+                continue
+            allowed = {selection} if isinstance(selection, str) else set(selection)
+            rows = [row for row in rows if self._raw_data_cell_value(row, key) in allowed]
+        return rows
+
+    def _raw_data_filter_options(self, column_key: str) -> list[str]:
+        candidates = self._raw_data_filtered_rows(exclude_column=column_key)
+        values = {self._raw_data_cell_value(row, column_key) for row in candidates}
+        return sorted(values, key=lambda value: (value == BLANK_FILTER, value.casefold()))
+
+    def _raw_data_column_is_numeric(self, column_key: str) -> bool:
+        index = self.raw_data_columns.index(column_key)
+        saw_value = False
+        for row in self.raw_data_all_rows:
+            value = row[index]
+            if not value:
+                continue
+            saw_value = True
+            try:
+                float(value.replace(",", ""))
+            except ValueError:
+                return False
+        return saw_value
+
+    def _raw_data_sorted_rows(self, rows: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
+        column = self.raw_data_sort_column
+        if column is None:
+            return rows
+        index = self.raw_data_columns.index(column)
+        populated: list[tuple[str, tuple[str, ...]]] = []
+        blanks: list[tuple[str, ...]] = []
+        for row in rows:
+            value = row[index]
+            if not value:
+                blanks.append(row)
+            else:
+                populated.append((value, row))
+
+        def as_number(value: str) -> float | None:
+            try:
+                return float(value.replace(",", ""))
+            except ValueError:
+                return None
+
+        numeric_values = [as_number(value) for value, _row in populated]
+        if populated and all(value is not None for value in numeric_values):
+            keyed = list(zip(numeric_values, (row for _value, row in populated)))
+            keyed.sort(key=lambda item: item[0], reverse=self.raw_data_sort_descending)
+            ordered = [row for _value, row in keyed]
+        else:
+            populated.sort(key=lambda item: item[0].casefold(), reverse=self.raw_data_sort_descending)
+            ordered = [row for _value, row in populated]
+        return ordered + blanks
+
+    def _refresh_raw_data_table(self) -> None:
+        self.raw_data_tree.delete(*self.raw_data_tree.get_children())
+        if self.raw_data_result is None:
+            return
+        filtered = self._raw_data_filtered_rows()
+        ordered = self._raw_data_sorted_rows(filtered)
+        for index, row in enumerate(ordered):
+            self.raw_data_tree.insert("", tk.END, iid=str(index), values=row)
+        filters_active = any(
+            selection != ALL_FILTER for selection in self.raw_data_filter_selections.values()
+        )
+        self.clear_raw_data_filters_button.configure(
+            state=tk.NORMAL if filters_active else tk.DISABLED
+        )
+        self._update_raw_data_column_headings()
+        self.data_status_var.set(
+            f"Showing {len(ordered):,} of {len(self.raw_data_all_rows):,} rows from "
+            f"'{self.raw_data_result.sheet_name.strip()}' (columns B:AI, header row "
+            f"{self.raw_data_result.header_row})."
+        )
+
+    def _update_raw_data_column_headings(self) -> None:
+        for column, header in zip(self.raw_data_columns, self.raw_data_headers):
+            filter_active = self.raw_data_filter_selections.get(column, ALL_FILTER) != ALL_FILTER
+            filter_marker = " ●" if filter_active else ""
+            sort_marker = ""
+            if column == self.raw_data_sort_column:
+                sort_marker = " ↓" if self.raw_data_sort_descending else " ↑"
+            self.raw_data_tree.heading(column, text=f"{header}{filter_marker}{sort_marker} ▾")
+
+    def _set_raw_data_sort(self, column: str, descending: bool) -> None:
+        self.raw_data_sort_column = column
+        self.raw_data_sort_descending = descending
+        self._close_data_filter_popup()
+        self._refresh_raw_data_table()
+
+    def _set_raw_data_column_filter(self, column: str, value: str) -> None:
+        self.raw_data_filter_selections[column] = value
+        self._close_data_filter_popup()
+        self._refresh_raw_data_table()
+
+    def _clear_raw_data_filters(self) -> None:
+        self._close_data_filter_popup()
+        for key in self.raw_data_filter_selections:
+            self.raw_data_filter_selections[key] = ALL_FILTER
+        self._refresh_raw_data_table()
+
+    def _open_data_column_filter(self, column: str) -> None:
+        if self.raw_data_result is None:
+            return
+        self._close_data_filter_popup()
+        popup = tk.Toplevel(self)
+        self._data_filter_popup = popup
+        popup.withdraw()
+        popup.transient(self)
+        popup.overrideredirect(True)
+        popup.resizable(False, False)
+        popup.bind("<Escape>", lambda _event: self._close_data_filter_popup())
+
+        border = tk.Frame(popup, background="#7a7a7a", padx=1, pady=1)
+        border.pack(fill=tk.BOTH, expand=True)
+        body = tk.Frame(border, background="white", padx=8, pady=8)
+        body.pack(fill=tk.BOTH, expand=True)
+
+        def menu_button(
+            text: str,
+            command: Callable[[], object],
+            state: str = tk.NORMAL,
+        ) -> tk.Button:
+            button = tk.Button(
+                body,
+                text=text,
+                command=command,
+                state=state,
+                anchor=tk.W,
+                background="white",
+                activebackground="#e5f1fb",
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=6,
+                pady=4,
+            )
+            button.pack(fill=tk.X)
+            return button
+
+        heading_text = self.raw_data_headers[self.raw_data_columns.index(column)]
+        numeric = self._raw_data_column_is_numeric(column)
+        ascending_label = "↑  Sort Smallest to Largest" if numeric else "A  Z  Sort A to Z"
+        descending_label = "↓  Sort Largest to Smallest" if numeric else "Z  A  Sort Z to A"
+        menu_button(ascending_label, lambda: self._set_raw_data_sort(column, False))
+        menu_button(descending_label, lambda: self._set_raw_data_sort(column, True))
+
+        current_selection = self.raw_data_filter_selections.get(column, ALL_FILTER)
+        filter_active = current_selection != ALL_FILTER
+        tk.Frame(body, height=1, background="#d0d0d0").pack(fill=tk.X, pady=5)
+        menu_button(
+            f'Clear Filter From "{heading_text}"',
+            lambda: self._set_raw_data_column_filter(column, ALL_FILTER),
+            state=tk.NORMAL if filter_active else tk.DISABLED,
+        )
+
+        available_values = self._raw_data_filter_options(column)
+        if current_selection == ALL_FILTER:
+            checked_values = set(available_values)
+        elif isinstance(current_selection, str):
+            checked_values = {current_selection}
+        else:
+            checked_values = set(current_selection)
+
+        search_var = tk.StringVar()
+        search_entry = tk.Entry(
+            body,
+            textvariable=search_var,
+            width=38,
+            relief=tk.SOLID,
+            borderwidth=1,
+        )
+        search_entry.pack(fill=tk.X, pady=(8, 5))
+
+        list_frame = tk.Frame(body, background="white")
+        list_frame.pack(fill=tk.BOTH, expand=True)
+        values_list = tk.Listbox(
+            list_frame,
+            height=11,
+            width=42,
+            exportselection=False,
+            selectmode=tk.BROWSE,
+            activestyle="none",
+            relief=tk.SOLID,
+            borderwidth=1,
+        )
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=values_list.yview)
+        values_list.configure(yscrollcommand=scrollbar.set)
+        values_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        displayed_values: list[str] = []
+        ok_button: ttk.Button | None = None
+
+        def refresh_values(*_args: object) -> None:
+            query = search_var.get().strip().casefold()
+            displayed_values[:] = [
+                value for value in available_values if not query or query in value.casefold()
+            ]
+            values_list.delete(0, tk.END)
+            displayed_set = set(displayed_values)
+            selected_displayed = checked_values & displayed_set
+            if displayed_values and selected_displayed == displayed_set:
+                select_all_mark = "☑"
+            elif selected_displayed:
+                select_all_mark = "▣"
+            else:
+                select_all_mark = "☐"
+            values_list.insert(tk.END, f"{select_all_mark}  (Select All)")
+            for value in displayed_values:
+                mark = "☑" if value in checked_values else "☐"
+                values_list.insert(tk.END, f"{mark}  {value}")
+            if ok_button is not None:
+                ok_button.configure(state=tk.NORMAL if checked_values else tk.DISABLED)
+
+        def toggle_value(event: tk.Event) -> str:
+            index = values_list.nearest(event.y)
+            if index == 0:
+                visible = set(displayed_values)
+                if visible and visible.issubset(checked_values):
+                    checked_values.difference_update(visible)
+                else:
+                    checked_values.update(visible)
+            elif 0 < index <= len(displayed_values):
+                value = displayed_values[index - 1]
+                if value in checked_values:
+                    checked_values.remove(value)
+                else:
+                    checked_values.add(value)
+            refresh_values()
+            values_list.selection_clear(0, tk.END)
+            return "break"
+
+        def apply_selected() -> None:
+            if not checked_values:
+                return
+            if checked_values == set(available_values):
+                selection: str | frozenset[str] = ALL_FILTER
+            else:
+                selection = frozenset(checked_values)
+            self.raw_data_filter_selections[column] = selection
+            self._close_data_filter_popup()
+            self._refresh_raw_data_table()
+
+        search_var.trace_add("write", refresh_values)
+        popup.bind("<Return>", lambda _event: apply_selected())
+        actions = ttk.Frame(body)
+        actions.pack(fill=tk.X, pady=(8, 0))
+        ttk.Button(actions, text="Cancel", command=self._close_data_filter_popup).pack(side=tk.RIGHT)
+        ok_button = ttk.Button(actions, text="OK", command=apply_selected)
+        ok_button.pack(side=tk.RIGHT, padx=(0, 6))
+        refresh_values()
+        values_list.bind("<Button-1>", toggle_value)
+        search_entry.focus_set()
+
+        popup.update_idletasks()
+        popup_width = popup.winfo_reqwidth()
+        popup_height = popup.winfo_reqheight()
+        window_left = self.winfo_rootx()
+        window_top = self.winfo_rooty()
+        window_right = window_left + self.winfo_width()
+        window_bottom = window_top + self.winfo_height()
+        x = max(window_left, min(self.winfo_pointerx() - 16, window_right - popup_width))
+        y = max(window_top, min(self.winfo_pointery() + 16, window_bottom - popup_height))
+        popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+        popup.deiconify()
+        popup.lift()
+        self.after_idle(self._enable_data_filter_outside_click, popup)
+
+    def _enable_data_filter_outside_click(self, popup: tk.Toplevel) -> None:
+        if self._data_filter_popup is not popup:
+            return
+        self._data_filter_outside_binding = self.bind(
+            "<Button-1>",
+            self._data_filter_clicked_outside,
+            add="+",
+        )
+
+    def _close_data_filter_popup(self) -> None:
+        if self._data_filter_outside_binding is not None:
+            self.unbind("<Button-1>", self._data_filter_outside_binding)
+            self._data_filter_outside_binding = None
+        if self._data_filter_popup is not None:
+            try:
+                self._data_filter_popup.destroy()
+            except tk.TclError:
+                pass
+            self._data_filter_popup = None
+
+    def _data_filter_clicked_outside(self, _event: tk.Event) -> None:
+        self._close_data_filter_popup()
+
+    def _build_master_tab(self) -> None:
+        source = ttk.LabelFrame(self.master_tab, text="Master workbook (Master PCK ING.xlsx)", padding=12)
+        source.pack(fill=tk.X)
+        source.columnconfigure(1, weight=1)
+
+        ttk.Label(source, text="Excel file:").grid(row=0, column=0, sticky=tk.W, padx=(0, 8))
+        ttk.Entry(source, textvariable=self.master_file_var).grid(row=0, column=1, sticky=tk.EW)
+        ttk.Button(source, text="Browse…", command=self._browse_master_workbook).grid(
+            row=0, column=2, padx=(8, 0)
+        )
+        self.load_master_button = ttk.Button(
+            source,
+            text="Load master data",
+            command=self._start_master_load,
+        )
+        self.load_master_button.grid(row=0, column=3, padx=(8, 0))
+
+        table_frame = ttk.Frame(self.master_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
+        master_columns = ("material", "description", "component_name", "mrp_controller")
+        self.master_columns = master_columns
+        self.master_headings = {
+            "material": "Material",
+            "description": "Description",
+            "component_name": "Component name",
+            "mrp_controller": "Component MRP Controller",
+        }
+        self.master_tree = ttk.Treeview(table_frame, columns=master_columns, show="headings")
+        widths = {
+            "material": 160,
+            "description": 300,
+            "component_name": 300,
+            "mrp_controller": 160,
+        }
+        for column in master_columns:
+            self.master_tree.heading(
+                column,
+                text=self.master_headings[column],
+                command=lambda selected_column=column: self._sort_master_by(selected_column),
+            )
+            self.master_tree.column(column, width=widths[column], minwidth=80, anchor=tk.W)
+
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.master_tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.master_tree.xview)
+        self.master_tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        self.master_tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+
+        status = ttk.Label(
+            self.master_tab,
+            textvariable=self.master_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        )
+        status.pack(fill=tk.X, pady=(8, 0))
+
+    def _browse_master_workbook(self) -> None:
+        selected = filedialog.askopenfilename(
+            title="Select master workbook",
+            filetypes=[("Excel workbook", "*.xlsx *.xlsm"), ("All files", "*.*")],
+        )
+        if selected:
+            self.master_file_var.set(selected)
+
+    def _start_master_load(self) -> None:
+        if not self.master_file_var.get().strip():
+            messagebox.showwarning("Missing source", "Please select the master Excel file.")
+            return
+        self.load_master_button.configure(state=tk.DISABLED)
+        self.master_status_var.set("Loading master data…")
+        threading.Thread(target=self._master_load_worker, daemon=True).start()
+
+    def _master_load_worker(self) -> None:
+        try:
+            records = extract_master_data(self.master_file_var.get().strip())
+        except Exception as exc:
+            self.after(0, self._show_master_error, exc)
+            return
+        try:
+            save_master_data(self.master_store_file_path, records)
+        except ValueError as exc:
+            self.after(0, self._show_master_error, exc)
+            return
+        self.after(0, self._show_master_result, records, True)
+
+    def _show_master_result(self, records: list[MasterComponentRecord], imported: bool) -> None:
+        self.master_records = records
+        self.load_master_button.configure(state=tk.NORMAL)
+        self._refresh_master_table()
+        materials = {record.material for record in records if record.material}
+        verb = "Imported" if imported else "Loaded"
+        self.master_status_var.set(
+            f"{verb} {len(records):,} component rows across {len(materials):,} materials."
+        )
+
+    def _show_master_error(self, exc: Exception) -> None:
+        self.load_master_button.configure(state=tk.NORMAL)
+        self.master_status_var.set("Failed to load master data.")
+        messagebox.showerror("Master data error", str(exc))
+
+    def _load_saved_master_data(self) -> None:
+        try:
+            records = load_master_data(self.master_store_file_path)
+        except ValueError as exc:
+            self.master_status_var.set(str(exc))
+            return
+        if records:
+            self._show_master_result(records, False)
+
+    def _sort_master_by(self, column: str) -> None:
+        if self.master_sort_column == column:
+            self.master_sort_descending = not self.master_sort_descending
+        else:
+            self.master_sort_column = column
+            self.master_sort_descending = False
+        self._refresh_master_table()
+
+    def _refresh_master_table(self) -> None:
+        self.master_tree.delete(*self.master_tree.get_children())
+        rows = list(self.master_records)
+        if self.master_sort_column is not None:
+            rows.sort(
+                key=lambda record: getattr(record, self.master_sort_column).casefold(),
+                reverse=self.master_sort_descending,
+            )
+        for index, record in enumerate(rows):
+            self.master_tree.insert(
+                "",
+                tk.END,
+                iid=str(index),
+                values=(
+                    record.material,
+                    record.description,
+                    record.component_name,
+                    record.mrp_controller,
+                ),
+            )
+        for column, heading in self.master_headings.items():
+            sort_marker = ""
+            if column == self.master_sort_column:
+                sort_marker = " ↓" if self.master_sort_descending else " ↑"
+            self.master_tree.heading(column, text=f"{heading}{sort_marker}")
+
+    def _build_assortment_upload_tab(self) -> None:
+        source = ttk.LabelFrame(
+            self.assortment_upload_tab,
+            text="Assortment workbook (per-shipment size distribution)",
+            padding=12,
+        )
+        source.pack(fill=tk.X)
+        source.columnconfigure(1, weight=1)
+
+        ttk.Label(source, text="Excel file:").grid(row=0, column=0, sticky=tk.W, padx=(0, 8))
+        ttk.Entry(source, textvariable=self.assortment_upload_file_var).grid(
+            row=0, column=1, sticky=tk.EW
+        )
+        ttk.Button(
+            source,
+            text="Browse…",
+            command=self._browse_assortment_upload_workbook,
+        ).grid(row=0, column=2, padx=(8, 0))
+        self.load_assortment_upload_button = ttk.Button(
+            source,
+            text="Load assortment data",
+            command=self._start_assortment_upload_load,
+        )
+        self.load_assortment_upload_button.grid(row=0, column=3, padx=(8, 0))
+
+        self.assortment_upload_table_frame = ttk.Frame(self.assortment_upload_tab)
+        self.assortment_upload_table_frame.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
+
+        status = ttk.Label(
+            self.assortment_upload_tab,
+            textvariable=self.assortment_upload_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        )
+        status.pack(fill=tk.X, pady=(8, 0))
+
+    def _browse_assortment_upload_workbook(self) -> None:
+        selected = filedialog.askopenfilename(
+            title="Select assortment workbook",
+            filetypes=[("Excel workbook", "*.xlsx *.xlsm"), ("All files", "*.*")],
+        )
+        if selected:
+            self.assortment_upload_file_var.set(selected)
+
+    def _start_assortment_upload_load(self) -> None:
+        if not self.assortment_upload_file_var.get().strip():
+            messagebox.showwarning("Missing source", "Please select the assortment Excel file.")
+            return
+        self.load_assortment_upload_button.configure(state=tk.DISABLED)
+        self.assortment_upload_status_var.set("Loading assortment data…")
+        threading.Thread(target=self._assortment_upload_worker, daemon=True).start()
+
+    def _assortment_upload_worker(self) -> None:
+        try:
+            sheet_name, field_labels, records = extract_assortment_shipments(
+                self.assortment_upload_file_var.get().strip()
+            )
+        except Exception as exc:
+            self.after(0, self._show_assortment_upload_error, exc)
+            return
+        try:
+            save_assortment_shipments(
+                self.assortment_upload_store_file_path,
+                sheet_name,
+                field_labels,
+                records,
+            )
+        except ValueError as exc:
+            self.after(0, self._show_assortment_upload_error, exc)
+            return
+        self.after(0, self._show_assortment_upload_result, sheet_name, field_labels, records, True)
+
+    def _show_assortment_upload_result(
+        self,
+        sheet_name: str,
+        field_labels: list[str],
+        records: list[AssortmentShipmentRecord],
+        imported: bool,
+    ) -> None:
+        self.assortment_upload_field_labels = field_labels
+        self.assortment_upload_records = records
+        self.assortment_upload_sort_column = None
+        self.assortment_upload_sort_descending = False
+        self._rebuild_assortment_upload_tree(field_labels)
+        self._refresh_assortment_upload_table()
+        self._refresh_summary_table()
+        self.load_assortment_upload_button.configure(state=tk.NORMAL)
+        verb = "Imported" if imported else "Loaded"
+        sheet_note = f" from worksheet '{sheet_name}'" if sheet_name else ""
+        self.assortment_upload_status_var.set(
+            f"{verb} {len(records):,} shipments{sheet_note}."
+        )
+
+    def _show_assortment_upload_error(self, exc: Exception) -> None:
+        self.load_assortment_upload_button.configure(state=tk.NORMAL)
+        self.assortment_upload_status_var.set("Failed to load assortment data.")
+        messagebox.showerror("Assortment data error", str(exc))
+
+    def _load_saved_assortment_upload(self) -> None:
+        try:
+            sheet_name, field_labels, records = load_assortment_shipments(
+                self.assortment_upload_store_file_path
+            )
+        except ValueError as exc:
+            self.assortment_upload_status_var.set(str(exc))
+            return
+        if records:
+            self._show_assortment_upload_result(sheet_name, field_labels, records, False)
+
+    def _rebuild_assortment_upload_tree(self, field_labels: list[str]) -> None:
+        for child in self.assortment_upload_table_frame.winfo_children():
+            child.destroy()
+        columns = [f"field_{index:02d}" for index in range(len(field_labels))]
+        self.assortment_upload_columns = columns
+        tree = ttk.Treeview(self.assortment_upload_table_frame, columns=columns, show="headings")
+        wide_labels = {"ฟาร์ม", "จังหวัด"}
+        for column, label in zip(columns, field_labels):
+            tree.heading(
+                column,
+                text=label,
+                command=lambda selected_column=column: self._sort_assortment_upload_by(
+                    selected_column
+                ),
+            )
+            width = 220 if label in wide_labels else 100
+            tree.column(column, width=width, minwidth=70, anchor=tk.W)
+
+        vertical = ttk.Scrollbar(
+            self.assortment_upload_table_frame, orient=tk.VERTICAL, command=tree.yview
+        )
+        horizontal = ttk.Scrollbar(
+            self.assortment_upload_table_frame, orient=tk.HORIZONTAL, command=tree.xview
+        )
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        self.assortment_upload_table_frame.rowconfigure(0, weight=1)
+        self.assortment_upload_table_frame.columnconfigure(0, weight=1)
+        self.assortment_upload_tree = tree
+
+    def _sort_assortment_upload_by(self, column: str) -> None:
+        if self.assortment_upload_sort_column == column:
+            self.assortment_upload_sort_descending = not self.assortment_upload_sort_descending
+        else:
+            self.assortment_upload_sort_column = column
+            self.assortment_upload_sort_descending = False
+        self._refresh_assortment_upload_table()
+
+    def _refresh_assortment_upload_table(self) -> None:
+        if self.assortment_upload_tree is None:
+            return
+        self.assortment_upload_tree.delete(*self.assortment_upload_tree.get_children())
+        rows = list(self.assortment_upload_records)
+        if self.assortment_upload_sort_column is not None:
+            index = self.assortment_upload_columns.index(self.assortment_upload_sort_column)
+
+            def sort_key(record: AssortmentShipmentRecord) -> tuple[bool, float | str]:
+                value = record.fields[index][1]
+                try:
+                    return (False, float(value.replace(",", "")))
+                except ValueError:
+                    return (True, value.casefold())
+
+            rows.sort(key=sort_key, reverse=self.assortment_upload_sort_descending)
+        for row_index, record in enumerate(rows):
+            self.assortment_upload_tree.insert(
+                "",
+                tk.END,
+                iid=str(row_index),
+                values=[value for _label, value in record.fields],
+            )
+        for column, label in zip(self.assortment_upload_columns, self.assortment_upload_field_labels):
+            sort_marker = ""
+            if column == self.assortment_upload_sort_column:
+                sort_marker = " ↓" if self.assortment_upload_sort_descending else " ↑"
+            self.assortment_upload_tree.heading(column, text=f"{label}{sort_marker}")
+
+    def _build_summary_tab(self) -> None:
+        ttk.Label(
+            self.summary_tab,
+            text=(
+                "เทียบปริมาณกุ้งต่อวัน: Assortment (จับได้) เทียบกับ Data (ใช้จริง, "
+                "น้ำหนัก HO) แยกตามไซซ์ RM — 51-75=M/HC, 76-100=S/SS, 101+=BK"
+            ),
+            wraplength=900,
+            justify=tk.LEFT,
+        ).pack(fill=tk.X, pady=(0, 8), anchor=tk.W)
+
+        table_frame = ttk.Frame(self.summary_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True)
+        summary_columns = ("date", "group", "assortment_kg", "data_used_kg", "difference_kg")
+        self.summary_columns = summary_columns
+        self.summary_headings = {
+            "date": "วันที่",
+            "group": "ไซซ์ RM",
+            "assortment_kg": "Assortment (กก.)",
+            "data_used_kg": "Data ใช้จริง (กก.)",
+            "difference_kg": "ขาด/เหลือ (กก.)",
+        }
+        tree = ttk.Treeview(table_frame, columns=summary_columns, show="headings")
+        widths = {
+            "date": 100,
+            "group": 150,
+            "assortment_kg": 140,
+            "data_used_kg": 140,
+            "difference_kg": 140,
+        }
+        for column in summary_columns:
+            tree.heading(column, text=self.summary_headings[column])
+            numeric = column != "date" and column != "group"
+            tree.column(column, width=widths[column], minwidth=80, anchor=tk.E if numeric else tk.W)
+        tree.tag_configure("shortage", foreground="#b00020")
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        self.summary_tree = tree
+
+        ttk.Label(
+            self.summary_tab,
+            textvariable=self.summary_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(8, 0))
+
+    def _refresh_summary_table(self) -> None:
+        if self.summary_tree is None:
+            return
+        self.summary_tree.delete(*self.summary_tree.get_children())
+        missing_sources = [
+            name
+            for name, loaded in (
+                ("Data", bool(self.raw_data_all_rows)),
+                ("Assortment", bool(self.assortment_upload_records)),
+            )
+            if not loaded
+        ]
+        if missing_sources:
+            tab_word = "tab" if len(missing_sources) == 1 else "tabs"
+            self.summary_status_var.set(
+                f"Load data on the {' and '.join(missing_sources)} {tab_word} first."
+            )
+            return
+        if "RM" not in self.raw_data_headers:
+            self.summary_status_var.set(
+                "Could not find the 'RM' column in the Data tab's loaded columns."
+            )
+            return
+        date_index = 0
+        rm_size_index = self.raw_data_headers.index("RM")
+        ho_weight_index = len(self.raw_data_columns) - 1
+        rows = build_summary_rows(
+            self.assortment_upload_records,
+            self.raw_data_all_rows,
+            date_index=date_index,
+            rm_size_index=rm_size_index,
+            ho_weight_index=ho_weight_index,
+        )
+        plan_start = self.plan_start_date_var.get()
+        plan_end = self.plan_end_date_var.get()
+        date_range_note = ""
+        if plan_start and plan_end:
+            if plan_start > plan_end:
+                plan_start, plan_end = plan_end, plan_start
+            rows = [row for row in rows if plan_start <= row.record_date <= plan_end]
+            date_range_note = f" from {plan_start} to {plan_end} (per Plan tab)"
+        for index, row in enumerate(rows):
+            difference = row.difference_kg
+            self.summary_tree.insert(
+                "",
+                tk.END,
+                iid=str(index),
+                values=(
+                    row.record_date,
+                    row.group_label,
+                    f"{row.assortment_kg:,.0f}",
+                    f"{row.data_used_kg:,.0f}",
+                    f"{difference:,.0f}",
+                ),
+                tags=("shortage",) if difference < 0 else (),
+            )
+        dates = {row.record_date for row in rows}
+        self.summary_status_var.set(
+            f"Showing {len(rows):,} rows across {len(dates):,} dates and "
+            f"{len(RM_SIZE_GROUPS)} RM size groups{date_range_note}."
+        )
 
     def _build_rm_tab(self) -> None:
         self.rm_tab.rowconfigure(0, weight=1)
@@ -1278,178 +2191,31 @@ class ProductionPlanApp(tk.Tk):
     def _build_plan_tab(self) -> None:
         controls = ttk.Frame(self.plan_tab)
         controls.pack(fill=tk.X, pady=(0, 8))
-        ttk.Button(
+        ttk.Label(controls, text="วันที่เริ่มต้น:").pack(side=tk.LEFT)
+        self.plan_start_date_combo = ttk.Combobox(
             controls,
-            text="Generate Plan",
-            command=self._generate_plan,
-        ).pack(side=tk.LEFT)
-        ttk.Label(
+            textvariable=self.plan_start_date_var,
+            state="readonly",
+            width=14,
+        )
+        self.plan_start_date_combo.pack(side=tk.LEFT, padx=(4, 16))
+        ttk.Label(controls, text="วันที่สิ้นสุด:").pack(side=tk.LEFT)
+        self.plan_end_date_combo = ttk.Combobox(
             controls,
-            textvariable=self.plan_summary_var,
-            style="Summary.TLabel",
-        ).pack(side=tk.LEFT, padx=(14, 0))
+            textvariable=self.plan_end_date_var,
+            state="readonly",
+            width=14,
+        )
+        self.plan_end_date_combo.pack(side=tk.LEFT, padx=(4, 16))
+        self.plan_start_date_combo.bind(
+            "<<ComboboxSelected>>", lambda _event: self._refresh_plan_table()
+        )
+        self.plan_end_date_combo.bind(
+            "<<ComboboxSelected>>", lambda _event: self._refresh_plan_table()
+        )
 
-        plan_panes = ttk.PanedWindow(self.plan_tab, orient=tk.VERTICAL)
-        plan_panes.pack(fill=tk.BOTH, expand=True)
-
-        schedule_frame = ttk.LabelFrame(
-            plan_panes,
-            text="Generated daily production plan",
-            padding=8,
-        )
-        schedule_frame.rowconfigure(0, weight=1)
-        schedule_frame.columnconfigure(0, weight=1)
-        plan_panes.add(schedule_frame, weight=3)
-
-        plan_columns = (
-            "order_no",
-            "plan_date",
-            "due_date",
-            "type",
-            "market",
-            "rm_size",
-            "customer",
-            "group1",
-            "order_cups",
-            "order_wontons",
-            "rm_kg",
-            "produce_wontons",
-            "expected_wontons",
-            "rm_source",
-        )
-        self.plan_tree = ttk.Treeview(
-            schedule_frame,
-            columns=plan_columns,
-            show="headings",
-        )
-        plan_headings = {
-            "order_no": "Order No.",
-            "plan_date": "Plan date",
-            "due_date": "Load date",
-            "type": "Type",
-            "market": "Use for",
-            "rm_size": "RM Size",
-            "customer": "Customer",
-            "group1": "Group 1",
-            "order_cups": "Order (ถ้วย)",
-            "order_wontons": "Order (จำนวนเกี๊ยว)",
-            "rm_kg": "RM used (kg)",
-            "produce_wontons": "Produce (จำนวนเกี๊ยว)",
-            "expected_wontons": "Remaining (จำนวนเกี๊ยว)",
-            "rm_source": "RM source",
-        }
-        plan_widths = {
-            "order_no": 105,
-            "plan_date": 95,
-            "due_date": 95,
-            "type": 75,
-            "market": 85,
-            "rm_size": 70,
-            "customer": 190,
-            "group1": 180,
-            "order_cups": 115,
-            "order_wontons": 145,
-            "rm_kg": 100,
-            "produce_wontons": 155,
-            "expected_wontons": 115,
-            "rm_source": 310,
-        }
-        numeric_columns = {
-            "order_cups",
-            "order_wontons",
-            "rm_kg",
-            "produce_wontons",
-            "expected_wontons",
-        }
-        for column in plan_columns:
-            self.plan_tree.heading(column, text=plan_headings[column])
-            self.plan_tree.column(
-                column,
-                width=plan_widths[column],
-                minwidth=60,
-                anchor=tk.E if column in numeric_columns else tk.W,
-                stretch=column in {"customer", "group1", "rm_source"},
-            )
-        self.plan_tree.tag_configure("late", background="#fff0e1", foreground="#9a3d00")
-        plan_vertical = ttk.Scrollbar(
-            schedule_frame,
-            orient=tk.VERTICAL,
-            command=self.plan_tree.yview,
-        )
-        plan_horizontal = ttk.Scrollbar(
-            schedule_frame,
-            orient=tk.HORIZONTAL,
-            command=self.plan_tree.xview,
-        )
-        self.plan_tree.configure(
-            yscrollcommand=plan_vertical.set,
-            xscrollcommand=plan_horizontal.set,
-        )
-        self.plan_tree.grid(row=0, column=0, sticky="nsew")
-        plan_vertical.grid(row=0, column=1, sticky="ns")
-        plan_horizontal.grid(row=1, column=0, sticky="ew")
-
-        unplanned_frame = ttk.LabelFrame(
-            plan_panes,
-            text="Unplanned / excluded orders and remaining demand",
-            padding=8,
-        )
-        unplanned_frame.rowconfigure(0, weight=1)
-        unplanned_frame.columnconfigure(0, weight=1)
-        plan_panes.add(unplanned_frame, weight=1)
-        unplanned_columns = (
-            "order_no",
-            "due_date",
-            "type",
-            "market",
-            "rm_size",
-            "customer",
-            "group1",
-            "remaining",
-            "reason",
-        )
-        self.unplanned_tree = ttk.Treeview(
-            unplanned_frame,
-            columns=unplanned_columns,
-            show="headings",
-            height=7,
-        )
-        unplanned_headings = {
-            "order_no": "Order No.",
-            "due_date": "Load date",
-            "type": "Type",
-            "market": "Use for",
-            "rm_size": "RM Size",
-            "customer": "Customer",
-            "group1": "Group 1",
-            "remaining": "Remaining wontons",
-            "reason": "Reason",
-        }
-        for column in unplanned_columns:
-            self.unplanned_tree.heading(column, text=unplanned_headings[column])
-            self.unplanned_tree.column(
-                column,
-                width=120 if column not in {"customer", "group1", "reason"} else 220,
-                anchor=tk.E if column == "remaining" else tk.W,
-                stretch=column in {"customer", "group1", "reason"},
-            )
-        unplanned_vertical = ttk.Scrollbar(
-            unplanned_frame,
-            orient=tk.VERTICAL,
-            command=self.unplanned_tree.yview,
-        )
-        unplanned_horizontal = ttk.Scrollbar(
-            unplanned_frame,
-            orient=tk.HORIZONTAL,
-            command=self.unplanned_tree.xview,
-        )
-        self.unplanned_tree.configure(
-            yscrollcommand=unplanned_vertical.set,
-            xscrollcommand=unplanned_horizontal.set,
-        )
-        self.unplanned_tree.grid(row=0, column=0, sticky="nsew")
-        unplanned_vertical.grid(row=0, column=1, sticky="ns")
-        unplanned_horizontal.grid(row=1, column=0, sticky="ew")
+        self.plan_table_frame = ttk.Frame(self.plan_tab)
+        self.plan_table_frame.pack(fill=tk.BOTH, expand=True)
 
         ttk.Label(
             self.plan_tab,
@@ -1459,91 +2225,72 @@ class ProductionPlanApp(tk.Tk):
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(8, 0))
 
-    def _generate_plan(self) -> None:
-        if not self.saved_order_records:
-            messagebox.showwarning("Generate Plan", "Extract and save Order data first.")
-            return
-        ranges = self._current_assortment_size_range_definitions()
-        try:
-            rules = load_rules(self.rule_file_path)
-            result = generate_plan(
-                self.saved_order_records.values(),
-                self.assortment_actual_records.values(),
-                ranges,
-                self.capacity_settings,
-                self.class_definitions.values(),
-                rules,
-                planning_date=date.today(),
-                wonton_weight_settings=self.wonton_weight_settings,
-            )
-        except (ValueError, OSError) as exc:
-            messagebox.showerror("Generate Plan", str(exc))
-            self.plan_status_var.set(f"Could not generate plan: {exc}")
-            return
+    def _refresh_plan_date_options(self) -> None:
+        """Repopulate the Plan tab's date pickers from the Data tab's loaded rows."""
 
-        self.plan_result = result
+        if not hasattr(self, "plan_start_date_combo"):
+            return
+        dates = sorted({row[0] for row in self.raw_data_all_rows if row and row[0]})
+        self.plan_start_date_combo.configure(values=dates)
+        self.plan_end_date_combo.configure(values=dates)
+        if dates:
+            if self.plan_start_date_var.get() not in dates:
+                self.plan_start_date_var.set(dates[0])
+            if self.plan_end_date_var.get() not in dates:
+                self.plan_end_date_var.set(dates[-1])
+        else:
+            self.plan_start_date_var.set("")
+            self.plan_end_date_var.set("")
+        self._rebuild_plan_tree()
+        self._refresh_plan_table()
+
+    def _rebuild_plan_tree(self) -> None:
+        for child in self.plan_table_frame.winfo_children():
+            child.destroy()
+        columns = list(self.raw_data_columns)
+        self.plan_columns = columns
+        if not columns:
+            self.plan_tree = None
+            return
+        tree = ttk.Treeview(self.plan_table_frame, columns=columns, show="headings")
+        for column, header in zip(columns, self.raw_data_headers):
+            tree.heading(column, text=header)
+            tree.column(column, width=110, minwidth=60, anchor=tk.W)
+        vertical = ttk.Scrollbar(self.plan_table_frame, orient=tk.VERTICAL, command=tree.yview)
+        horizontal = ttk.Scrollbar(self.plan_table_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        self.plan_table_frame.rowconfigure(0, weight=1)
+        self.plan_table_frame.columnconfigure(0, weight=1)
+        self.plan_tree = tree
+
+    def _refresh_plan_table(self) -> None:
+        if self.plan_tree is None:
+            if not self.raw_data_all_rows:
+                self.plan_status_var.set("Load data on the Data tab first.")
+            self._refresh_summary_table()
+            return
         self.plan_tree.delete(*self.plan_tree.get_children())
-        for index, row in enumerate(result.allocations):
-            self.plan_tree.insert(
-                "",
-                tk.END,
-                iid=f"plan:{index}",
-                values=(
-                    row.order_no,
-                    row.plan_date,
-                    row.due_date,
-                    row.production_type,
-                    market_display_label(row.market_type),
-                    row.rm_size,
-                    row.customer,
-                    row.group_1,
-                    self._format_optional_number(row.order_cups),
-                    self._format_optional_number(row.order_wontons),
-                    self._format_optional_number(row.rm_kg),
-                    self._format_optional_number(row.produced_wontons),
-                    self._format_optional_number(row.expected_wontons),
-                    row.rm_sources,
-                ),
-                tags=("late",) if row.is_late else (),
-            )
-
-        self.unplanned_tree.delete(*self.unplanned_tree.get_children())
-        for index, row in enumerate(
-            sorted(
-                result.unplanned,
-                key=lambda item: (item.due_date, item.order_no, item.order_id),
-            )
-        ):
-            self.unplanned_tree.insert(
-                "",
-                tk.END,
-                iid=f"unplanned:{index}",
-                values=(
-                    row.order_no,
-                    row.due_date,
-                    row.production_type,
-                    market_display_label(row.market_type),
-                    row.rm_size,
-                    row.customer,
-                    row.group_1,
-                    self._format_optional_number(row.remaining_wontons),
-                    row.reason,
-                ),
-            )
-
-        planned_orders = len({row.order_id for row in result.allocations})
-        late_rows = sum(row.is_late for row in result.allocations)
-        self.plan_summary_var.set(
-            f"{planned_orders:,} orders planned  |  "
-            f"{result.planned_wontons:,.0f} wontons  |  "
-            f"RM {result.used_rm_kg:,.2f} kg  |  "
-            f"{len(result.unplanned):,} unplanned"
-        )
+        start = self.plan_start_date_var.get()
+        end = self.plan_end_date_var.get()
+        if not start or not end:
+            self.plan_status_var.set("Select a start and end date.")
+            self._refresh_summary_table()
+            return
+        if start > end:
+            start, end = end, start
+        matching = [
+            row for row in self.raw_data_all_rows if row and start <= row[0] <= end
+        ]
+        for index, row in enumerate(matching):
+            self.plan_tree.insert("", tk.END, iid=str(index), values=row)
         self.plan_status_var.set(
-            f"Generated {len(result.allocations):,} daily plan rows from {result.start_date} "
-            f"through {result.end_date}. {result.skipped_past_orders:,} past orders ignored; "
-            f"{late_rows:,} late rows. Month-only orders use month-end."
+            f"Showing {len(matching):,} of {len(self.raw_data_all_rows):,} rows "
+            f"from {start} to {end}."
         )
+        self._refresh_summary_table()
 
     def _build_plan_rule_tab(self) -> None:
         ttk.Label(
@@ -2019,16 +2766,6 @@ class ProductionPlanApp(tk.Tk):
         self._update_wonton_yield_previews()
         self._refresh_assortment_actual_history_table()
         self._refresh_rm_timeline()
-        self.plan_result = None
-        if hasattr(self, "plan_tree"):
-            self.plan_tree.delete(*self.plan_tree.get_children())
-            self.unplanned_tree.delete(*self.unplanned_tree.get_children())
-            self.plan_summary_var.set(
-                "Wonton weights changed | Generate Plan to recalculate RM yield."
-            )
-        self.plan_status_var.set(
-            "Wonton weights changed. Generate Plan again to apply the new RM yield."
-        )
         summary = " | ".join(
             f"{size_class} {self._format_optional_number(settings.grams_for(size_class))} g "
             f"= {self._format_optional_number(settings.wontons_per_kg(size_class))} wontons/kg"
@@ -3582,10 +4319,9 @@ class ProductionPlanApp(tk.Tk):
                 tk.END,
                 iid=item_id,
                 values=(
+                    record.prod_date_display,
+                    record.load_date_display,
                     record.order_no,
-                    record.date,
-                    record.month,
-                    record.year,
                     record.country,
                     record.customer_name,
                     record.group_1,
@@ -3628,6 +4364,8 @@ class ProductionPlanApp(tk.Tk):
             sort_marker = ""
             if column == self.order_sort_column or (
                 column == "date" and self.order_sort_column == SCHEDULE_DATE_COLUMN
+            ) or (
+                column == "prod_date" and self.order_sort_column == PROD_SCHEDULE_DATE_COLUMN
             ):
                 sort_marker = " ↓" if self.order_sort_descending else " ↑"
             self.tree.heading(
@@ -3673,18 +4411,23 @@ class ProductionPlanApp(tk.Tk):
             button.pack(fill=tk.X)
             return button
 
-        sort_column = SCHEDULE_DATE_COLUMN if column == "date" else column
+        sort_column = (
+            PROD_SCHEDULE_DATE_COLUMN if column == "prod_date"
+            else SCHEDULE_DATE_COLUMN if column == "date"
+            else column
+        )
         numeric = column in NUMERIC_ORDER_COLUMNS
+        is_date_column = column in ("date", "prod_date")
         ascending_label = (
             "↑  Sort Oldest to Newest"
-            if column == "date"
+            if is_date_column
             else "↑  Sort Smallest to Largest"
             if numeric
             else "A  Z  Sort A to Z"
         )
         descending_label = (
             "↓  Sort Newest to Oldest"
-            if column == "date"
+            if is_date_column
             else "↓  Sort Largest to Smallest"
             if numeric
             else "Z  A  Sort Z to A"

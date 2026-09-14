@@ -15,13 +15,16 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
 
-PRODUCTION_DATE_COLUMN = 3  # C
+PRODUCTION_DATE_COLUMN = 3  # C (แผน LOAD Date)
+PRODUCTION_PLAN_DATE_COLUMN = 2  # B (แผนผลิต Date)
 COUNTRY_COLUMN = 8  # H
 CUSTOMER_COLUMN = 10  # J
 GROUP_1_COLUMN = 11  # K
 GROUP_2_COLUMN = 12  # L
 PACKAGING_COLUMN = 15  # O
+RAW_HO_WEIGHT_CUPS_COLUMN = 16  # P (cups)
 WONTONS_PER_CUP_COLUMN = 17  # Q
 HO_WEIGHT_FACTOR_COLUMN = 18  # R
 RM_SIZE_COLUMN = 19  # S
@@ -33,6 +36,9 @@ ORDER_EXPORT_FIELDS = (
     "date",
     "month",
     "year",
+    "prod_date",
+    "prod_month",
+    "prod_year",
     "country",
     "customer_name",
     "group_1",
@@ -72,12 +78,27 @@ class OrderRecord:
     production: int | float | None = None
     record_id: str = ""
     order_no: str = ""
+    prod_date: str = ""
+    prod_month: str = ""
+    prod_year: str = ""
 
     @property
     def month_key(self) -> str:
         """Return YYYY-MM for filtering while exports keep separate columns."""
 
         return f"{self.year}-{self.month}"
+
+    @property
+    def load_date_display(self) -> str:
+        """Return the แผน LOAD date (column C) as one combined display string."""
+
+        return _format_date_parts(self.date, self.month, self.year)
+
+    @property
+    def prod_date_display(self) -> str:
+        """Return the แผนผลิต production date (column B) as one combined display string."""
+
+        return _format_date_parts(self.prod_date, self.prod_month, self.prod_year)
 
     @property
     def total_wontons(self) -> int | float | None:
@@ -103,6 +124,96 @@ class ExtractionResult:
     issues: list[ExtractionIssue]
     sheet_name: str
     header_row: int
+
+
+RAW_DATA_FIRST_COLUMN = 2  # B
+RAW_DATA_LAST_COLUMN = ORDER_CUPS_COLUMN  # AI
+RAW_DATA_EXCLUDED_COLUMNS = {30}  # AD (Remaek / Remark)
+
+
+@dataclass(frozen=True, slots=True)
+class RawDataResult:
+    """Columns B through AI exactly as stored in the sheet, with no parsing."""
+
+    headers: list[str]
+    rows: list[tuple[str, ...]]
+    sheet_name: str
+    header_row: int
+
+
+def extract_raw_data(
+    workbook_path: str | Path,
+    sheet_name: str | None = None,
+) -> RawDataResult:
+    """Return every non-blank row's column B:AI cells as plain display text.
+
+    No date splitting, number parsing, cleanup, or calculation is applied to
+    the source columns; each cell is rendered with the same text formatting
+    used for issue reporting elsewhere in this module. One extra column,
+    "น้ำหนัก HO", is appended with (P*Q*R*V)/0.54 computed per row.
+    """
+
+    path = _validated_path(workbook_path)
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        selected_sheet = sheet_name or _choose_default_sheet_from_workbook(workbook)
+        if selected_sheet not in workbook.sheetnames:
+            raise ValueError(f"Worksheet not found: {selected_sheet}")
+
+        worksheet = workbook[selected_sheet]
+        header_row, _ = _find_header_row(worksheet)
+        included_columns = [
+            column
+            for column in range(RAW_DATA_FIRST_COLUMN, RAW_DATA_LAST_COLUMN + 1)
+            if column not in RAW_DATA_EXCLUDED_COLUMNS
+        ]
+        headers = [
+            _clean_text(worksheet.cell(header_row, column).value)
+            or get_column_letter(column)
+            for column in included_columns
+        ]
+        headers.append("น้ำหนัก HO")
+
+        rows: list[tuple[str, ...]] = []
+        for row in worksheet.iter_rows(
+            min_row=header_row + 1,
+            min_col=RAW_DATA_FIRST_COLUMN,
+            max_col=RAW_DATA_LAST_COLUMN,
+            values_only=True,
+        ):
+            if all(_is_blank(value) for value in row):
+                continue
+            display_row = tuple(
+                _display_value(row[column - RAW_DATA_FIRST_COLUMN])
+                for column in included_columns
+            )
+            rows.append((*display_row, _calculate_raw_ho_weight(row)))
+
+        return RawDataResult(
+            headers=headers,
+            rows=rows,
+            sheet_name=selected_sheet,
+            header_row=header_row,
+        )
+    finally:
+        workbook.close()
+
+
+def _calculate_raw_ho_weight(row: tuple[Any, ...]) -> str:
+    """Compute (P*Q*R*V)/0.54 from a B:AI-aligned row; blank if any part is missing."""
+
+    def raw_data_column_value(column: int) -> Any:
+        index = column - RAW_DATA_FIRST_COLUMN
+        return row[index] if 0 <= index < len(row) else None
+
+    cups = _parse_number(raw_data_column_value(RAW_HO_WEIGHT_CUPS_COLUMN))
+    pieces_per_cup = _parse_number(raw_data_column_value(WONTONS_PER_CUP_COLUMN))
+    weight_per_piece = _parse_number(raw_data_column_value(HO_WEIGHT_FACTOR_COLUMN))
+    quantity = _parse_number(raw_data_column_value(ORDER_UNIT_COLUMN))
+    if None in (cups, pieces_per_cup, weight_per_piece, quantity):
+        return ""
+    result = (cups * pieces_per_cup * weight_per_piece * quantity) / 0.54
+    return str(int(result) if float(result).is_integer() else round(result, 4))
 
 
 def list_sheets(workbook_path: str | Path) -> list[str]:
@@ -140,12 +251,15 @@ def extract_orders(
 ) -> ExtractionResult:
     """Extract complete C/J/V order rows into a stable, normalized schema.
 
-    Column C becomes separate zero-padded date, month, and year fields. Column J
-    becomes the customer name. Column V becomes the order quantity in units,
-    column Q becomes ลูกเกี๊ยว/ถ้วย, and column AI becomes the order quantity
-    in cups. Cups per unit is derived by dividing column AI by column V, while
-    จำนวนเกี๊ยว is derived by multiplying column AI by column Q. น้ำหนัก HO
-    (kg) is จำนวนเกี๊ยว multiplied by column R, then divided by 0.54.
+    Column C becomes separate zero-padded date, month, and year fields. Column B
+    (the แผนผลิต production date) is extracted the same way into separate
+    prod_date, prod_month, and prod_year fields whenever it parses; it is
+    informational only and never blocks a row. Column J becomes the customer
+    name. Column V becomes the order quantity in units, column Q becomes
+    ลูกเกี๊ยว/ถ้วย, and column AI becomes the order quantity in cups. Cups per
+    unit is derived by dividing column AI by column V, while จำนวนเกี๊ยว is
+    derived by multiplying column AI by column Q. น้ำหนัก HO (kg) is
+    จำนวนเกี๊ยว multiplied by column R, then divided by 0.54.
     Rows with no selected values are ignored; other incomplete rows are reported
     as issues rather than silently converted to orders.
     """
@@ -161,6 +275,7 @@ def extract_orders(
         header_row, _ = _find_header_row(worksheet)
         records: list[OrderRecord] = []
         issues: list[ExtractionIssue] = []
+        last_prod_date_value: Any = None
 
         for source_row, row in enumerate(
             worksheet.iter_rows(
@@ -171,6 +286,14 @@ def extract_orders(
             start=header_row + 1,
         ):
             raw_date = _cell_value(row, PRODUCTION_DATE_COLUMN)
+            raw_prod_date = _cell_value(row, PRODUCTION_PLAN_DATE_COLUMN)
+            if _is_blank(raw_prod_date):
+                # Column B is often left blank for rows that repeat the
+                # production date above it (a visual grouping convention);
+                # carry the last seen value forward instead of losing it.
+                raw_prod_date = last_prod_date_value
+            else:
+                last_prod_date_value = raw_prod_date
             raw_country = _cell_value(row, COUNTRY_COLUMN)
             raw_customer = _cell_value(row, CUSTOMER_COLUMN)
             raw_group_1 = _cell_value(row, GROUP_1_COLUMN)
@@ -187,6 +310,7 @@ def extract_orders(
                 continue
 
             production_period = _parse_production_period(raw_date)
+            prod_period = _parse_production_period(raw_prod_date)
             customer = _clean_text(raw_customer)
             order_unit = _parse_number(raw_unit)
             ho_weight_factor = _parse_number(raw_ho_weight_factor)
@@ -224,6 +348,9 @@ def extract_orders(
                     date=production_period[0],
                     month=production_period[1],
                     year=production_period[2],
+                    prod_date=prod_period[0] if prod_period else "",
+                    prod_month=prod_period[1] if prod_period else "",
+                    prod_year=prod_period[2] if prod_period else "",
                     country=_clean_text(raw_country),
                     customer_name=customer,
                     group_1=_clean_text(raw_group_1),
@@ -427,3 +554,16 @@ def _display_value(value: Any) -> str:
     if isinstance(value, date):
         return value.isoformat()
     return str(value)
+
+
+def _format_date_parts(day: str, month: str, year: str) -> str:
+    """Combine zero-padded day/month/year parts into one DD/MM/YYYY string."""
+
+    day = day.strip()
+    month = month.strip()
+    year = year.strip()
+    if not month or not year:
+        return ""
+    if day:
+        return f"{day}/{month}/{year}"
+    return f"{month}/{year}"

@@ -11,13 +11,13 @@ from extractor import OrderRecord
 
 ALL_FILTER = "All"
 SCHEDULE_DATE_COLUMN = "schedule_date"
+PROD_SCHEDULE_DATE_COLUMN = "prod_schedule_date"
 BLANK_FILTER = "(blank)"
 PRODUCTION_ENTERED = "Entered"
 PRODUCTION_MISSING = "Not entered"
 NUMERIC_ORDER_COLUMNS = {
     "date",
-    "month",
-    "year",
+    "prod_date",
     "wontons_per_cup",
     "order_unit",
     "order_cups",
@@ -32,9 +32,8 @@ ORDER_COLUMN_ATTRIBUTES = {
 
 FILTER_SPECS = (
     ("order_no", "Order No."),
-    ("year", "Year"),
-    ("month", "Month"),
-    ("date", "Date"),
+    ("prod_date", "Prod.Date"),
+    ("date", "Load.Date"),
     ("country", "Country"),
     ("customer", "Customer"),
     ("group_1", "Group 1"),
@@ -169,15 +168,16 @@ def sort_orders(
     record_list = list(records)
     if column is None:
         return record_list
-    if column == SCHEDULE_DATE_COLUMN:
+    if column in _SCHEDULE_COLUMNS:
+        effective_date_fn, day_field = _SCHEDULE_COLUMNS[column]
         dated: list[tuple[date, bool, OrderRecord]] = []
         undated: list[OrderRecord] = []
         for record in record_list:
-            effective_date = order_effective_date(record)
+            effective_date = effective_date_fn(record)
             if effective_date is None:
                 undated.append(record)
             else:
-                month_only = not str(record.date).strip()
+                month_only = not str(getattr(record, day_field)).strip()
                 dated.append((effective_date, month_only, record))
         # Preserve explicit month-end dates before month-only rows even when the
         # primary date direction is reversed.
@@ -207,14 +207,30 @@ def sort_orders(
 def order_effective_date(record: OrderRecord) -> date | None:
     """Return an exact order date, or month-end for a month-only order."""
 
+    return _effective_date(record.year, record.month, record.date)
+
+
+def prod_effective_date(record: OrderRecord) -> date | None:
+    """Return an exact production date, or month-end for a month-only order."""
+
+    return _effective_date(record.prod_year, record.prod_month, record.prod_date)
+
+
+def _effective_date(year: str, month: str, day: str) -> date | None:
     try:
-        year = int(str(record.year).strip())
-        month = int(str(record.month).strip())
-        day_text = str(record.date).strip()
-        day = int(day_text) if day_text else monthrange(year, month)[1]
-        return date(year, month, day)
+        year_number = int(str(year).strip())
+        month_number = int(str(month).strip())
+        day_text = str(day).strip()
+        day_number = int(day_text) if day_text else monthrange(year_number, month_number)[1]
+        return date(year_number, month_number, day_number)
     except (TypeError, ValueError):
         return None
+
+
+_SCHEDULE_COLUMNS = {
+    SCHEDULE_DATE_COLUMN: (order_effective_date, "date"),
+    PROD_SCHEDULE_DATE_COLUMN: (prod_effective_date, "prod_date"),
+}
 
 
 def current_and_future_orders(
@@ -241,11 +257,12 @@ def filter_value(record: OrderRecord, key: str) -> str:
         if value is None:
             return BLANK_FILTER
         return f"{value:.2f}".rstrip("0").rstrip(".")
+    elif key == "date":
+        value = record.load_date_display
+    elif key == "prod_date":
+        value = record.prod_date_display
     elif key in {
         "order_no",
-        "year",
-        "month",
-        "date",
         "country",
         "group_1",
         "group_2",

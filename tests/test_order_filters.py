@@ -7,6 +7,7 @@ from extractor import OrderRecord
 from order_filters import (
     ALL_FILTER,
     BLANK_FILTER,
+    PROD_SCHEDULE_DATE_COLUMN,
     PRODUCTION_ENTERED,
     PRODUCTION_MISSING,
     SCHEDULE_DATE_COLUMN,
@@ -14,6 +15,7 @@ from order_filters import (
     current_and_future_orders,
     filter_options,
     filter_orders,
+    filter_value,
     order_effective_date,
     sort_orders,
 )
@@ -59,7 +61,7 @@ class OrderFilterTests(unittest.TestCase):
     def test_combines_multiple_filters(self) -> None:
         filtered = filter_orders(
             self.records,
-            {"year": "2025", "country": "USA", "soup": ALL_FILTER},
+            {"date": "10/2025", "country": "USA", "soup": ALL_FILTER},
         )
         self.assertEqual([record.record_id for record in filtered], ["1"])
 
@@ -162,15 +164,15 @@ class OrderFilterTests(unittest.TestCase):
             {
                 "country": frozenset({"UK", "USA"}),
                 "rm_size": frozenset({"S", "SS"}),
-                "year": ALL_FILTER,
+                "date": ALL_FILTER,
             },
-            ("country", "rm_size", "year"),
+            ("country", "rm_size", "date"),
             preferred_key="country",
         )
 
         self.assertEqual(selections["country"], ALL_FILTER)
         self.assertEqual(selections["rm_size"], frozenset({"S", "SS"}))
-        self.assertEqual(options["year"], ["2025", "2026"])
+        self.assertEqual(options["date"], ["01/2026", "10/2025"])
 
     def test_cascading_filters_collapse_to_all_when_one_value_remains(self) -> None:
         selections, _options = cascading_filter_state(
@@ -186,14 +188,14 @@ class OrderFilterTests(unittest.TestCase):
     def test_cascading_options_follow_other_selections(self) -> None:
         selections, options = cascading_filter_state(
             self.records,
-            {"country": ALL_FILTER, "rm_size": "S", "year": ALL_FILTER},
-            ("country", "rm_size", "year"),
+            {"country": ALL_FILTER, "rm_size": "S", "date": ALL_FILTER},
+            ("country", "rm_size", "date"),
             preferred_key="rm_size",
         )
 
         self.assertEqual(selections["rm_size"], "S")
         self.assertEqual(options["country"], ["UK"])
-        self.assertEqual(options["year"], ["2025"])
+        self.assertEqual(options["date"], ["10/2025"])
         self.assertEqual(options["rm_size"], ["M", "S", "SS"])
 
     def test_cascading_filters_reset_conflict_but_keep_latest_selection(self) -> None:
@@ -314,6 +316,35 @@ class OrderFilterTests(unittest.TestCase):
 
         self.assertEqual([record.record_id for record in ascending], ["2", "1", "3"])
         self.assertEqual([record.record_id for record in descending], ["3", "2", "1"])
+
+    def test_prod_schedule_sort_is_chronological_across_year_month_and_day(self) -> None:
+        self.records[0].prod_year, self.records[0].prod_month, self.records[0].prod_date = (
+            "2026",
+            "09",
+            "01",
+        )
+        self.records[1].prod_year, self.records[1].prod_month, self.records[1].prod_date = (
+            "2025",
+            "12",
+            "31",
+        )
+        self.records[2].prod_year, self.records[2].prod_month, self.records[2].prod_date = (
+            "2026",
+            "08",
+            "30",
+        )
+
+        sorted_records = sort_orders(self.records, PROD_SCHEDULE_DATE_COLUMN)
+
+        self.assertEqual([record.record_id for record in sorted_records], ["2", "3", "1"])
+
+    def test_date_and_prod_date_filters_use_combined_display(self) -> None:
+        record = self.records[0]
+        record.date, record.month, record.year = "15", "10", "2025"
+        record.prod_date, record.prod_month, record.prod_year = "20", "09", "2025"
+
+        self.assertEqual(filter_value(record, "date"), "15/10/2025")
+        self.assertEqual(filter_value(record, "prod_date"), "20/09/2025")
 
 
 if __name__ == "__main__":
