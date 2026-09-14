@@ -448,6 +448,40 @@ class OrdersViewMixin:
         )
         self._refresh_preview()
 
+    def _apply_order_group_visibility(self) -> None:
+        """Show only the column groups selected from the Order Columns menu."""
+
+        visible_columns = tuple(
+            column
+            for label, members, _background, _foreground in self.order_column_groups
+            if self.order_group_visibility[label].get()
+            for column in members
+        )
+        self.tree.configure(displaycolumns=visible_columns)
+        self._refresh_order_group_header(visible_columns)
+        self.tree.xview_moveto(0)
+
+    def _refresh_order_group_header(self, visible_columns: tuple[str, ...] | None = None) -> None:
+        if not hasattr(self, "order_group_header"):
+            return
+        visible = set(visible_columns or self.tree.cget("displaycolumns"))
+        self.order_group_header.delete("all")
+        x = 0
+        for label, members, background, foreground in self.order_column_groups:
+            shown_members = tuple(column for column in members if column in visible)
+            if not shown_members:
+                continue
+            group_width = sum(self.order_column_widths[column] for column in shown_members)
+            self.order_group_header.create_rectangle(
+                x, 1, x + group_width, 29, fill=background, outline="#ffffff"
+            )
+            self.order_group_header.create_text(
+                x + group_width / 2, 15, text=label, fill=foreground,
+                font=("Segoe UI", 10, "bold"),
+            )
+            x += group_width
+        self.order_group_header.configure(scrollregion=(0, 0, x, 30))
+
     def _edit_production_cell(self, event: tk.Event) -> None:
         item_id = self.tree.identify_row(event.y)
         column_id = self.tree.identify_column(event.x)
