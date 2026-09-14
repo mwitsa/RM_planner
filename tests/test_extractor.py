@@ -37,6 +37,7 @@ class ExtractorTests(unittest.TestCase):
         plan["L5"] = "Cooked\nWonton"
         plan["N5"] = " CODE-001 "
         plan["O5"] = "130g*24"
+        plan["P5"] = 5
         plan["Q5"] = 8
         plan["S5"] = "M"
         plan["U5"] = " Regular "
@@ -85,6 +86,9 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0].packaging, "130g*24")
         self.assertEqual(result.records[0].rm_size, "M")
         self.assertEqual(result.records[0].soup, "Regular")
+        self.assertEqual(result.records[0].cups, 5)
+        self.assertEqual(result.records[0].pcs_per_cup, 8)
+        self.assertEqual(result.records[0].wt_per_pcs, 0.0054)
         self.assertEqual(result.records[0].wontons_per_cup, 8)
         self.assertEqual(result.records[0].order_unit, 1250)
         self.assertEqual(result.records[0].order_cups, 20000)
@@ -151,6 +155,9 @@ class ExtractorTests(unittest.TestCase):
             "packaging",
             "rm_size",
             "soup",
+            "cups",
+            "pcs_per_cup",
+            "wt_per_pcs",
             "wontons_per_cup",
             "order_unit",
             "order_cups",

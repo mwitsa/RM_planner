@@ -88,6 +88,11 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                 raw.get("wontons_per_cup"),
                 "ลูกเกี๊ยว per cup",
             )
+            cups = _optional_number(raw.get("cups"), "cups")
+            pcs_per_cup = _optional_number(
+                raw.get("pcs_per_cup", wontons_per_cup), "Pcs./Cup"
+            )
+            wt_per_pcs = _optional_number(raw.get("wt_per_pcs"), "WT/Pcs")
             ho_weight_kg = _optional_number(
                 raw.get("ho_weight_kg"),
                 "น้ำหนัก HO (kg)",
@@ -110,6 +115,9 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                     packaging=str(raw["packaging"]),
                     rm_size=str(raw.get("rm_size", "")),
                     soup=str(raw["soup"]),
+                    cups=cups,
+                    pcs_per_cup=pcs_per_cup,
+                    wt_per_pcs=wt_per_pcs,
                     wontons_per_cup=wontons_per_cup,
                     order_unit=order_unit,
                     order_cups=order_cups,
@@ -213,6 +221,15 @@ def _backfill_new_source_fields(
             changed = True
         if existing.wontons_per_cup is None and incoming.wontons_per_cup is not None:
             existing.wontons_per_cup = incoming.wontons_per_cup
+            changed = True
+        if existing.cups is None and incoming.cups is not None:
+            existing.cups = incoming.cups
+            changed = True
+        if existing.pcs_per_cup is None and incoming.pcs_per_cup is not None:
+            existing.pcs_per_cup = incoming.pcs_per_cup
+            changed = True
+        if existing.wt_per_pcs is None and incoming.wt_per_pcs is not None:
+            existing.wt_per_pcs = incoming.wt_per_pcs
             changed = True
         if incoming.ho_weight_kg is not None and (
             existing.ho_weight_kg != incoming.ho_weight_kg

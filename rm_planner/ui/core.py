@@ -264,6 +264,9 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "packaging",
             "rm_size",
             "soup",
+            "cups",
+            "pcs_per_cup",
+            "wt_per_pcs",
             "wontons_per_cup",
             "order_unit",
             "order_cups",
@@ -284,6 +287,9 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "packaging": "Packaging",
             "rm_size": "RM Size",
             "soup": "Soup",
+            "cups": "cups",
+            "pcs_per_cup": "Pcs./Cup",
+            "wt_per_pcs": "WT/Pcs",
             "wontons_per_cup": "ลูกเกี๊ยว/ถ้วย",
             "order_unit": "Order (unit)",
             "order_cups": "Order (ถ้วย)",
@@ -303,6 +309,9 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "packaging": 140,
             "rm_size": 90,
             "soup": 130,
+            "cups": 80,
+            "pcs_per_cup": 95,
+            "wt_per_pcs": 90,
             "wontons_per_cup": 120,
             "order_unit": 120,
             "order_cups": 120,
@@ -323,6 +332,9 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
                 "order_cups",
                 "cups_per_unit",
                 "wontons_per_cup",
+                "cups",
+                "pcs_per_cup",
+                "wt_per_pcs",
                 "total_wontons",
                 "ho_weight_kg",
             ) else tk.W
@@ -340,7 +352,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         )
         self.order_column_groups = (
             ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
-            ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "soup"), "#e8e0fb", "#513a87"),
+            ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "soup", "cups", "pcs_per_cup", "wt_per_pcs"), "#e8e0fb", "#513a87"),
             ("ปริมาณผลิต", ("wontons_per_cup", "order_unit", "order_cups", "cups_per_unit", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
         )
         self.order_column_widths = widths

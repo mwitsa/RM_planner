@@ -25,6 +25,9 @@ NUMERIC_ORDER_COLUMNS = {
     "total_wontons",
     "ho_weight_kg",
     "production",
+    "cups",
+    "pcs_per_cup",
+    "wt_per_pcs",
 }
 ORDER_COLUMN_ATTRIBUTES = {
     "customer": "customer_name",
@@ -42,6 +45,9 @@ FILTER_SPECS = (
     ("packaging", "Packaging"),
     ("rm_size", "RM Size"),
     ("soup", "Soup"),
+    ("cups", "cups"),
+    ("pcs_per_cup", "Pcs./Cup"),
+    ("wt_per_pcs", "WT/Pcs"),
     ("wontons_per_cup", "ลูกเกี๊ยว/ถ้วย"),
     ("order_unit", "Order (unit)"),
     ("order_cups", "Order (ถ้วย)"),
@@ -59,6 +65,9 @@ NUMERIC_FILTER_KEYS = {
     "total_wontons",
     "ho_weight_kg",
     "production",
+    "cups",
+    "pcs_per_cup",
+    "wt_per_pcs",
 }
 
 FilterSelection = str | frozenset[str]

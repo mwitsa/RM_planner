@@ -49,6 +49,9 @@ ORDER_EXPORT_FIELDS = (
     "packaging",
     "rm_size",
     "soup",
+    "cups",
+    "pcs_per_cup",
+    "wt_per_pcs",
     "wontons_per_cup",
     "order_unit",
     "order_cups",
@@ -77,6 +80,9 @@ class OrderRecord:
     cups_per_unit: float | None
     rm_size: str = ""
     code: str = ""
+    cups: int | float | None = None
+    pcs_per_cup: int | float | None = None
+    wt_per_pcs: int | float | None = None
     wontons_per_cup: int | float | None = None
     ho_weight_kg: int | float | None = None
     production: int | float | None = None
@@ -305,6 +311,7 @@ def extract_orders(
             raw_group_2 = _cell_value(row, GROUP_2_COLUMN)
             raw_code = _cell_value(row, CODE_COLUMN)
             raw_packaging = _cell_value(row, PACKAGING_COLUMN)
+            raw_cups_per_order = _cell_value(row, RAW_HO_WEIGHT_CUPS_COLUMN)
             raw_wontons_per_cup = _cell_value(row, WONTONS_PER_CUP_COLUMN)
             raw_ho_weight_factor = _cell_value(row, HO_WEIGHT_FACTOR_COLUMN)
             raw_rm_size = _cell_value(row, RM_SIZE_COLUMN)
@@ -321,6 +328,7 @@ def extract_orders(
             order_unit = _parse_number(raw_unit)
             ho_weight_factor = _parse_number(raw_ho_weight_factor)
             order_cups = _parse_number(raw_cups)
+            cups_per_order = _parse_number(raw_cups_per_order)
             wontons_per_cup = _parse_number(raw_wontons_per_cup)
 
             missing: list[str] = []
@@ -334,6 +342,8 @@ def extract_orders(
                 missing.append("invalid order quantity in cups (column AI)")
             if not _is_blank(raw_wontons_per_cup) and wontons_per_cup is None:
                 missing.append("invalid ลูกเกี๊ยว/ถ้วย (column Q)")
+            if not _is_blank(raw_cups_per_order) and cups_per_order is None:
+                missing.append("invalid cups (column P)")
             if not _is_blank(raw_ho_weight_factor) and ho_weight_factor is None:
                 missing.append("invalid น้ำหนัก HO factor (column R)")
 
@@ -365,6 +375,9 @@ def extract_orders(
                     packaging=_clean_text(raw_packaging),
                     rm_size=_clean_text(raw_rm_size),
                     soup=_clean_text(raw_soup),
+                    cups=cups_per_order,
+                    pcs_per_cup=wontons_per_cup,
+                    wt_per_pcs=ho_weight_factor,
                     wontons_per_cup=wontons_per_cup,
                     order_unit=order_unit,
                     order_cups=order_cups,
