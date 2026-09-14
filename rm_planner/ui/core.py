@@ -24,6 +24,8 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.title("Production Plan Extractor / โปรแกรมดึงข้อมูลแผนผลิต")
         self.geometry("1180x720")
         self.minsize(900, 560)
+        # Start maximized on Windows while retaining the standard title bar.
+        self.state("zoomed")
 
         self.file_var = tk.StringVar()
         self.sheet_var = tk.StringVar()
