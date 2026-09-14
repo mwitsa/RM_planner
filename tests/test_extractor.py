@@ -43,6 +43,7 @@ class ExtractorTests(unittest.TestCase):
         plan["T5"] = "Soy dip"
         plan["U5"] = " Regular "
         plan["V5"] = "1,250"
+        plan["X5"] = 500
         plan["R5"] = 0.0054
         plan["AI5"] = 20000
         plan["C6"] = datetime(2026, 8, 28)  # separator/incomplete row
@@ -93,6 +94,7 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0].wt_per_pcs, 0.0054)
         self.assertEqual(result.records[0].wontons_per_cup, 8)
         self.assertEqual(result.records[0].order_unit, 1250)
+        self.assertEqual(result.records[0].stock_unit, 500)
         self.assertEqual(result.records[0].order_cups, 20000)
         self.assertEqual(result.records[0].cups_per_unit, 16)
         self.assertEqual(result.records[0].total_wontons, 160000)
@@ -163,6 +165,7 @@ class ExtractorTests(unittest.TestCase):
             "wt_per_pcs",
             "wontons_per_cup",
             "order_unit",
+            "stock_unit",
             "order_cups",
             "cups_per_unit",
             "total_wontons",

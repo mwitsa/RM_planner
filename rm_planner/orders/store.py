@@ -83,6 +83,7 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                 "order quantity in units",
             )
             order_cups = _optional_number(raw.get("order_cups"), "order quantity in cups")
+            stock_unit = _optional_number(raw.get("stock_unit"), "Stock (unit)")
             cups_per_unit = _optional_number(raw.get("cups_per_unit"), "cups per unit")
             wontons_per_cup = _optional_number(
                 raw.get("wontons_per_cup"),
@@ -121,6 +122,7 @@ def load_order_records(store_path: str | Path) -> list[OrderRecord]:
                     wt_per_pcs=wt_per_pcs,
                     wontons_per_cup=wontons_per_cup,
                     order_unit=order_unit,
+                    stock_unit=stock_unit,
                     order_cups=order_cups,
                     cups_per_unit=cups_per_unit,
                     ho_weight_kg=ho_weight_kg,
@@ -234,6 +236,9 @@ def _backfill_new_source_fields(
             changed = True
         if existing.wt_per_pcs is None and incoming.wt_per_pcs is not None:
             existing.wt_per_pcs = incoming.wt_per_pcs
+            changed = True
+        if existing.stock_unit is None and incoming.stock_unit is not None:
+            existing.stock_unit = incoming.stock_unit
             changed = True
         if incoming.ho_weight_kg is not None and (
             existing.ho_weight_kg != incoming.ho_weight_kg

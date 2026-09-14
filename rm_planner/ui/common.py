@@ -140,6 +140,7 @@ ORDER_COLUMN_FILTER_KEYS = {
     "wt_per_pcs": "wt_per_pcs",
     "wontons_per_cup": "wontons_per_cup",
     "order_unit": "order_unit",
+    "stock_unit": "stock_unit",
     "order_cups": "order_cups",
     "cups_per_unit": "cups_per_unit",
     "total_wontons": "total_wontons",

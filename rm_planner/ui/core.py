@@ -269,6 +269,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "pcs_per_cup",
             "wt_per_pcs",
             "order_unit",
+            "stock_unit",
             "order_cups",
             "total_wontons",
             "ho_weight_kg",
@@ -291,6 +292,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "pcs_per_cup": "Pcs./Cup",
             "wt_per_pcs": "WT/Pcs",
             "order_unit": "Order (unit)",
+            "stock_unit": "Stock (unit)",
             "order_cups": "Order (ถ้วย)",
             "total_wontons": "จำนวนเกี๊ยว",
             "ho_weight_kg": "น้ำหนัก HO (kg)",
@@ -312,6 +314,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             "pcs_per_cup": 95,
             "wt_per_pcs": 90,
             "order_unit": 120,
+            "stock_unit": 120,
             "order_cups": 120,
             "total_wontons": 130,
             "ho_weight_kg": 130,
@@ -326,6 +329,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
             )
             anchor = tk.E if column in (
                 "order_unit",
+                "stock_unit",
                 "order_cups",
                 "cups",
                 "pcs_per_cup",
@@ -348,7 +352,7 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.order_column_groups = (
             ("Order data", ("prod_date", "date", "order_no", "country", "customer"), "#dceeff", "#24567b"),
             ("SKU detail", ("code", "group_1", "group_2", "packaging", "rm_size", "dip", "soup", "cups", "pcs_per_cup", "wt_per_pcs"), "#e8e0fb", "#513a87"),
-            ("ปริมาณผลิต", ("order_unit", "order_cups", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
+            ("ปริมาณผลิต", ("order_unit", "stock_unit", "order_cups", "total_wontons", "ho_weight_kg"), "#e1f3e8", "#24613c"),
         )
         self.order_column_widths = widths
         self.order_group_visibility = {

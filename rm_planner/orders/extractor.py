@@ -33,6 +33,7 @@ RM_SIZE_COLUMN = 19  # S
 DIP_COLUMN = 20  # T
 SOUP_COLUMN = 21  # U
 ORDER_UNIT_COLUMN = 22  # V
+STOCK_UNIT_COLUMN = 24  # X
 ORDER_CUPS_COLUMN = 35  # AI
 SUPPORTED_EXTENSIONS = {".xlsx", ".xlsm"}
 ORDER_EXPORT_FIELDS = (
@@ -56,6 +57,7 @@ ORDER_EXPORT_FIELDS = (
     "wt_per_pcs",
     "wontons_per_cup",
     "order_unit",
+    "stock_unit",
     "order_cups",
     "cups_per_unit",
     "total_wontons",
@@ -87,6 +89,7 @@ class OrderRecord:
     pcs_per_cup: int | float | None = None
     wt_per_pcs: int | float | None = None
     wontons_per_cup: int | float | None = None
+    stock_unit: int | float | None = None
     ho_weight_kg: int | float | None = None
     production: int | float | None = None
     record_id: str = ""
@@ -321,6 +324,7 @@ def extract_orders(
             raw_dip = _cell_value(row, DIP_COLUMN)
             raw_soup = _cell_value(row, SOUP_COLUMN)
             raw_unit = _cell_value(row, ORDER_UNIT_COLUMN)
+            raw_stock_unit = _cell_value(row, STOCK_UNIT_COLUMN)
             raw_cups = _cell_value(row, ORDER_CUPS_COLUMN)
 
             if all(_is_blank(value) for value in (raw_date, raw_customer, raw_unit)):
@@ -330,6 +334,7 @@ def extract_orders(
             prod_period = _parse_production_period(raw_prod_date)
             customer = _clean_text(raw_customer)
             order_unit = _parse_number(raw_unit)
+            stock_unit = _parse_number(raw_stock_unit)
             ho_weight_factor = _parse_number(raw_ho_weight_factor)
             order_cups = _parse_number(raw_cups)
             cups_per_order = _parse_number(raw_cups_per_order)
@@ -344,6 +349,8 @@ def extract_orders(
                 missing.append("invalid or missing order quantity in units (column V)")
             if not _is_blank(raw_cups) and order_cups is None:
                 missing.append("invalid order quantity in cups (column AI)")
+            if not _is_blank(raw_stock_unit) and stock_unit is None:
+                missing.append("invalid Stock (unit) (column X)")
             if not _is_blank(raw_wontons_per_cup) and wontons_per_cup is None:
                 missing.append("invalid ลูกเกี๊ยว/ถ้วย (column Q)")
             if not _is_blank(raw_cups_per_order) and cups_per_order is None:
@@ -385,6 +392,7 @@ def extract_orders(
                     wt_per_pcs=ho_weight_factor,
                     wontons_per_cup=wontons_per_cup,
                     order_unit=order_unit,
+                    stock_unit=stock_unit,
                     order_cups=order_cups,
                     cups_per_unit=_divide_optional(order_cups, order_unit),
                     ho_weight_kg=_calculate_ho_weight(

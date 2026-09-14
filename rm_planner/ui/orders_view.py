@@ -156,6 +156,7 @@ class OrdersViewMixin:
                     self._format_optional_number(record.pcs_per_cup),
                     self._format_optional_number(record.wt_per_pcs),
                     self._format_optional_number(record.order_unit),
+                    self._format_optional_number(record.stock_unit),
                     self._format_optional_number(record.order_cups),
                     self._format_optional_number(record.total_wontons),
                     self._format_optional_number(record.ho_weight_kg),

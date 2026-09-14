@@ -20,6 +20,7 @@ NUMERIC_ORDER_COLUMNS = {
     "prod_date",
     "wontons_per_cup",
     "order_unit",
+    "stock_unit",
     "order_cups",
     "cups_per_unit",
     "total_wontons",
@@ -50,6 +51,7 @@ FILTER_SPECS = (
     ("pcs_per_cup", "Pcs./Cup"),
     ("wt_per_pcs", "WT/Pcs"),
     ("order_unit", "Order (unit)"),
+    ("stock_unit", "Stock (unit)"),
     ("order_cups", "Order (ถ้วย)"),
     ("total_wontons", "จำนวนเกี๊ยว"),
     ("ho_weight_kg", "น้ำหนัก HO (kg)"),
@@ -59,6 +61,7 @@ FILTER_SPECS = (
 NUMERIC_FILTER_KEYS = {
     "wontons_per_cup",
     "order_unit",
+    "stock_unit",
     "order_cups",
     "cups_per_unit",
     "total_wontons",
