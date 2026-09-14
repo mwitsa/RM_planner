@@ -66,7 +66,9 @@ class ProductionPlanApp(DataViewMixin, MasterViewMixin, ShipmentViewMixin, Summa
         self.result: ExtractionResult | None = None
         self.saved_order_records: dict[str, OrderRecord] = {}
         self.order_records_by_id: dict[str, OrderRecord] = {}
-        self.order_sort_column: str | None = SCHEDULE_DATE_COLUMN
+        # The default visible window is based on the production schedule, so
+        # present those orders in production-date order as well.
+        self.order_sort_column: str | None = PROD_SCHEDULE_DATE_COLUMN
         self.order_sort_descending = False
         self.hide_past_orders = True
         self.assortment_table: AssortmentTable | None = None
