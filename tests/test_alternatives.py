@@ -135,6 +135,14 @@ class AlternativeTests(unittest.TestCase):
         self.assertEqual(len(raw_schedule), 2)
         self.assertAlmostEqual(raw_schedule[1]['start_hours'], 0.4)
 
+        # RAW products with different CODEs still run continuously: unlike
+        # cooked work, a raw change must not insert the 30-minute break.
+        context['jobs'][1]['code'] = 'DIFFERENT-RAW-CODE'
+        plan = compare(context)[0]
+        raw_schedule = [entry for entry in plan['schedule'] if entry['line'] == 'RAW']
+        self.assertEqual(plan['changes'], 0)
+        self.assertAlmostEqual(raw_schedule[1]['start_hours'], 0.4)
+
     def test_incompatible_allergens_and_earliest_date(self):
         c = self.context()
         c['jobs'][1]['egg']='ไม่มีไข่'

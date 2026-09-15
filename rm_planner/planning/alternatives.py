@@ -218,7 +218,9 @@ def evaluate(context, rows):
                 if not j['egg'] or j['soup_rank'] is None or j['market'] == 'unassigned':
                     pending.append(f"{j['order']}: ตรวจตลาด กลุ่มไข่ และลำดับซุป")
                 current_operation = operation_key(r)
-                if previous is not None and previous != current_operation:
+                # Raw product changes run continuously.  The standard 30-minute
+                # break/setup applies only to the cooked line.
+                if line != 'RAW' and previous is not None and previous != current_operation:
                     changes += 1
                     elapsed += s['setup_minutes'] / 60
                 previous = current_operation
