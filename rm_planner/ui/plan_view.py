@@ -626,15 +626,11 @@ class PlanViewMixin:
                     rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
                     size_text = ', '.join(rm_sizes)
                     market = job.get('market', 'unassigned')
-                    market_label = {
-                        'domestic': 'ในประเทศ',
-                        'export': 'ต่างประเทศ',
-                    }.get(market, 'ยังไม่กำหนดตลาด')
                     detail = (
                         f"Product: {', '.join(products)}\n"
                         f"CODE: {code}\n"
                         f"RM Size: {size_text}\n"
-                        f"ตลาด: {market_label}\n"
+                        f"Country: {job.get('country_value') or '—'}\n"
                         f"{line} • {fmt(total_quantity)} เกี๊ยว"
                     )
                     border_options = {'outline': '#18324a', 'width': 2}

@@ -13,7 +13,7 @@ from hashlib import sha256
 import json
 import math
 
-from .engine import (order_due_date, production_type_for_order, market_type_for_order,
+from .engine import (order_due_date, production_type_for_order, market_type_for_order, class_value_for_order,
                      outstanding_order_quantities, _inventory_lots)
 from .capacity_store import capacities_at_percentage
 from rm_planner.inventory.range_store import normalize_size_class
@@ -46,6 +46,7 @@ def settings_defaults():
 def build_context(orders, stock, ranges, capacity, classes, weights, start, settings, profiles):
     """Adapt saved application records without mutating those records."""
     start = date.fromisoformat(start)
+    classes = tuple(classes)
     s = dict(settings_defaults(), **settings)
     s.pop('adjustment', None)  # Legacy adjustment duration; replaced by a date.
     for key in s:
@@ -108,6 +109,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             code=order.code.strip(),
             product=order.product.strip(),
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
+            country_value=class_value_for_order(order, 'Country', classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
             day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
             locked=bool(p.get('locked', False)), egg=p.get('egg', ''), soup_rank=rank,

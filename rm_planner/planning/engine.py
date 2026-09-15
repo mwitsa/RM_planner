@@ -386,6 +386,17 @@ def market_type_for_order(
     return "unassigned"
 
 
+def class_value_for_order(
+    record: OrderRecord,
+    class_name: str,
+    definitions: Iterable[ClassDefinition],
+) -> str:
+    """Return the configured Value for a matching Order class definition."""
+
+    definition = _class_definition(record, class_name, definitions)
+    return definition.value.strip() if definition is not None else ""
+
+
 def outstanding_order_quantities(record: OrderRecord) -> tuple[float, float, float]:
     """Return outstanding units, cups, and wontons after manual production."""
 
@@ -567,6 +578,17 @@ def _class_group(
 ) -> str:
     """Return the saved class group for an Order field, if one exists."""
 
+    definition = _class_definition(record, class_name, definitions)
+    return definition.group.strip() if definition is not None else ""
+
+
+def _class_definition(
+    record: OrderRecord,
+    class_name: str,
+    definitions: Iterable[ClassDefinition],
+) -> ClassDefinition | None:
+    """Find the Class Define row matching one field on an Order."""
+
     name_by_class = {
         "Country": record.country,
         "Group 1": record.group_1,
@@ -577,8 +599,8 @@ def _class_group(
             item.class_value.strip().casefold() == class_name.casefold()
             and item.name.strip().casefold() == target_name
         ):
-            return item.group.strip()
-    return ""
+            return item
+    return None
 
 
 def _market_priority(market_type: str) -> int:
