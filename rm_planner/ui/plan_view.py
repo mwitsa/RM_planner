@@ -157,13 +157,7 @@ class PlanViewMixin:
         self._proposal_timeline_canvas.configure(xscrollcommand=timeline_horizontal.set, yscrollcommand=timeline_vertical.set)
         self._proposal_timeline_canvas.bind('<Configure>', lambda _event: self._render_plan_timeline())
         notebook.bind('<<NotebookTabChanged>>', lambda _event: self._render_plan_timeline())
-        actions = ttk.Frame(self.plan_tab)
-        actions.pack(fill='x', pady=8)
-        ttk.Button(actions, text='แก้ความพร้อม / วันผลิตเร็วที่สุด / ล็อกงาน', command=self._proposal_job_dialog).pack(side='left')
-        ttk.Button(actions, text='แผนที่ยืนยันแล้ว', command=self._proposal_history).pack(side='left', padx=8)
-        ttk.Button(actions, text='ตรวจและยืนยันแผนที่เลือก', command=self._approve_proposal).pack(side='right')
         self._proposal_tables['jobs'].bind('<Double-1>', lambda _: self._proposal_job_dialog())
-        ttk.Label(self.plan_tab, textvariable=self.plan_status_var, relief='sunken', padding=5).pack(fill='x')
         self.plan_status_var.set(self._proposal_load_error or 'แสดงแผนเดิมจาก Order • ยังไม่ได้ตรวจ RM หรือ Capacity')
         for var in [self.plan_start_date_var, self.adjust_from_var, *self._proposal_vars.values()]:
             var.trace_add('write', lambda *_: self._plan_inputs_changed())
