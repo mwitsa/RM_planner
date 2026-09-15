@@ -619,7 +619,11 @@ class PlanViewMixin:
             for line, start_hour, thai_label in (('COOKED', 18, 'เกี๊ยวสุก'), ('RAW', 19, 'เกี๊ยวดิบ')):
                 canvas.create_rectangle(left, y, timeline_right, y + row_height - 8,
                                         fill='#f2f6fa', outline='')
-                canvas.create_text(12, y + 13, text=line, anchor='w', fill='#18324a', font=('Segoe UI', 10, 'bold'))
+                line_quantity = sum(entry['qty'] for entry in entries_by_day[day].get(line, ()))
+                canvas.create_text(
+                    12, y + 13, text=f'{line} • {fmt(line_quantity)} ลูก', anchor='w',
+                    fill='#18324a', font=('Segoe UI', 9, 'bold'),
+                )
                 canvas.create_text(12, y + 31, text=thai_label, anchor='w', fill='#6b7d8d', font=('Segoe UI', 8))
                 periods = []
                 for entry in entries_by_day[day].get(line, []):
