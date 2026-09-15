@@ -81,22 +81,68 @@ class PlanViewMixin:
         notebook = ttk.Notebook(self.plan_tab)
         notebook.pack(fill='both', expand=True)
         self._proposal_tables = {}
-        for key, title, columns in [
-            ('jobs', 'แผนผลิต (Excel format)', ('Order', 'แผนเดิม', 'แผนใหม่', 'ไลน์', 'RM', 'จำนวนเกี๊ยว', 'ความพร้อม', 'ล็อก'))]:
+        # Keep the Excel-style plan view aligned with Order: the proposed
+        # production date comes first, then the same three familiar groups.
+        plan_columns = (
+            'new_plan',
+            'prod_date', 'date', 'order_no', 'country', 'customer',
+            'code', 'product', 'group_1', 'group_2', 'packaging', 'rm_size',
+            'dip', 'soup', 'cups', 'pcs_per_cup', 'wt_per_pcs',
+            'order_unit', 'stock_unit', 'order_cups', 'total_wontons',
+            'wt_pd_kg', 'ho_weight_kg',
+        )
+        self._plan_column_headings = {
+            'new_plan': 'แผนใหม่', 'prod_date': 'Prod.Date', 'date': 'Load.Date',
+            'order_no': 'Order No.', 'country': 'Country', 'customer': 'Customer',
+            'code': 'CODE', 'product': 'Product', 'group_1': 'Group 1',
+            'group_2': 'Group 2', 'packaging': 'Packaging', 'rm_size': 'RM Size',
+            'dip': 'Dip', 'soup': 'Soup', 'cups': 'cups', 'pcs_per_cup': 'Pcs./Cup',
+            'wt_per_pcs': 'WT/Pcs', 'order_unit': 'Order (unit)',
+            'stock_unit': 'Stock (unit)', 'order_cups': 'Order (ถ้วย)',
+            'total_wontons': 'จำนวนเกี๊ยว', 'wt_pd_kg': 'WT/PD (kg)',
+            'ho_weight_kg': 'WT/HO (kg)',
+        }
+        self._plan_column_widths = {
+            'new_plan': 110, 'prod_date': 100, 'date': 100, 'order_no': 105,
+            'country': 100, 'customer': 260, 'code': 110, 'product': 180,
+            'group_1': 190, 'group_2': 210, 'packaging': 140, 'rm_size': 90,
+            'dip': 100, 'soup': 130, 'cups': 80, 'pcs_per_cup': 95,
+            'wt_per_pcs': 90, 'order_unit': 120, 'stock_unit': 120,
+            'order_cups': 120, 'total_wontons': 130, 'wt_pd_kg': 120,
+            'ho_weight_kg': 130,
+        }
+        self._plan_column_groups = (
+            ('Order data', ('prod_date', 'date', 'order_no', 'country', 'customer'), '#dceeff', '#24567b'),
+            ('SKU detail', ('code', 'product', 'group_1', 'group_2', 'packaging', 'rm_size', 'dip', 'soup', 'cups', 'pcs_per_cup', 'wt_per_pcs'), '#e8e0fb', '#513a87'),
+            ('ปริมาณผลิต', ('order_unit', 'stock_unit', 'order_cups', 'total_wontons', 'wt_pd_kg', 'ho_weight_kg'), '#e1f3e8', '#24613c'),
+        )
+        for key, title, columns in [('jobs', 'แผนผลิต (Excel format)', plan_columns)]:
             frame = ttk.Frame(notebook)
             notebook.add(frame, text=title)
             tree = ttk.Treeview(frame, columns=columns, show='headings', height=8)
             for column in columns:
-                tree.heading(column, text=column)
-                tree.column(column, width=125, minwidth=60)
-            tree.grid(row=0, column=0, sticky='nsew')
+                tree.heading(column, text=self._plan_column_headings[column])
+                anchor = 'e' if column in {
+                    'cups', 'pcs_per_cup', 'wt_per_pcs', 'order_unit', 'stock_unit',
+                    'order_cups', 'total_wontons', 'wt_pd_kg', 'ho_weight_kg',
+                } else 'w'
+                tree.column(column, width=self._plan_column_widths[column], minwidth=70, anchor=anchor)
+            plan_group_header = tk.Canvas(frame, height=30, background='#f6f8fb',
+                                          highlightthickness=0, borderwidth=0)
+            self._proposal_plan_group_header = plan_group_header
+            self._refresh_plan_group_header()
+            plan_group_header.grid(row=0, column=0, sticky='ew')
+            tree.grid(row=1, column=0, sticky='nsew')
             vs = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
-            vs.grid(row=0, column=1, sticky='ns')
+            vs.grid(row=1, column=1, sticky='ns')
             hs = ttk.Scrollbar(frame, orient='horizontal', command=tree.xview)
-            hs.grid(row=1, column=0, sticky='ew')
-            tree.configure(yscrollcommand=vs.set, xscrollcommand=hs.set)
+            hs.grid(row=2, column=0, sticky='ew')
+            def sync_plan_horizontal_scroll(first: str, last: str) -> None:
+                hs.set(first, last)
+                plan_group_header.xview_moveto(float(first))
+            tree.configure(yscrollcommand=vs.set, xscrollcommand=sync_plan_horizontal_scroll)
             frame.columnconfigure(0, weight=1)
-            frame.rowconfigure(0, weight=1)
+            frame.rowconfigure(1, weight=1)
             self._proposal_tables[key] = tree
         timeline = ttk.Frame(notebook)
         notebook.add(timeline, text='แผนผลิต (Timeline format)')
@@ -278,6 +324,45 @@ class PlanViewMixin:
         except (TypeError, ValueError):
             return ''
 
+    def _refresh_plan_group_header(self):
+        """Draw the Order-style grouped header above the plan detail table."""
+        if not hasattr(self, '_proposal_plan_group_header'):
+            return
+        header = self._proposal_plan_group_header
+        header.delete('all')
+        schedule_width = self._plan_column_widths['new_plan']
+        header.create_rectangle(0, 1, schedule_width, 29, fill='#fff4d8', outline='#ffffff')
+        header.create_text(schedule_width / 2, 15, text='แผนใหม่', fill='#765112',
+                           font=('Segoe UI', 10, 'bold'))
+        x = schedule_width
+        for label, members, background, foreground in self._plan_column_groups:
+            group_width = sum(self._plan_column_widths[column] for column in members)
+            header.create_rectangle(x, 1, x + group_width, 29, fill=background, outline='#ffffff')
+            header.create_text(x + group_width / 2, 15, text=label, fill=foreground,
+                               font=('Segoe UI', 10, 'bold'))
+            x += group_width
+        header.configure(scrollregion=(0, 0, x, 30))
+
+    def _order_for_plan_job(self, job_id):
+        return self.order_records_by_id.get(job_id) or self.saved_order_records.get(job_id)
+
+    def _plan_table_values(self, new_plan, job_id):
+        """Return a plan row in the exact Order-table field order."""
+        order = self._order_for_plan_job(job_id)
+        if order is None:
+            return (new_plan,) + ('—',) * (len(self._plan_column_headings) - 1)
+        optional = self._format_optional_number
+        return (
+            new_plan,
+            order.prod_date_display, order.load_date_display, order.order_no,
+            order.country, order.customer_name, order.code, order.product,
+            order.group_1, order.group_2, order.packaging, order.rm_size,
+            order.dip, order.soup, optional(order.cups), optional(order.pcs_per_cup),
+            optional(order.wt_per_pcs, decimal_places=3, keep_trailing_zeroes=True),
+            optional(order.order_unit), optional(order.stock_unit), optional(order.order_cups),
+            optional(order.total_wontons), optional(order.wt_pd_kg), optional(order.ho_weight_kg),
+        )
+
     def _baseline_orders_in_window(self):
         try:
             start = date.fromisoformat(self.plan_start_date_var.get().strip())
@@ -325,10 +410,7 @@ class PlanViewMixin:
         for index, (planned, order, quantity) in enumerate(rows):
             iid = f'baseline:{index}'
             self._proposal_row_ids[iid] = order.record_id
-            tree.insert('', 'end', iid=iid, values=(
-                order.order_no, planned, planned, order.group_2 or order.group_1,
-                order.rm_size or '—', fmt(quantity), 'ยังไม่ตรวจ', '—',
-            ))
+            tree.insert('', 'end', iid=iid, values=self._plan_table_values(planned, order.record_id))
         self.plan_status_var.set(
             f'คงแผนเดิม: {len(rows):,} งาน ระหว่าง {self.plan_start_date_var.get()}–{end.isoformat()} '
             '• กำลังรอคำนวณทางเลือกอัตโนมัติ'
@@ -416,8 +498,7 @@ class PlanViewMixin:
         for n, r in enumerate(sorted(p['rows'], key=lambda r: (r['day'], r['job']))):
             j = jobs[r['job']]
             self._proposal_row_ids[str(n)] = j['id']
-            tree.insert('', 'end', iid=str(n), values=(j['order'], j['day'], r['day'], j['line'], j['size'],
-                        fmt(r['qty']), READY[j['status']], 'ล็อก' if j['locked'] else 'ปรับได้'))
+            tree.insert('', 'end', iid=str(n), values=self._plan_table_values(r['day'], j['id']))
         self.plan_status_var.set(f"{p['title']} • {len(context['jobs'])} งาน • {context['start']} ถึง {self.plan_end_date_var.get()} • ข้อมูล ณ รอบคำนวณล่าสุด ยังไม่ยืนยัน")
         self._render_plan_timeline()
 
