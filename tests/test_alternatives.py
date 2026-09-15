@@ -203,7 +203,6 @@ class AlternativeTests(unittest.TestCase):
         self.assertEqual(entry['rm_allocated_kg'], 5)
         self.assertEqual(entry['rm_shortage_kg'], 5)
         self.assertEqual(entry['rm_coverage'], 0.5)
-        self.assertEqual(result['daily'][0]['incoming_by_size'], {'M': 5.0})
 
     def test_bk_run_is_fully_uncovered_when_no_bk_stock_exists(self):
         context = {

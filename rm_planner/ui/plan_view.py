@@ -517,13 +517,10 @@ class PlanViewMixin:
         label_width, hour_width, row_height, left = 140, 70, 58, 140
         timeline_hours = len(hours) - 1  # 12:00 through 08:00 next morning = 20 hours.
         timeline_right = left + timeline_hours * hour_width
-        stock_summary_width = 330
-        stock_summary_x = timeline_right + 16
-        width = stock_summary_x + stock_summary_width + 20
+        width = timeline_right + 20
         entries_by_day = {}
         for entry in plan['schedule']:
             entries_by_day.setdefault(entry['day'], {}).setdefault(entry['line'], []).append(entry)
-        daily_by_day = {item['day']: item for item in plan.get('daily', ())}
         colours = {'M': '#4f83cc', 'S': '#2f9d8f', 'SS': '#8268bd'}
         colour_meanings = {
             'M': 'สีน้ำเงิน = RM Size M',
@@ -609,7 +606,6 @@ class PlanViewMixin:
 
         y = 30
         for day in sorted(entries_by_day):
-            day_top = y
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
             for offset, hour in enumerate(hours):
                 x = left + offset * hour_width
@@ -708,47 +704,6 @@ class PlanViewMixin:
                             tags=(tooltip_tag,),
                         )
                 y += row_height
-            day_balance = daily_by_day.get(day, {}).get('by_size', {})
-            incoming_by_size = daily_by_day.get(day, {}).get('incoming_by_size', {})
-            stock_sizes = ('M', 'S', 'SS', 'HC', 'BK')
-            incoming_line = ' | '.join(
-                f"{size} {fmt(incoming_by_size.get(size, 0))} kg"
-                for size in stock_sizes if incoming_by_size.get(size, 0)
-            ) or 'ไม่มี'
-            balance_lines = (
-                ' | '.join(f"{size} {fmt(day_balance.get(size, 0))} kg" for size in stock_sizes[:3]),
-                ' | '.join(f"{size} {fmt(day_balance.get(size, 0))} kg" for size in stock_sizes[3:]),
-            )
-            stock_detail = (
-                f"{day}\nRM รับเข้า: "
-                + ', '.join(f"{size} {fmt(incoming_by_size.get(size, 0))} kg" for size in stock_sizes)
-                + '\nRM คงเหลือหลังผลิต: \n'
-                + '\n'.join(f"{size}: {fmt(day_balance.get(size, 0))} kg" for size in stock_sizes)
-            )
-            stock_tag = f'timeline-stock:{day}'
-            canvas.create_rectangle(
-                stock_summary_x, day_top + 30, stock_summary_x + stock_summary_width,
-                day_top + 30 + row_height * 2 - 8,
-                fill='#f7fafc', outline='#cbd8e3', tags=(stock_tag,),
-            )
-            canvas.create_text(
-                stock_summary_x + 10, day_top + 45, text='RM รับเข้า / คงเหลือสิ้นวัน', anchor='w',
-                fill='#31465a', font=('Segoe UI', 9, 'bold'), tags=(stock_tag,),
-            )
-            canvas.create_text(
-                stock_summary_x + 10, day_top + 63, text=f'เข้า: {incoming_line}', anchor='w',
-                fill='#40566b', font=('Segoe UI', 8), tags=(stock_tag,),
-            )
-            canvas.create_text(
-                stock_summary_x + 10, day_top + 80, text=f'เหลือ: {balance_lines[0]}', anchor='w',
-                fill='#40566b', font=('Segoe UI', 8), tags=(stock_tag,),
-            )
-            canvas.create_text(
-                stock_summary_x + 10, day_top + 97, text=f'       {balance_lines[1]}', anchor='w',
-                fill='#40566b', font=('Segoe UI', 8), tags=(stock_tag,),
-            )
-            canvas.tag_bind(stock_tag, '<Enter>', lambda event, tooltip_text=stock_detail: show_timeline_tip(event, tooltip_text))
-            canvas.tag_bind(stock_tag, '<Leave>', hide_timeline_tip)
             y += 14
         canvas.configure(scrollregion=(0, 0, width, max(y, canvas.winfo_height())))
 
