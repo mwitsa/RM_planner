@@ -418,6 +418,7 @@ class PlanViewMixin:
 
     def _proposal_context(self):
         records = self.result.records if self.result is not None else list(self.saved_order_records.values())
+        operation_rules = load_operation_rules(self.operation_rule_file_path)
         return build_context(records, self.assortment_actual_records.values(),
             self._current_assortment_size_range_definitions(), self.capacity_settings,
             tuple(self.class_definitions.values()), self.wonton_weight_settings,
@@ -425,7 +426,7 @@ class PlanViewMixin:
                 **{k: v.get() for k, v in self._proposal_vars.items()},
                 'adjust_from': self.adjust_from_var.get(),
             },
-            self._proposal_preferences['profiles'])
+            self._proposal_preferences['profiles'], operation_rules)
 
     def _calculate_proposals(self, quiet=False):
         try:

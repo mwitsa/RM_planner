@@ -143,6 +143,42 @@ class AlternativeTests(unittest.TestCase):
         self.assertEqual(plan['changes'], 0)
         self.assertAlmostEqual(raw_schedule[1]['start_hours'], 0.4)
 
+    def test_workflow_rules_order_only_proposed_cooked_plans(self):
+        base_job = dict(order='test', code='', qty=100, day='2026-09-16', locked=False,
+                        earliest='', status='unknown', ready_date='', reviewer='', max_qty=0,
+                        line='COOKED', market='domestic', egg='มีไข่', soup_rank=0,
+                        cups=10, yield_rate=10, stock_size='M', size='M', due='2026-09-16')
+        context = {
+            'start': '2026-09-16',
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-16', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                dict(base_job, id='a', sku='A', class_groups={'country': 'd'}),
+                dict(base_job, id='b', sku='B', class_groups={'country': 'e'}),
+            ],
+            'lots': [], 'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [],
+            'operation_rules': (
+                {'name': 'Country order', 'nodes': (
+                    {'class': 'Country', 'group': 'E'}, {'class': 'Country', 'group': 'D'},
+                )},
+            ),
+        }
+
+        plans = compare(context)
+        baseline = [entry['job'] for entry in plans[0]['schedule'] if entry['line'] == 'COOKED']
+        proposed = [entry['job'] for entry in plans[1]['schedule'] if entry['line'] == 'COOKED']
+
+        self.assertEqual(baseline, ['a', 'b'])
+        self.assertEqual(proposed, ['b', 'a'])
+
+        # Workflow rules are deliberately a cooked-wonton sequencing tool;
+        # RAW keeps its normal production order even when the same classes match.
+        raw_context = dict(context, jobs=[dict(job, line='RAW') for job in context['jobs']])
+        raw_plan = evaluate(raw_context, baseline_rows(raw_context), apply_operation_rules=True)
+        raw_order = [entry['job'] for entry in raw_plan['schedule'] if entry['line'] == 'RAW']
+        self.assertEqual(raw_order, ['a', 'b'])
+
     def test_incompatible_allergens_and_earliest_date(self):
         c = self.context()
         c['jobs'][1]['egg']='ไม่มีไข่'

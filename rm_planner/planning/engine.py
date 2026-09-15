@@ -386,6 +386,16 @@ def market_type_for_order(
     return "unassigned"
 
 
+def class_group_for_order(
+    record: OrderRecord,
+    class_name: str,
+    definitions: Iterable[ClassDefinition],
+) -> str:
+    """Return the configured Class Define Group for an Order field."""
+
+    return _class_group(record, class_name, definitions)
+
+
 def outstanding_order_quantities(record: OrderRecord) -> tuple[float, float, float]:
     """Return outstanding units, cups, and wontons after manual production."""
 
@@ -579,10 +589,16 @@ def _class_definition(
     """Find the Class Define row matching one field on an Order."""
 
     name_by_class = {
-        "Country": record.country,
-        "Group 1": record.group_1,
+        "country": record.country,
+        "customer": record.customer_name,
+        "group 1": record.group_1,
+        "group 2": record.group_2,
+        "packaging": record.packaging,
+        "soup": record.soup,
     }
-    target_name = name_by_class[class_name].strip().casefold()
+    target_name = name_by_class.get(class_name.strip().casefold(), "").strip().casefold()
+    if not target_name:
+        return None
     for item in definitions:
         if (
             item.class_value.strip().casefold() == class_name.casefold()

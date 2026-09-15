@@ -13,7 +13,7 @@ from hashlib import sha256
 import json
 import math
 
-from .engine import (order_due_date, production_type_for_order, market_type_for_order,
+from .engine import (class_group_for_order, order_due_date, production_type_for_order, market_type_for_order,
                      outstanding_order_quantities, _inventory_lots)
 from .capacity_store import capacities_at_percentage
 from rm_planner.inventory.range_store import normalize_size_class
@@ -43,10 +43,25 @@ def settings_defaults():
                 stop_cost=None, freeze_cost=None, freeze_percent=None)
 
 
-def build_context(orders, stock, ranges, capacity, classes, weights, start, settings, profiles):
+def build_context(orders, stock, ranges, capacity, classes, weights, start, settings, profiles,
+                  operation_rules=()):
     """Adapt saved application records without mutating those records."""
     start = date.fromisoformat(start)
     classes = tuple(classes)
+    operation_rules = tuple(
+        {
+            'name': str(rule.get('name', '')).strip(),
+            'nodes': tuple(
+                {'class': str(node.get('class', '')).strip(), 'group': str(node.get('group', '')).strip()}
+                for node in rule.get('nodes', ())
+                if isinstance(node, dict) and str(node.get('class', '')).strip() and str(node.get('group', '')).strip()
+            ),
+        }
+        for rule in operation_rules if isinstance(rule, dict)
+    )
+    operation_classes = {
+        node['class'] for rule in operation_rules for node in rule['nodes']
+    }
     s = dict(settings_defaults(), **settings)
     s.pop('adjustment', None)  # Legacy adjustment duration; replaced by a date.
     for key in s:
@@ -109,6 +124,10 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             code=order.code.strip(),
             product=order.product.strip(),
             country=order.country.strip(),
+            class_groups={
+                class_name.casefold(): class_group_for_order(order, class_name, classes).casefold()
+                for class_name in operation_classes
+            },
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
             day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
@@ -131,7 +150,8 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     for lot in lots:
         number(lot['kg'], 'Stock kg')
     return dict(start=start.isoformat(), settings=s, jobs=jobs, lots=lots,
-                capacity={'RAW': float(raw), 'COOKED': float(cooked)}, notices=notices, forecasts=forecasts)
+                capacity={'RAW': float(raw), 'COOKED': float(cooked)}, notices=notices,
+                forecasts=forecasts, operation_rules=operation_rules)
 
 
 def signature(context):
@@ -142,7 +162,17 @@ def baseline_rows(context):
     return [dict(job=j['id'], day=j['day'], qty=j['qty']) for j in context['jobs']]
 
 
-def evaluate(context, rows):
+def _operation_rule_rank(job, rules):
+    """Return the workflow position for one cooked job, or a final fallback."""
+
+    for rule_index, rule in enumerate(rules):
+        for node_index, node in enumerate(rule['nodes']):
+            if job.get('class_groups', {}).get(node['class'].casefold()) == node['group'].casefold():
+                return rule_index, node_index
+    return len(rules), 0
+
+
+def evaluate(context, rows, apply_operation_rules=False):
     jobs = {j['id']: j for j in context['jobs']}
     s = context['settings']
     start = date.fromisoformat(context['start'])
@@ -199,15 +229,20 @@ def evaluate(context, rows):
                 # detail differs, so they become one uninterrupted run.
                 return job['code'] if line == 'RAW' and job['code'] else job['sku']
 
+            def work_key(row):
+                job = jobs[row['job']]
+                fallback = (
+                    job['soup_rank'] if job['soup_rank'] is not None else 999,
+                    operation_key(row),
+                    row['job'],
+                )
+                if line == 'COOKED' and apply_operation_rules:
+                    return (*_operation_rule_rank(job, context.get('operation_rules', ())), *fallback)
+                return fallback if line == 'COOKED' else (operation_key(row), row['job'])
+
             work = sorted(
                 (r for r in selected if jobs[r['job']]['line'] == line),
-                key=lambda r: (
-                    operation_key(r) if line == 'RAW' else (
-                        jobs[r['job']]['soup_rank'] if jobs[r['job']]['soup_rank'] is not None else 999,
-                        operation_key(r),
-                    ),
-                    r['job'],
-                ),
+                key=work_key,
             )
             groups = {(jobs[r['job']]['market'], jobs[r['job']]['egg']) for r in work}
             if len(groups) > 1:
@@ -267,7 +302,9 @@ def compare(context):
     results = [dict(base, id='baseline', title=TITLES['baseline'])]
     jobs = {j['id']: j for j in context['jobs']}
     for policy in ('material', 'balanced'):
-        current = deepcopy(base)
+        # Only proposed plans follow the visual Operation order rule.  The
+        # baseline remains a faithful view of the imported production plan.
+        current = evaluate(context, baseline_rows(context), apply_operation_rules=True)
         if not base['errors'] and (policy != 'balanced' or base['cost'] is not None):
             # Start earliest; a moved job is considered only once, preserving readiness caps.
             used = set()
@@ -295,7 +332,7 @@ def compare(context):
                         rows.append(dict(job=j['id'], day=target, qty=amount))
                         if j['qty'] - amount > EPS:
                             rows.append(dict(job=j['id'], day=j['day'], qty=j['qty'] - amount))
-                        trial = evaluate(context, rows)
+                        trial = evaluate(context, rows, apply_operation_rules=True)
                         if trial['errors']:
                             high = amount
                         else:

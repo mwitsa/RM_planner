@@ -260,6 +260,12 @@ class CapacityViewMixin:
         self.operation_rule_status_var.set(
             f"Saved {len(self.operation_rules):,} rule(s). Order runs left → right, then top → bottom."
         )
+        # Proposed plans retain a calculation snapshot, so regenerate them
+        # immediately after the workflow changes. The baseline is unaffected.
+        if hasattr(self, "_proposal_tables"):
+            self._invalidate_proposals()
+            self.after_idle(self._render_baseline_preview)
+            self.after_idle(lambda: self._calculate_proposals(quiet=True))
         return True
 
     def _add_operation_rule(self) -> None:
