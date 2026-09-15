@@ -203,6 +203,10 @@ class CapacityViewMixin:
         toolbar.pack(fill=tk.X, pady=(0, 10))
         ttk.Button(toolbar, text="+ Add rule", command=self._add_operation_rule).pack(side=tk.LEFT)
         ttk.Button(toolbar, text="Remove selected box", command=self._remove_selected_operation_rule_node).pack(side=tk.LEFT, padx=8)
+        order_help = ttk.Label(toolbar, text="ⓘ Order help", foreground="#24567b", cursor="hand2")
+        order_help.pack(side=tk.RIGHT)
+        order_help.bind("<Enter>", self._show_operation_rule_order_tip)
+        order_help.bind("<Leave>", self._hide_operation_rule_order_tip)
 
         board = ttk.LabelFrame(self.operation_order_rule_tab, text="Workflow board", padding=1)
         board.pack(fill=tk.BOTH, expand=True)
@@ -219,6 +223,30 @@ class CapacityViewMixin:
         ttk.Label(self.operation_order_rule_tab, textvariable=self.operation_rule_status_var,
                   relief=tk.SUNKEN, anchor=tk.W, padding=(6, 3)).pack(fill=tk.X, pady=(10, 0))
         self._render_operation_rule_canvas()
+
+    def _show_operation_rule_order_tip(self, event) -> None:
+        self._hide_operation_rule_order_tip()
+        tip = tk.Toplevel(self)
+        tip.overrideredirect(True)
+        tip.attributes("-topmost", True)
+        tk.Label(
+            tip,
+            text="Run order\n• Each Rule: left → right\n• Then: top → bottom\n• Drag RULE to move the whole row",
+            justify=tk.LEFT,
+            background="#18324a",
+            foreground="white",
+            font=("Segoe UI", 9),
+            padx=9,
+            pady=7,
+        ).pack()
+        tip.geometry(f"+{event.x_root + 12}+{event.y_root + 14}")
+        self._operation_rule_order_tip = tip
+
+    def _hide_operation_rule_order_tip(self, _event=None) -> None:
+        tip = getattr(self, "_operation_rule_order_tip", None)
+        if tip is not None and tip.winfo_exists():
+            tip.destroy()
+        self._operation_rule_order_tip = None
 
     def _save_operation_rules(self) -> bool:
         try:
@@ -323,8 +351,15 @@ class CapacityViewMixin:
                                anchor=tk.W, fill="#64748b", font=("Segoe UI", 11))
         for rule_index, rule in enumerate(self.operation_rules):
             y = 48 + rule_index * row_height
-            canvas.create_text(18, y + node_height / 2, text=f"RULE {rule_index + 1}", anchor=tk.W,
-                               fill="#1f2937", font=("Segoe UI", 13, "bold"))
+            rule_tag = f"operation-rule:{rule_index}"
+            canvas.create_rectangle(8, y + 12, 132, y + node_height - 12, fill="#f2f6fa",
+                                    outline="", tags=(rule_tag,))
+            canvas.create_text(18, y + node_height / 2, text=f"RULE {rule_index + 1}  ↕", anchor=tk.W,
+                               fill="#1f2937", font=("Segoe UI", 13, "bold"), tags=(rule_tag,))
+            canvas.tag_bind(rule_tag, "<ButtonPress-1>",
+                            lambda event, r=rule_index: self._start_operation_rule_row_drag(event, r))
+            canvas.tag_bind(rule_tag, "<B1-Motion>", self._move_operation_rule_row_drag)
+            canvas.tag_bind(rule_tag, "<ButtonRelease-1>", self._finish_operation_rule_row_drag)
             nodes = rule["nodes"]
             for node_index, node in enumerate(nodes):
                 x = first_x + node_index * (node_width + gap)
@@ -353,6 +388,33 @@ class CapacityViewMixin:
             canvas.tag_bind(add_tag, "<Button-1>",
                             lambda _event, target_rule=rule_index: self._add_operation_rule_node(target_rule))
         canvas.configure(scrollregion=(0, 0, width, height))
+
+    def _start_operation_rule_row_drag(self, event, rule_index: int) -> None:
+        self._operation_rule_row_drag = {"rule": rule_index, "y": self.operation_rule_canvas.canvasy(event.y)}
+
+    def _move_operation_rule_row_drag(self, event) -> None:
+        if not hasattr(self, "_operation_rule_row_drag") or self._operation_rule_row_drag is None:
+            return
+        canvas = self.operation_rule_canvas
+        current_y = canvas.canvasy(event.y)
+        delta_y = current_y - self._operation_rule_row_drag["y"]
+        canvas.move(f"operation-rule:{self._operation_rule_row_drag['rule']}", 0, delta_y)
+        self._operation_rule_row_drag["y"] = current_y
+
+    def _finish_operation_rule_row_drag(self, event) -> None:
+        drag = getattr(self, "_operation_rule_row_drag", None)
+        if drag is None:
+            return
+        source_rule = drag["rule"]
+        target_rule = min(max(0, int((self.operation_rule_canvas.canvasy(event.y) - 48) // 130)),
+                          len(self.operation_rules) - 1)
+        if target_rule != source_rule:
+            rule = self.operation_rules.pop(source_rule)
+            self.operation_rules.insert(target_rule, rule)
+            self._operation_rule_selected = None
+            self._save_operation_rules()
+        self._operation_rule_row_drag = None
+        self._render_operation_rule_canvas()
 
     def _start_operation_rule_drag(self, event, rule_index: int, node_index: int) -> None:
         self._operation_rule_selected = (rule_index, node_index)
