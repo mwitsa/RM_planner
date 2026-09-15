@@ -202,8 +202,7 @@ class CapacityViewMixin:
         toolbar = ttk.Frame(self.operation_order_rule_tab)
         toolbar.pack(fill=tk.X, pady=(0, 10))
         ttk.Button(toolbar, text="+ Add rule", command=self._add_operation_rule).pack(side=tk.LEFT)
-        ttk.Button(toolbar, text="+ Add class box", command=self._add_operation_rule_node).pack(side=tk.LEFT, padx=8)
-        ttk.Button(toolbar, text="Remove selected box", command=self._remove_selected_operation_rule_node).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text="Remove selected box", command=self._remove_selected_operation_rule_node).pack(side=tk.LEFT, padx=8)
 
         board = ttk.LabelFrame(self.operation_order_rule_tab, text="Workflow board", padding=1)
         board.pack(fill=tk.BOTH, expand=True)
@@ -238,7 +237,7 @@ class CapacityViewMixin:
         self._save_operation_rules()
         self._render_operation_rule_canvas()
 
-    def _add_operation_rule_node(self) -> None:
+    def _add_operation_rule_node(self, rule_index: int) -> None:
         if not self.operation_rules:
             messagebox.showinfo("Operation order rule", "เพิ่ม Rule ก่อน แล้วจึงเพิ่มกล่อง Class", parent=self)
             return
@@ -252,14 +251,11 @@ class CapacityViewMixin:
         dialog.resizable(False, False)
         body = ttk.Frame(dialog, padding=16)
         body.pack(fill=tk.BOTH, expand=True)
-        rule_var = tk.StringVar(value=f"Rule {len(self.operation_rules)}")
         class_var = tk.StringVar(value=classes[0])
         group_var = tk.StringVar()
-        ttk.Label(body, text="Rule").grid(row=0, column=0, sticky=tk.W, pady=(0, 7))
-        rule_picker = ttk.Combobox(body, textvariable=rule_var,
-                                   values=[f"Rule {number}" for number in range(1, len(self.operation_rules) + 1)],
-                                   width=30, state="readonly")
-        rule_picker.grid(row=0, column=1, sticky="ew", padx=(12, 0), pady=(0, 7))
+        ttk.Label(body, text=f"Add to Rule {rule_index + 1}", style="Summary.TLabel").grid(
+            row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 12)
+        )
         ttk.Label(body, text="Class").grid(row=1, column=0, sticky=tk.W, pady=(0, 7))
         class_picker = ttk.Combobox(body, textvariable=class_var, values=classes, width=30, state="readonly")
         class_picker.grid(row=1, column=1, sticky="ew", padx=(12, 0), pady=(0, 7))
@@ -281,7 +277,6 @@ class CapacityViewMixin:
             if not group_var.get():
                 messagebox.showwarning("Add class box", "Class นี้ยังไม่มี Group ให้เลือก", parent=dialog)
                 return
-            rule_index = int(rule_var.get().removeprefix("Rule ")) - 1
             self.operation_rules[rule_index]["nodes"].append({
                 "class": class_var.get().strip(), "group": group_var.get().strip(),
             })
@@ -349,6 +344,14 @@ class CapacityViewMixin:
                                 lambda event, r=rule_index, n=node_index: self._start_operation_rule_drag(event, r, n))
                 canvas.tag_bind(tag, "<B1-Motion>", self._move_operation_rule_drag)
                 canvas.tag_bind(tag, "<ButtonRelease-1>", self._finish_operation_rule_drag)
+            add_x = first_x + len(nodes) * (node_width + gap) + 18
+            add_tag = f"operation-add:{rule_index}"
+            canvas.create_rectangle(add_x, y + 19, add_x + 36, y + 55, fill="#ffffff",
+                                    outline="#7b8ca0", width=1, tags=(add_tag,))
+            canvas.create_text(add_x + 18, y + 37, text="+", fill="#24567b",
+                               font=("Segoe UI", 20, "bold"), tags=(add_tag,))
+            canvas.tag_bind(add_tag, "<Button-1>",
+                            lambda _event, target_rule=rule_index: self._add_operation_rule_node(target_rule))
         canvas.configure(scrollregion=(0, 0, width, height))
 
     def _start_operation_rule_drag(self, event, rule_index: int, node_index: int) -> None:
