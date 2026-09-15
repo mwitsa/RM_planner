@@ -196,7 +196,7 @@ class PlanViewMixin:
                 child.destroy()
             for tree in self._proposal_tables.values():
                 tree.delete(*tree.get_children())
-            self._proposal_detail.set('ข้อมูลเปลี่ยนแล้ว กรุณาคำนวณใหม่')
+            self._proposal_detail.set('กำลังคำนวณแผนใหม่')
             self.plan_status_var.set('กรุณาคำนวณใหม่ก่อนตรวจหรือยืนยัน')
 
     def _refresh_plan_date_options(self):
@@ -479,25 +479,102 @@ class PlanViewMixin:
 
     def _select_proposal(self, index):
         self._proposal_selected = index
+        existing_cost_tip = getattr(self, '_proposal_cost_tip', None)
+        if existing_cost_tip is not None and existing_cost_tip.winfo_exists():
+            existing_cost_tip.destroy()
+        self._proposal_cost_tip = None
         for child in self._proposal_cards.winfo_children():
             child.destroy()
         context = self._proposal_context_used
+
+        def hide_cost_tip(_event=None):
+            tip = getattr(self, '_proposal_cost_tip', None)
+            if tip is not None and tip.winfo_exists():
+                tip.destroy()
+            self._proposal_cost_tip = None
+
+        def show_cost_tip(event, plan):
+            hide_cost_tip()
+            settings = context['settings']
+            details = ['รายละเอียดต้นทุน']
+            if plan['freeze_cost'] is None:
+                details.append('• ค่า Freeze: RM เหลือทั้งหมดจะเข้า Freeze 100% (กรุณาตั้ง บาท/kg)')
+            else:
+                details.append(
+                    f"• ค่า Freeze: RM เหลือ {fmt(plan['remaining'])} kg × 100%"
+                    f" = {fmt(plan['freeze_kg'])} kg"
+                )
+                details.append(
+                    f"  • {fmt(plan['freeze_kg'])} kg × ฿ {fmt(settings['freeze_cost'])}/kg"
+                    f" = ฿ {fmt(plan['freeze_cost'])}"
+                )
+            if plan['setup_cost'] is None:
+                details.append('• ค่าเปลี่ยนงาน: ยังไม่คำนวณ (กรุณาตั้ง บาท/ชม.)')
+            else:
+                details.append('• ค่าเปลี่ยนงานรายวัน:')
+                active_from = settings.get('adjust_from', context['start'])
+                daily_changes = [
+                    day for day in plan.get('daily', ())
+                    if day['day'] >= active_from and day.get('changes', 0)
+                ]
+                for day in daily_changes:
+                    day_cost = day['changes'] * settings['setup_minutes'] / 60 * settings['stop_cost']
+                    details.append(
+                        f"  • {day['day']}: {day['changes']} ครั้ง × {fmt(settings['setup_minutes'])} นาที"
+                        f" × ฿ {fmt(settings['stop_cost'])}/ชม. = ฿ {fmt(day_cost)}"
+                    )
+                if not daily_changes:
+                    details.append('  • ไม่มีวันที่มีการเปลี่ยนงาน = ฿ 0.0')
+                details.append(f"  • รวมค่าเปลี่ยนงาน: ฿ {fmt(plan['setup_cost'])}")
+            details.append(f"• รวมต้นทุน: ฿ {fmt(plan['cost'])}")
+            tip = tk.Toplevel(self)
+            tip.overrideredirect(True)
+            tip.attributes('-topmost', True)
+            tk.Label(
+                tip,
+                text='\n'.join(details),
+                justify=tk.LEFT,
+                background='#18324a',
+                foreground='white',
+                font=('Segoe UI', 9),
+                padx=9,
+                pady=6,
+            ).pack()
+            tip.update_idletasks()
+            x = event.x_root + 12
+            if x + tip.winfo_reqwidth() > tip.winfo_screenwidth():
+                x = max(0, event.x_root - tip.winfo_reqwidth() - 12)
+            y = event.y_root + 14
+            if y + tip.winfo_reqheight() > tip.winfo_screenheight():
+                y = max(0, event.y_root - tip.winfo_reqheight() - 12)
+            tip.geometry(f'+{x}+{y}')
+            self._proposal_cost_tip = tip
+
         for i, plan in enumerate(self._proposals):
             self._proposal_cards.columnconfigure(i, weight=1, uniform='proposal')
             box = tk.Frame(self._proposal_cards, bg='white', highlightthickness=2,
                            highlightbackground='#168078' if i == index else '#d8dce2', padx=8, pady=8)
             box.grid(row=0, column=i, sticky='nsew', padx=3)
-            for title, font in [(plan['title'], ('Segoe UI', 10, 'bold')),
-                                (fmt(plan['remaining'])+' kg', ('Segoe UI', 19, 'bold')),
-                                ('ต้นทุน ฿ '+fmt(plan['cost']), ('Segoe UI', 10, 'bold')),
-                                (f"เปลี่ยน SKU {plan['changes']} ครั้ง • ย้าย {plan['moved']} งาน", ('Segoe UI', 9))]:
-                tk.Label(box, text=title, bg='white', anchor='w', font=font).pack(fill='x', pady=2)
+            tk.Label(box, text=plan['title'], bg='white', anchor='w',
+                     font=('Segoe UI', 10, 'bold')).pack(fill='x', pady=2)
+            tk.Label(box, text='เหลือ '+fmt(plan['remaining'])+' kg', bg='white', anchor='w',
+                     font=('Segoe UI', 19, 'bold')).pack(fill='x', pady=2)
+            cost_label = tk.Label(box, text='ต้นทุน ฿ '+fmt(plan['cost']), bg='white', anchor='w',
+                                  font=('Segoe UI', 10, 'bold'), cursor='question_arrow')
+            cost_label.pack(fill='x', pady=2)
+            cost_label.bind('<Enter>', lambda event, selected_plan=plan: show_cost_tip(event, selected_plan))
+            cost_label.bind('<Leave>', hide_cost_tip)
+            produced_orders = len({row['job'] for row in plan['rows']})
+            produced_wontons = sum(float(row['qty']) for row in plan['rows'])
+            tk.Label(
+                box,
+                text=f'ผลิต {produced_orders:,} ออเดอร์ | {fmt(produced_wontons)} ลูกเกี๊ยว',
+                bg='white', anchor='w', font=('Segoe UI', 9),
+            ).pack(fill='x', pady=2)
             ttk.Button(box, text='กำลังดูแผนนี้' if i == index else 'ดูรายละเอียด',
                        command=lambda n=i: self._select_proposal(n)).pack(fill='x', pady=(6, 0))
         p = self._proposals[index]
-        delta = None if p['cost'] is None else self._proposals[0]['cost'] - p['cost']
-        self._proposal_detail.set(f"วันนี้ RM เหลือ {fmt(p['daily'][0]['remaining'])} kg | ค่า Freeze สิ้นช่วง ฿ {fmt(p['freeze_cost'])} | "
-            f"ค่าเปลี่ยนงาน ฿ {fmt(p['setup_cost'])} | ประหยัดเทียบฐาน ฿ {fmt(delta)} | งานเลยกำหนดส่ง {p['late']} งาน")
+        self._proposal_detail.set('')
         jobs = {j['id']: j for j in context['jobs']}
         self._proposal_row_ids = {}
         tree = self._proposal_tables['jobs']
@@ -506,11 +583,17 @@ class PlanViewMixin:
             j = jobs[r['job']]
             self._proposal_row_ids[str(n)] = j['id']
             tree.insert('', 'end', iid=str(n), values=self._plan_table_values(r['day'], j['id']))
-        self.plan_status_var.set(f"{p['title']} • {len(context['jobs'])} งาน • {context['start']} ถึง {self.plan_end_date_var.get()} • ข้อมูล ณ รอบคำนวณล่าสุด ยังไม่ยืนยัน")
+        deferred = len(p.get('deferred', ()))
+        schedule_count = len(p['rows'])
+        suffix = f' • เลื่อนไปหลังช่วง {deferred} งาน' if deferred else ''
+        self.plan_status_var.set(
+            f"{p['title']} • จัดวาง {schedule_count} งาน{suffix} • "
+            f"{context['start']} ถึง {self.plan_end_date_var.get()} • ข้อมูล ณ รอบคำนวณล่าสุด ยังไม่ยืนยัน"
+        )
         self._render_plan_timeline()
 
     def _render_plan_timeline(self):
-        """Draw the selected plan in production-day time (16:00 to 08:00)."""
+        """Draw the selected plan in production-day time (16:00 to 04:00)."""
         if not hasattr(self, '_proposal_timeline_canvas'):
             return
         canvas = self._proposal_timeline_canvas
@@ -525,9 +608,9 @@ class PlanViewMixin:
         plan = self._proposals[self._proposal_selected]
         jobs = {job['id']: job for job in self._proposal_context_used['jobs']}
         production_start_hour = PRODUCTION_WINDOW_START_HOUR
-        hours = tuple(range(production_start_hour, 24)) + tuple(range(0, 9))
+        hours = tuple(range(production_start_hour, 24)) + tuple(range(0, 5))
         label_width, row_height, left = 140, 58, 140
-        timeline_hours = len(hours) - 1  # 16:00 through 08:00 next morning = 16 hours.
+        timeline_hours = len(hours) - 1  # 16:00 through 04:00 next morning = 12 hours.
         # Keep the entire timeline as wide as before (20 × 70 px), making the
         # shorter 16-hour window more legible instead of shrinking the canvas.
         hour_width = (20 * 70) / timeline_hours
@@ -611,7 +694,7 @@ class PlanViewMixin:
             # Keep each receiving date separate even when an older lot is
             # displayed at the top of the current planning horizon.
             lot_groups.setdefault(lot['arrival_day'], []).append(lot)
-        # Leave the 08:00 label fully visible before the first RM-arrival box.
+        # Leave the 04:00 label fully visible before the first RM-arrival box.
         rm_rail_x = timeline_right + 92
         rm_bar_width, rm_bar_gap, rm_group_gap = 16, 5, 14
         market_group_gap, market_header_min_width = 12, 54
@@ -790,8 +873,22 @@ class PlanViewMixin:
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
             for offset, hour in enumerate(hours):
                 x = left + offset * hour_width
-                canvas.create_text(x + hour_width / 2, y + 14, text=f'{hour:02d}:00', fill='#557188', font=('Segoe UI', 9))
-                canvas.create_line(x, y + 28, x, y + 28 + row_height * 2, fill='#d9e3eb', dash=(2, 3))
+                # Labels sit directly above their hour boundary, so a bar's
+                # left edge can be read as an exact start time at a glance.
+                canvas.create_text(
+                    x, y + 14, text=f'{hour:02d}:00', anchor='n',
+                    fill='#385a76', font=('Segoe UI', 9, 'bold'),
+                )
+                canvas.create_line(
+                    x, y + 25, x, y + 28 + row_height * 2,
+                    fill='#aebfce', width=1,
+                )
+                if offset < timeline_hours:
+                    half_hour_x = x + hour_width / 2
+                    canvas.create_line(
+                        half_hour_x, y + 28, half_hour_x, y + 28 + row_height * 2,
+                        fill='#dce5ed', dash=(2, 3),
+                    )
             y += 30
             for line, thai_label in (('COOKED', 'เกี๊ยวสุก'), ('RAW', 'เกี๊ยวดิบ')):
                 start_hour = production_start_hours[line]
@@ -823,8 +920,8 @@ class PlanViewMixin:
                     x2 = x1
                     for entry in entries:
                         entry_job = jobs[entry['job']]
-                        cup_quantity = entry['qty'] / entry_job['qty'] * entry_job['cups'] if entry_job['qty'] else 0
-                        duration = cup_quantity / capacity * self._proposal_context_used['settings']['shift_hours'] if capacity else 0
+                        wonton_quantity = entry['qty']
+                        duration = wonton_quantity / capacity * self._proposal_context_used['settings']['shift_hours'] if capacity else 0
                         entry_start = left + (((start_hour - production_start_hour) % 24) + entry['start_hours']) * hour_width
                         x2 = max(x2, entry_start + max(duration * hour_width, 3))
                     x2 = min(left + timeline_hours * hour_width, x2)
@@ -833,7 +930,18 @@ class PlanViewMixin:
                         jobs[entry['job']].get('product', '').strip() or '—'
                         for entry in entries
                     ))
-                    code = period['operation'] or '—'
+                    # Raw-line grouping uses the product code as its
+                    # operation key.  Cooked work is grouped differently, so
+                    # never take the displayed code from that grouping alone:
+                    # use the product Code when present, otherwise show the
+                    # Excel Order No. rather than an empty ``CODE:`` line.
+                    codes = list(dict.fromkeys(
+                        jobs[entry['job']].get('code', '').strip()
+                        or jobs[entry['job']].get('order', '').strip()
+                        or '—'
+                        for entry in entries
+                    ))
+                    code = ', '.join(codes)
                     total_quantity = sum(entry['qty'] for entry in entries)
                     period_rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
                     size_text = ', '.join(period_rm_sizes)
@@ -1075,8 +1183,7 @@ class PlanViewMixin:
 
     def _proposal_settings_dialog(self):
         labels = [('shift_hours', 'ชั่วโมงต่อกะ (แปลง capacity เป็นเวลา)'), ('setup_minutes', 'เปลี่ยน SKU นาที/ครั้ง'),
-                  ('stop_cost', 'หยุดไลน์ บาท/ชม. (ว่าง = ไม่ทราบ)'), ('freeze_cost', 'Freeze บาท/kg (ว่าง = ไม่ทราบ)'),
-                  ('freeze_percent', 'RM เหลือเข้า Freeze สิ้นช่วง % (ว่าง = ไม่ทราบ)')]
+                  ('stop_cost', 'หยุดไลน์ บาท/ชม. (ว่าง = ไม่ทราบ)'), ('freeze_cost', 'Freeze บาท/kg (ว่าง = ไม่ทราบ)')]
         dialog, variables = self._plan_form('ต้นทุน / สมมติฐาน', [(k, t, self._proposal_vars[k].get()) for k, t in labels])
         def save():
             original = {k: self._proposal_vars[k].get() for k in variables}

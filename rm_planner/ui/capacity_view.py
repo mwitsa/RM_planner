@@ -66,9 +66,9 @@ class CapacityViewMixin:
         hours_entry = ttk.Entry(hours_card, textvariable=self.work_hours_per_day_var, width=12,
                                 font=("Segoe UI", 14))
         hours_entry.pack(anchor=tk.W, pady=(6, 3))
-        ttk.Label(hours_card, text="ชั่วโมง/วัน  •  ใช้คูณกับ Prod Cap / hr ของทุกประเภท").pack(anchor=tk.W)
+        ttk.Label(hours_card, text="ชั่วโมง/วัน  •  ใช้คูณกับกำลังผลิตเกี๊ยวต่อชั่วโมงของทุกประเภท").pack(anchor=tk.W)
 
-        inputs = ttk.LabelFrame(capacity_content, text="Prod Cap / hr", padding=14)
+        inputs = ttk.LabelFrame(capacity_content, text="Production capacity (ลูกเกี๊ยว / ชั่วโมง)", padding=14)
         inputs.pack(fill=tk.X, pady=(14, 0))
         for column in range(3):
             inputs.columnconfigure(column, weight=1)
@@ -83,7 +83,7 @@ class CapacityViewMixin:
             ttk.Label(field, text=label, font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky=tk.W)
             entry = ttk.Entry(field, textvariable=variable, font=("Segoe UI", 14))
             entry.grid(row=1, column=0, sticky="ew", pady=(6, 0))
-            ttk.Label(field, text="ถ้วย / ชั่วโมง").grid(row=2, column=0, sticky=tk.W, pady=(3, 0))
+            ttk.Label(field, text="ลูกเกี๊ยว / ชั่วโมง").grid(row=2, column=0, sticky=tk.W, pady=(3, 0))
             entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
         hours_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
 
@@ -101,7 +101,7 @@ class CapacityViewMixin:
             tk.Label(card, text=label, bg="#edf6fb", anchor="w", font=("Segoe UI", 10, "bold")).pack(fill=tk.X)
             tk.Label(card, textvariable=variable, bg="#edf6fb", anchor="w", font=("Segoe UI", 17, "bold")).pack(
                 fill=tk.X, pady=(5, 0))
-            tk.Label(card, text="ถ้วย / วัน", bg="#edf6fb", anchor="w").pack(fill=tk.X)
+            tk.Label(card, text="ลูกเกี๊ยว / วัน", bg="#edf6fb", anchor="w").pack(fill=tk.X)
 
         action_frame = ttk.Frame(capacity_content)
         action_frame.pack(fill=tk.X, pady=(18, 0))
@@ -290,7 +290,7 @@ class CapacityViewMixin:
             ttk.Label(field, text="เวลาเริ่มผลิตของวันนั้น").pack(anchor=tk.W)
         ttk.Label(
             setting_card,
-            text="เลือกได้เฉพาะช่วง 16:00 ถึง 08:00 ตาม Timeframe ของ Timeline",
+            text="เลือกได้เฉพาะช่วง 16:00 ถึง 04:00 ตาม Timeframe ของ Timeline",
         ).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(14, 0))
 
         actions = ttk.Frame(self.production_start_tab)
@@ -755,11 +755,11 @@ class CapacityViewMixin:
         try:
             work_hours_per_day = self._parse_work_hours(self.work_hours_per_day_var.get())
             raw_cups_per_hour = self._parse_capacity_number(
-                self.raw_cups_per_hour_var.get(), "Raw cups / hr")
+                self.raw_cups_per_hour_var.get(), "Raw wontons / hr")
             cooked_cups_per_hour = self._parse_capacity_number(
-                self.cooked_cups_per_hour_var.get(), "Cooked cups / hr")
+                self.cooked_cups_per_hour_var.get(), "Cooked wontons / hr")
             cooked_noodle_cups_per_hour = self._parse_capacity_number(
-                self.cooked_noodle_cups_per_hour_var.get(), "Cooked noodle cups / hr")
+                self.cooked_noodle_cups_per_hour_var.get(), "Cooked noodle wontons / hr")
             settings = CapacitySettings(
                 raw_percentage=100,
                 cooked_percentage=100,

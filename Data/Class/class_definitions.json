@@ -5,235 +5,235 @@
       "id": "3eecc204-02a4-4aa3-a864-5eb10a83e511",
       "class": "Country",
       "name": ".7-11",
-      "group": "2",
+      "group": "D",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:18:52.933817+00:00"
+      "updated_at": "2026-09-14T20:20:22.026188+00:00"
     },
     {
       "id": "2c2a78e3-a0ea-4dd1-be13-217fa8405f08",
       "class": "Country",
       "name": "5 Stars",
-      "group": "2",
+      "group": "D",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:18:56.536656+00:00"
+      "updated_at": "2026-09-14T20:20:24.214064+00:00"
     },
     {
       "id": "3497633c-8ec5-42ed-891c-52b4c4c1f336",
       "class": "Country",
       "name": "AUS",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:20:26.938760+00:00"
     },
     {
       "id": "64b91149-f95b-4319-8ce0-7dabb1a54448",
       "class": "Country",
       "name": "Belgium",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:26.919802+00:00"
     },
     {
       "id": "8875d4f9-f1ed-4d88-8446-d0098cba68c0",
       "class": "Country",
       "name": "BRUNEI",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:30.671814+00:00"
     },
     {
       "id": "923fef05-6f96-4ec7-addf-6a0784244b0e",
       "class": "Country",
       "name": "Cambodia",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:33.347183+00:00"
     },
     {
       "id": "fe4b82d4-d7b9-4d83-9129-f0defc6b4433",
       "class": "Country",
       "name": "CAN",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:36.172271+00:00"
     },
     {
       "id": "67595d3f-0b7b-4143-8641-a65950e105d8",
       "class": "Country",
       "name": "China",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:38.591564+00:00"
     },
     {
       "id": "019203d9-25e4-4719-905d-a5a978b03a30",
       "class": "Country",
       "name": "Denmark",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:41.188444+00:00"
     },
     {
       "id": "330d2e81-7e5a-4ab7-9560-d2eab8322acc",
       "class": "Country",
       "name": "Germany",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:44.271189+00:00"
     },
     {
       "id": "dac2c714-7d8b-4403-928c-d426acf57c84",
       "class": "Country",
       "name": "HK",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:47.138638+00:00"
     },
     {
       "id": "1bf65f5a-101a-4a00-af7a-f56f497acf10",
       "class": "Country",
       "name": "Ireland",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:49.901446+00:00"
     },
     {
       "id": "14b148e5-99f2-4263-b94e-c227c4efaa06",
       "class": "Country",
       "name": "Japan",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:52.774099+00:00"
     },
     {
       "id": "f49d6f8e-65e4-4e08-b2b5-9ab963b676fd",
       "class": "Country",
       "name": "Korea",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:55.615837+00:00"
     },
     {
       "id": "6490e78d-05be-4aca-9961-97b0f80478f8",
       "class": "Country",
       "name": "Laos",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:23:58.118005+00:00"
     },
     {
       "id": "c3f30e0f-0894-4311-8eb3-d0a4688c82ed",
       "class": "Country",
       "name": "Malay",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:01.292045+00:00"
     },
     {
       "id": "ec3015ea-8655-440b-b7eb-9ccfc04279c7",
       "class": "Country",
       "name": "MTFS",
-      "group": "",
+      "group": "D",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T04:49:27.431652+00:00"
     },
     {
       "id": "6e9a89bf-0de2-44cf-a76e-c3e08d91fe38",
       "class": "Country",
       "name": "Netherlands",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:07.600323+00:00"
     },
     {
       "id": "2f110a96-ea84-4b9c-9038-5dfede33f280",
       "class": "Country",
       "name": "New Zealand",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:09.898954+00:00"
     },
     {
       "id": "de5763f8-fbb4-42f8-baa5-7c66991d79a6",
       "class": "Country",
       "name": "SG",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:12.878762+00:00"
     },
     {
       "id": "6b102fdb-dea9-4d6a-a5ee-d3c896771b65",
       "class": "Country",
       "name": "Spain",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:15.213125+00:00"
     },
     {
       "id": "0a1b56f0-0d82-4741-bc4e-b7ed808189b5",
       "class": "Country",
       "name": "Taiwan",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:17.974894+00:00"
     },
     {
       "id": "d24141d5-dd3d-458f-b013-9f44b29b3f08",
       "class": "Country",
       "name": "UAE",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:20.403556+00:00"
     },
     {
       "id": "f76ef769-ce0c-450a-8dbb-5ff26d4af899",
       "class": "Country",
       "name": "UK",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:23.128717+00:00"
     },
     {
       "id": "c855aec9-13a8-4f04-944c-48802f16370b",
       "class": "Country",
       "name": "USA",
-      "group": "1",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:26.224840+00:00"
     },
     {
       "id": "775ea8f2-68a6-4401-a64c-9953c2f1d1bb",
       "class": "Country",
       "name": "ขายภายใน",
-      "group": "2",
+      "group": "D",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:24:29.321583+00:00"
     },
     {
       "id": "01aaa7c7-b2bc-44ed-8af9-9d1e0d1d78f6",
@@ -626,406 +626,406 @@
       "id": "e319f967-3ad4-4746-8267-d9694c92c8c6",
       "class": "Group 1",
       "name": "C-Minced WT in tray no egg",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:41.543639+00:00"
+      "updated_at": "2026-09-14T20:10:07.294305+00:00"
     },
     {
       "id": "38087bf1-b12d-4878-8e08-10435bfd8e8d",
       "class": "Group 1",
       "name": "C-WT in tray no egg",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:44.104857+00:00"
+      "updated_at": "2026-09-14T20:10:16.783700+00:00"
     },
     {
       "id": "dd689447-e2a4-4091-ac93-af333a9fd7a7",
       "class": "Group 1",
       "name": "E+Minced NDE",
-      "group": "2",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-28T09:58:23.258697+00:00"
+      "updated_at": "2026-09-14T20:10:19.536353+00:00"
     },
     {
       "id": "e88f2832-20d0-4496-9a88-29f826faa850",
       "class": "Group 1",
       "name": "E+Minced WT",
-      "group": "",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:25.023968+00:00"
     },
     {
       "id": "90b5045c-656f-4480-8eb8-3d849c86b07c",
       "class": "Group 1",
       "name": "E+NDเส้นมัน+หมาล่า",
-      "group": "",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:28.176829+00:00"
     },
     {
       "id": "e87e4ed0-a96f-4b67-9ec1-aa312e0a9204",
       "class": "Group 1",
       "name": "E+Wonton",
-      "group": "",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:31.431051+00:00"
     },
     {
       "id": "fc03a1f4-013d-4821-a808-7ef9378657d7",
       "class": "Group 1",
       "name": "E+Wonton NDE",
-      "group": "",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:34.127836+00:00"
     },
     {
       "id": "1867a4fe-bf50-401a-8f36-3050f57c2161",
       "class": "Group 1",
       "name": "E+Wonton TY",
-      "group": "2",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:19.884932+00:00"
+      "updated_at": "2026-09-14T20:10:36.741609+00:00"
     },
     {
       "id": "4248ff6c-9c4e-4ac7-a9a1-8cbeb70a9593",
       "class": "Group 1",
       "name": "E+Wonton+หมาล่า",
-      "group": "",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:39.205984+00:00"
     },
     {
       "id": "49f426a3-044d-438c-83aa-83f629230db2",
       "class": "Group 1",
       "name": "EP+Wonton",
-      "group": "2",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:48:23.343666+00:00"
+      "updated_at": "2026-09-14T20:10:42.086381+00:00"
     },
     {
       "id": "f148dbb3-9174-4419-b471-8d4d08948215",
       "class": "Group 1",
       "name": "Minced ND",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:48.910397+00:00"
     },
     {
       "id": "505cff0a-387a-41d3-b63a-889f6eaf4608",
       "class": "Group 1",
       "name": "Minced ND+BC",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:53.465465+00:00"
     },
     {
       "id": "2904fd1d-93b5-4f77-a10c-3e25035bf22a",
       "class": "Group 1",
       "name": "Minced ND+BC+LS",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:10:56.072137+00:00"
     },
     {
       "id": "4f8bae22-429f-484a-9d52-345ace98e853",
       "class": "Group 1",
       "name": "Minced ND+BC+TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:22.228806+00:00"
+      "updated_at": "2026-09-14T20:10:58.492655+00:00"
     },
     {
       "id": "eedb7710-4e76-49e0-ab2d-4d5eabfc0931",
       "class": "Group 1",
       "name": "Minced ND+Kee Mao",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:01.848737+00:00"
     },
     {
       "id": "2269145b-ca01-43d8-9b62-6268d749534f",
       "class": "Group 1",
       "name": "Minced ND+TK",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:04.253836+00:00"
     },
     {
       "id": "184ce879-1b66-4e35-9fae-8b203c226336",
       "class": "Group 1",
       "name": "Minced ND+TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:24.401406+00:00"
+      "updated_at": "2026-09-14T20:11:07.997045+00:00"
     },
     {
       "id": "ea65655c-ef9c-4122-99f5-583cbcf5c86c",
       "class": "Group 1",
       "name": "Minced ND+V",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:45:11.835567+00:00"
+      "updated_at": "2026-09-14T20:11:13.151229+00:00"
     },
     {
       "id": "3a1d5124-108a-4309-92b2-5f6904626fca",
       "class": "Group 1",
       "name": "Minced ND+V+TK",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:45:21.579879+00:00"
+      "updated_at": "2026-09-14T20:11:16.064947+00:00"
     },
     {
       "id": "0307acf3-d733-426e-84f5-f22e34f4340d",
       "class": "Group 1",
       "name": "Minced ND+V+TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:45:24.030973+00:00"
+      "updated_at": "2026-09-14T20:11:18.645529+00:00"
     },
     {
       "id": "7071b075-4a60-46f9-819e-da32f1338268",
       "class": "Group 1",
       "name": "Minced ND+V+น้ำราดเป็ด",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:21.640486+00:00"
     },
     {
       "id": "0b8ff6e6-f74f-4375-9a17-fa315ef3c300",
       "class": "Group 1",
       "name": "Minced ND+หมาล่า",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:24.465807+00:00"
     },
     {
       "id": "7e0afa44-bb37-4c6d-ba8a-78c7e726821e",
       "class": "Group 1",
       "name": "Minced WT",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:28.343958+00:00"
     },
     {
       "id": "973110fa-c889-403b-82a9-1237ab47f08b",
       "class": "Group 1",
       "name": "Minced+ND+Kee Mao แห้ง",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:30.767914+00:00"
     },
     {
       "id": "28c456f6-e5cb-4405-8ecc-fd39ac63f878",
       "class": "Group 1",
       "name": "Minced+ND+V+น้ำราดเป็ด",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:33.390501+00:00"
     },
     {
       "id": "0bc99d23-a1ac-478e-9d06-ee726a2359e1",
       "class": "Group 1",
       "name": "Noodles+BC",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:36.205123+00:00"
     },
     {
       "id": "c78bd5e7-1bfa-4b27-8a89-680c88d2cf91",
       "class": "Group 1",
       "name": "R-Minced",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:39.128476+00:00"
     },
     {
       "id": "705f09b0-c030-4692-9874-9b1630432434",
       "class": "Group 1",
       "name": "R-Minced egg past",
-      "group": "2",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:46.740484+00:00"
+      "updated_at": "2026-09-14T20:11:42.517851+00:00"
     },
     {
       "id": "91dd70f8-faaa-43ee-a3bf-9816a7d0aa45",
       "class": "Group 1",
       "name": "R-Minced no egg",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:51.577177+00:00"
+      "updated_at": "2026-09-14T20:11:44.958080+00:00"
     },
     {
       "id": "2f4ea7d8-c955-4b86-b810-28940204e60a",
       "class": "Group 1",
       "name": "R-Wonton (Fried Sheet)",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:11:50.344071+00:00"
     },
     {
       "id": "c9f7825e-c821-403a-9905-41d01bfa32ca",
       "class": "Group 1",
       "name": "R-Wonton egg past",
-      "group": "2",
+      "group": "E",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:54.393073+00:00"
+      "updated_at": "2026-09-14T20:11:53.938955+00:00"
     },
     {
       "id": "6bc47d4b-3357-44d1-96d3-f8cfc2d800f7",
       "class": "Group 1",
       "name": "R-Wonton no egg",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:58.313250+00:00"
+      "updated_at": "2026-09-14T20:11:56.230176+00:00"
     },
     {
       "id": "95b0ec57-7d15-439a-a6df-3c386422a4e8",
       "class": "Group 1",
       "name": "Wonton",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:43:23.718286+00:00"
+      "updated_at": "2026-09-14T20:11:59.429433+00:00"
     },
     {
       "id": "8f304b7d-4e2a-4aa7-8fc0-80b4f0e243fe",
       "class": "Group 1",
       "name": "Wonton +LS",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:43:16.706660+00:00"
+      "updated_at": "2026-09-14T20:12:02.376318+00:00"
     },
     {
       "id": "d744a91a-055b-436e-a6c7-43917c34dffe",
       "class": "Group 1",
       "name": "Wonton +TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:43:27.505393+00:00"
+      "updated_at": "2026-09-14T20:12:05.753339+00:00"
     },
     {
       "id": "33115214-1d16-4f16-88cf-75f1a0ab129d",
       "class": "Group 1",
       "name": "Wonton +V",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:45:30.434089+00:00"
+      "updated_at": "2026-09-14T20:12:08.708835+00:00"
     },
     {
       "id": "f65270f2-c0c1-4fa4-b3c9-d2e29b6811a1",
       "class": "Group 1",
       "name": "Wonton ND",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:12:11.725653+00:00"
     },
     {
       "id": "88ba7ab0-c74b-4809-b2cf-048a7f3d8a1b",
       "class": "Group 1",
       "name": "Wonton ND+BC",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:12:13.736282+00:00"
     },
     {
       "id": "61f879a4-8196-4356-83ff-2ce82b8f7374",
       "class": "Group 1",
       "name": "Wonton ND+BC+TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:26.457587+00:00"
+      "updated_at": "2026-09-14T20:12:16.717836+00:00"
     },
     {
       "id": "cfb7827a-1337-4d69-bfdc-6384a775efff",
       "class": "Group 1",
       "name": "Wonton ND+Kee Mao",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:12:19.107956+00:00"
     },
     {
       "id": "3f702081-c57f-4287-94ca-1b10745d03da",
       "class": "Group 1",
       "name": "Wonton ND+V",
-      "group": "1",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:45:34.031976+00:00"
+      "updated_at": "2026-09-14T20:12:21.643193+00:00"
     },
     {
       "id": "bdd774b6-8701-4ae1-8fd8-52f26c563995",
       "class": "Group 1",
       "name": "Wonton ND+V+TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:45:36.810030+00:00"
+      "updated_at": "2026-09-14T20:12:24.164792+00:00"
     },
     {
       "id": "87a0e95a-b9ac-4ddc-bc82-5acde1f52287",
       "class": "Group 1",
       "name": "Wonton ND+เย็นตาโฟ",
-      "group": "",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-14T20:12:27.409894+00:00"
     },
     {
       "id": "07fb4ac9-b607-4994-b71c-848899ba233f",
       "class": "Group 1",
       "name": "Wonton TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:28.603857+00:00"
+      "updated_at": "2026-09-14T20:12:31.793599+00:00"
     },
     {
       "id": "5e846d00-e0d4-4c30-b5e3-0a46dd054ec5",
       "class": "Group 1",
       "name": "Wonton+TY",
-      "group": "2",
+      "group": "NE",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:47:30.969879+00:00"
+      "updated_at": "2026-09-14T20:12:34.166730+00:00"
     },
     {
       "id": "06df71f8-6525-435a-b590-882219321539",
@@ -1967,226 +1967,226 @@
       "id": "00308866-400f-439b-a158-6d29216c70bc",
       "class": "Soup",
       "name": "HOTPOT 10g",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:22:22.375935+00:00"
     },
     {
       "id": "1c3cac56-7fd5-4d2e-b2a8-d98749678508",
       "class": "Soup",
       "name": "Kee Mao",
-      "group": "",
+      "group": "ใส",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:22:39.256554+00:00"
     },
     {
       "id": "3dc60e6a-3a27-48db-a975-07e1b5ca4c7b",
       "class": "Soup",
       "name": "Kee Mao 50G.",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:22:49.406262+00:00"
     },
     {
       "id": "99e0f9c3-5b5f-4e28-a25a-d08de82ae436",
       "class": "Soup",
       "name": "Laksa",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:22:55.655960+00:00"
     },
     {
       "id": "dae17b9f-5d40-4f34-83b8-4e9bc7679d59",
       "class": "Soup",
       "name": "MK",
-      "group": "",
+      "group": "ใส",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:04.109546+00:00"
     },
     {
       "id": "2bc0ee42-4f8a-403c-9762-b00f0bde66b0",
       "class": "Soup",
       "name": "Regular",
-      "group": "",
+      "group": "ใส",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:10.505965+00:00"
     },
     {
       "id": "96621893-33c2-4c6d-b091-5e8b0fb1bab8",
       "class": "Soup",
       "name": "Sesame 15g",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:18.718458+00:00"
     },
     {
       "id": "0fe9ece3-467f-4600-b71d-f868ecd3e955",
       "class": "Soup",
       "name": "sesame 30g",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:27.117548+00:00"
     },
     {
       "id": "86fa5860-e1df-4fdc-9e08-5a9511e9fd9e",
       "class": "Soup",
       "name": "Soy Sauce",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:38.364473+00:00"
     },
     {
       "id": "82c46da2-5e03-4420-baf4-2d45b7d3ab03",
       "class": "Soup",
       "name": "Tomkha+CM",
-      "group": "",
+      "group": "ใส",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:45.349866+00:00"
     },
     {
       "id": "2a7cedfa-4d80-4ed6-904a-be6c025c9b29",
       "class": "Soup",
       "name": "Tomkha1+CM",
-      "group": "",
+      "group": "ใส",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:23:51.023131+00:00"
     },
     {
       "id": "b7c106c0-46c8-465b-8227-8b401a0305fc",
       "class": "Soup",
       "name": "TYA+CO",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:27:56.195054+00:00"
     },
     {
       "id": "cc570e31-80a6-479f-882f-21bbbe62a8a5",
       "class": "Soup",
       "name": "TYANS+CM",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:27:59.933314+00:00"
     },
     {
       "id": "a59317fb-bcdf-4387-9b64-21fe80c83113",
       "class": "Soup",
       "name": "TYANSSG+CM",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:03.226285+00:00"
     },
     {
       "id": "200f5745-4348-490f-ba13-38e213bd1ccf",
       "class": "Soup",
       "name": "TYEX+CO",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:09.178845+00:00"
     },
     {
       "id": "400461ea-f53c-436a-82f6-f6a76b5f3ab3",
       "class": "Soup",
       "name": "TYEXSG+CO",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:12.349052+00:00"
     },
     {
       "id": "240d19c1-3c16-4217-819b-1fe1c64dfd61",
       "class": "Soup",
       "name": "TYNSF",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:16.076558+00:00"
     },
     {
       "id": "4ee1e648-bfab-4354-b18b-83612cb49a4a",
       "class": "Soup",
       "name": "TYTB3C 30G",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:22.782030+00:00"
     },
     {
       "id": "95001ec3-6ad1-4b1a-9dd4-6ab374f32f5a",
       "class": "Soup",
       "name": "Y3",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:27.138954+00:00"
     },
     {
       "id": "62cbfdca-2121-4772-9436-9bda194db29d",
       "class": "Soup",
       "name": "ซุปซอง 10g.",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:31.576372+00:00"
     },
     {
       "id": "0e222b9f-c993-49f9-b96b-9c5fac954b57",
       "class": "Soup",
       "name": "ซุปซอง 5g.",
-      "group": "",
+      "group": "ซอง",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:35.937337+00:00"
     },
     {
       "id": "023145db-171c-4596-8369-aa3d3025e01b",
       "class": "Soup",
       "name": "น้ำดำ",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:41.942417+00:00"
     },
     {
       "id": "4bf9ec1c-3c56-402a-82a7-e26de358cc6c",
       "class": "Soup",
       "name": "น้ำราดเป็ด",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:28:45.571090+00:00"
     },
     {
       "id": "2c976670-7801-4563-91a0-4d843d619cf0",
       "class": "Soup",
       "name": "หมาล่า",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:29:35.311092+00:00"
     },
     {
       "id": "85b09845-e32d-4291-a8bf-55ba50ac302d",
       "class": "Soup",
       "name": "เย็นตาโฟ",
-      "group": "",
+      "group": "ข้น",
       "value": "",
       "created_at": "2026-08-27T11:10:12.739974+00:00",
-      "updated_at": "2026-08-27T11:10:12.739974+00:00"
+      "updated_at": "2026-09-15T06:29:39.477925+00:00"
     },
     {
       "id": "0f41f1c1-7e59-4554-99a8-cffed9ad4584",

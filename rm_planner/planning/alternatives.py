@@ -6,7 +6,8 @@ RM is usable kg (configured wonton yield), not workbook HO kg.
 """
 from __future__ import annotations
 
-from collections import defaultdict
+import calendar
+from collections import Counter, defaultdict
 from copy import deepcopy
 from datetime import date, timedelta
 from hashlib import sha256
@@ -31,6 +32,16 @@ TITLES = {"baseline": "แผนเดิม", "material": "ลดการเ�
 # calculation layer as well as the date picker so a saved or imported plan
 # cannot accidentally schedule production on a closed day.
 FACTORY_HOLIDAY_WEEKDAYS = frozenset((0, 1))
+REPLAN_ORDER_LOOKAHEAD_MONTHS = 2
+
+
+def _add_calendar_months(value, months):
+    """Advance a date by whole calendar months, clamping the day if needed."""
+
+    absolute_month = value.year * 12 + value.month - 1 + months
+    year, month_index = divmod(absolute_month, 12)
+    month = month_index + 1
+    return date(year, month, min(value.day, calendar.monthrange(year, month)[1]))
 
 
 def number(value, name, optional=False):
@@ -79,8 +90,6 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
         raise ValueError("มองล่วงหน้าต้องเป็นจำนวนเต็ม 1–31 วัน")
     if not 0 < s['shift_hours'] <= 24 or s['setup_minutes'] > s['shift_hours'] * 60:
         raise ValueError("ตรวจชั่วโมงทำงานและเวลาเปลี่ยน SKU")
-    if s['freeze_percent'] is not None and s['freeze_percent'] > 100:
-        raise ValueError("สัดส่วนเข้า Freeze ต้อง 0–100%")
     raw, cooked = capacities_at_percentage(capacity)
     if raw is None or cooked is None:
         raise ValueError("กรุณาตั้ง Capacity ดิบและสุกก่อน")
@@ -88,6 +97,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     # production shift used by both the feasibility check and the timeline.
     s['shift_hours'] = float(capacity.work_hours_per_day)
     end = start + timedelta(days=int(s['lookahead']) - 1)
+    replan_load_cutoff = _add_calendar_months(start, REPLAN_ORDER_LOOKAHEAD_MONTHS)
     try:
         adjust_from = date.fromisoformat(str(s['adjust_from'] or start.isoformat()))
     except (TypeError, ValueError):
@@ -112,13 +122,16 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
         except (TypeError, ValueError):
             notices.append(f"{order.order_no}: ไม่พบวันที่ผลิตเดิม จัดแผนให้อัตโนมัติไม่ได้")
             continue
-        if not start <= planned <= end:
+        # Keep Orders after the visible period as possible pull-forward
+        # candidates for the "reduce RM storage" proposal.  They are not part
+        # of the baseline plan, and are included in a proposal only when the
+        # whole Order is actually moved into the selected timeframe.
+        if planned < start:
             continue
-        _, cups, qty = outstanding_order_quantities(order)
+        candidate_only = planned > end
+        load_date = order_due_date(order)
+        _, _order_cups, qty = outstanding_order_quantities(order)
         if qty <= EPS:
-            continue
-        if cups <= EPS:
-            notices.append(f"{order.order_no}: ไม่มีจำนวนถ้วย จึงคำนวณ Capacity ถ้วย/วันไม่ได้")
             continue
         if not order.record_id or order.record_id in seen:
             raise ValueError("Order ต้องมี record_id ไม่ซ้ำกัน กรุณาบันทึก Order ก่อน")
@@ -152,12 +165,14 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
                 for class_name in operation_classes
             },
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
-            size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
-            day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
+            size=order.rm_size, stock_size=size, due=load_date.isoformat(),
+            day=planned.isoformat(), qty=qty, cups=_order_cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
             rm_required_kg=special_required_kg,
             locked=bool(p.get('locked', False)), egg=p.get('egg', ''), soup_rank=rank,
             earliest=earliest, status=ready, ready_date=ready_date,
-            max_qty=number(p.get('max_qty', 0), 'จำนวนที่พร้อม'), reviewer=p.get('reviewer', '').strip()))
+            max_qty=number(p.get('max_qty', 0), 'จำนวนที่พร้อม'), reviewer=p.get('reviewer', '').strip(),
+            candidate_only=candidate_only,
+            replan_eligible=load_date <= replan_load_cutoff))
     lots = []
     stock = tuple(stock)
     forecasts = [r.source_label for r in stock if r.record_type == 'prediction' and r.record_date <= end.isoformat()]
@@ -189,6 +204,35 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             (date.fromisoformat(lot['day']) + timedelta(days=chill_days)).isoformat()
             if chill_days is not None else None
         )
+    # Do not bring every later Order into the search.  A candidate must use a
+    # market/size RM pool that arrives in this timeframe and must be possible
+    # to make as one complete Order from physical RM available by its end.
+    # This keeps the no-split optimisation focused and predictable.
+    physical_by_pool = defaultdict(float)
+    timeframe_by_pool = defaultdict(float)
+    for lot in lots:
+        if lot['day'] <= end.isoformat():
+            pool = (lot['market'], lot['size'])
+            physical_by_pool[pool] += lot['kg']
+            if lot['day'] >= start.isoformat():
+                timeframe_by_pool[pool] += lot['kg']
+
+    def rm_requirement(job):
+        if job['rm_required_kg'] is not None:
+            return job['rm_required_kg']
+        return job['qty'] / job['yield_rate'] if job['yield_rate'] > EPS else None
+
+    jobs = [
+        job for job in jobs
+        if not job['candidate_only']
+        or (
+            job['replan_eligible']
+            and
+            rm_requirement(job) is not None
+            and timeframe_by_pool[(job['market'], job['stock_size'])] > EPS
+            and rm_requirement(job) <= physical_by_pool[(job['market'], job['stock_size'])] + EPS
+        )
+    ]
     return dict(start=start.isoformat(), settings=s, jobs=jobs, lots=lots,
                 capacity={'RAW': float(raw), 'COOKED': float(cooked)}, notices=notices,
                 forecasts=forecasts, operation_rules=operation_rules, chill_days=chill_days,
@@ -200,7 +244,10 @@ def signature(context):
 
 
 def baseline_rows(context):
-    return [dict(job=j['id'], day=j['day'], qty=j['qty']) for j in context['jobs']]
+    return [
+        dict(job=j['id'], day=j['day'], qty=j['qty'])
+        for j in context['jobs'] if not j.get('candidate_only', False)
+    ]
 
 
 def _operation_rule_rank(job, rules):
@@ -213,7 +260,7 @@ def _operation_rule_rank(job, rules):
     return len(rules), 0
 
 
-def evaluate(context, rows, apply_operation_rules=False):
+def evaluate(context, rows, apply_operation_rules=False, allow_unscheduled=False, allow_replan=False):
     jobs = {j['id']: j for j in context['jobs']}
     s = context['settings']
     start = date.fromisoformat(context['start'])
@@ -228,6 +275,7 @@ def evaluate(context, rows, apply_operation_rules=False):
         if planned_day.weekday() in FACTORY_HOLIDAY_WEEKDAYS:
             errors.append(f"{row['day']}: โรงงานหยุดผลิตวันจันทร์และวันอังคาร")
     totals = defaultdict(float)
+    deferred = []
     moved = defaultdict(float)
     for row in rows:
         if row['job'] not in jobs or number(row['qty'], 'จำนวนผลิต') <= EPS:
@@ -236,9 +284,14 @@ def evaluate(context, rows, apply_operation_rules=False):
         totals[j['id']] += row['qty']
         if row['day'] != j['day']:
             moved[j['id']] += row['qty']
-            if j['locked'] or row['day'] < adjust_from or row['day'] >= j['day']:
+            # A normal proposal is only allowed to pull an Order forward.  A
+            # reduce-storage proposal deliberately rebuilds the adjustable
+            # portion of the schedule, so it may place a non-locked Order on
+            # any valid day from ``adjust_from`` onward.
+            if (j['locked'] or row['day'] < adjust_from
+                    or (not allow_replan and row['day'] >= j['day'])):
                 errors.append(f"{j['order']}: ย้ายงานนอกช่วงหรือเป็นงานล็อก")
-            if not j['earliest'] or row['day'] < j['earliest']:
+            if j['earliest'] and row['day'] < j['earliest']:
                 errors.append(f"{j['order']}: ยังไม่อนุญาตให้ผลิตเร็วในวันนี้")
             if j['status'] == 'blocked':
                 errors.append(f"{j['order']}: วัสดุไม่พร้อม")
@@ -248,6 +301,12 @@ def evaluate(context, rows, apply_operation_rules=False):
             else:
                 pending.append(f"{j['order']}: รอยืนยันวัสดุ {row['day']}")
     for j in jobs.values():
+        if allow_unscheduled:
+            if not j.get('candidate_only', False) and j['id'] not in totals:
+                deferred.append(j['id'])
+            continue
+        if j.get('candidate_only', False) and j['id'] not in totals:
+            continue
         if abs(totals[j['id']] - j['qty']) > EPS:
             errors.append(f"{j['order']}: จำนวนไม่ตรงกับออเดอร์คงเหลือ")
     # Preserve each lot while allocating RM.  Besides making the consumption
@@ -301,8 +360,8 @@ def evaluate(context, rows, apply_operation_rules=False):
                     changes += 1
                     elapsed += s['setup_minutes'] / 60
                 previous = current_operation
-                planned_cups = r['qty'] / j['qty'] * j['cups']
-                duration = planned_cups / context['capacity'][line] * s['shift_hours'] if context['capacity'][line] else float('inf')
+                planned_wontons = r['qty']
+                duration = planned_wontons / context['capacity'][line] * s['shift_hours'] if context['capacity'][line] else float('inf')
                 if not math.isfinite(duration):
                     errors.append(f"{day} {line}: capacity เป็นศูนย์")
                     duration = 0
@@ -372,20 +431,34 @@ def evaluate(context, rows, apply_operation_rules=False):
             )
             if shortage > EPS:
                 errors.append(f"{day}: RM {balance_key[0]} {balance_key[1]} ขาด {shortage:,.1f} kg")
+        # ``remaining`` is the physical RM left unused after the plan.  A lot
+        # that reaches its Freeze day is no longer usable as chilled RM, but it
+        # is still stock left over and must remain visible in the daily
+        # operational balance.  This daily value includes opening stock so it
+        # remains useful when allocating today's work; the plan-card residual
+        # below applies the selected timeframe scope separately.
         by_size = {
             size: sum(
                 lot['remaining_kg'] for lot in lot_balances
-                if lot['size'] == size
-                and lot['day'] <= day
-                and (lot.get('freeze_day') is None or day < lot['freeze_day'])
+                if lot['size'] == size and lot['day'] <= day
             )
             for size in ('M', 'S', 'SS', 'HC', 'BK', 'Unused')
         }
         daily.append(dict(day=day, remaining=sum(by_size.values()), by_size=by_size,
                           changes=changes, hours=hours))
     active = [day for day in daily if day['day'] >= adjust_from]
-    residual = active[-1]['remaining']
-    freeze_kg = None if s['freeze_percent'] is None else residual * s['freeze_percent'] / 100
+    # The proposal cards report only RM left over from arrivals inside the
+    # selected planning timeframe.  Opening stock remains available to the
+    # allocation above, but is not part of this timeframe residual.
+    horizon_end = (start + timedelta(days=int(s['lookahead']) - 1)).isoformat()
+    residual = sum(
+        lot['remaining_kg'] for lot in lot_balances
+        if context['start'] <= lot['day'] <= horizon_end
+    )
+    # Any RM left unused at the end of the selected timeframe must be moved
+    # into Freeze in full.  ``freeze_percent`` is retained in saved settings
+    # for backward compatibility, but no longer changes this business rule.
+    freeze_kg = residual
     freeze_cost = None if freeze_kg is None or s['freeze_cost'] is None else freeze_kg * s['freeze_cost']
     change_count = sum(d['changes'] for d in active)
     setup_cost = None if s['stop_cost'] is None else change_count * s['setup_minutes'] / 60 * s['stop_cost']
@@ -395,60 +468,171 @@ def evaluate(context, rows, apply_operation_rules=False):
                 freeze_cost=freeze_cost, setup_cost=setup_cost, cost=cost, changes=change_count,
                 moved=len(moved), late=late, errors=list(dict.fromkeys(errors)),
                 pending=list(dict.fromkeys(pending)), signature=signature(context),
+                deferred=tuple(deferred),
                 status='invalid' if errors else 'conditional' if pending else 'review')
 
 
+def _rm_shortage(plan):
+    """Return the RM shortage represented by a fully evaluated proposal."""
+
+    return sum(max(float(entry.get('rm_shortage_kg') or 0), 0) for entry in plan['schedule'])
+
+
+def _is_rm_shortage_error(error):
+    return 'RM ' in error and ' ขาด ' in error
+
+
+def _move_complete_job(rows, job, target):
+    """Move one order as an indivisible unit, preserving all other rows."""
+
+    moved = False
+    result = []
+    for row in rows:
+        copied = dict(row)
+        if copied['job'] == job['id']:
+            if moved:
+                raise ValueError('แผนลดการเก็บ RM รองรับเฉพาะ Order ที่ยังไม่ถูกแบ่ง')
+            copied['day'] = target
+            moved = True
+        result.append(copied)
+    if not moved:
+        if not job.get('candidate_only', False):
+            raise ValueError('ไม่พบ Order ที่ต้องการย้ายในแผน')
+        result.append(dict(job=job['id'], day=target, qty=job['qty']))
+    return result
+
+
+def _complete_order_is_covered(plan, job_id):
+    entries = [entry for entry in plan['schedule'] if entry['job'] == job_id]
+    return bool(entries) and all((entry.get('rm_shortage_kg') or 0) <= EPS for entry in entries)
+
+
+def _structural_errors(plan):
+    """Errors which cannot be accepted merely to consume more RM."""
+
+    return Counter(error for error in plan['errors'] if not _is_rm_shortage_error(error))
+
+
+def _adds_structural_errors(trial, current):
+    previous = _structural_errors(current)
+    proposed = _structural_errors(trial)
+    return any(proposed[error] > previous[error] for error in proposed)
+
+
+def _job_rm_requirement(job):
+    required = job.get('rm_required_kg')
+    if required is not None:
+        return required
+    return job['qty'] / job['yield_rate'] if job['yield_rate'] > EPS else 0.0
+
+
+def _eligible_days(job, days):
+    """Return adjustable production dates compatible with readiness rules."""
+
+    if job['locked'] or job['status'] == 'blocked':
+        return ()
+    if job['status'] == 'partial' and job['max_qty'] < job['qty'] - EPS:
+        return ()
+    result = []
+    for target in days:
+        if job['earliest'] and job['earliest'] > target:
+            continue
+        if job['status'] == 'ready' and (job['ready_date'] != target or not job['reviewer']):
+            continue
+        if job['status'] == 'partial' and (job['ready_date'] != target or not job['reviewer']):
+            continue
+        result.append(target)
+    return tuple(result)
+
+
+def _reduce_material_plan(context, require_cost_reduction=False):
+    """Rebuild the adjustable schedule to minimise end-of-window RM.
+
+    This intentionally does *not* start from the old placement.  Everything
+    from ``adjust_from`` onward is removed.  Every later Order, including an
+    Order that was previously inside the visible window, becomes an optional
+    whole-unit candidate.  The new schedule contains only the candidates that
+    genuinely consume RM without creating a shortage or capacity/market
+    conflict; all others are deferred beyond the window.
+    """
+
+    jobs = {job['id']: job for job in context['jobs']}
+    settings = context['settings']
+    start = date.fromisoformat(context['start'])
+    adjust_from = date.fromisoformat(settings['adjust_from'])
+    end = start + timedelta(days=int(settings['lookahead']) - 1)
+    days = tuple(
+        (start + timedelta(days=offset)).isoformat()
+        for offset in range((adjust_from - start).days, int(settings['lookahead']))
+        if (start + timedelta(days=offset)).weekday() not in FACTORY_HOLIDAY_WEEKDAYS
+    )
+
+    # Preserve only work that is genuinely outside the reset area: production
+    # before the chosen date and explicit locked Orders.  Every other Order is
+    # a selectable whole-order candidate.  In particular, an old HC placement
+    # is not forced back into this window when selecting an SS Order uses the
+    # available RM more effectively; that HC Order is simply deferred.
+    frozen_rows = [
+        dict(job=job['id'], day=job['day'], qty=job['qty'])
+        for job in jobs.values()
+        if not job.get('candidate_only', False)
+        and (job['day'] < adjust_from.isoformat() or job['locked'])
+    ]
+    frozen_ids = {row['job'] for row in frozen_rows}
+    candidates = [
+        job for job in jobs.values()
+        if job['id'] not in frozen_ids and job.get('replan_eligible', True)
+    ]
+    current = evaluate(
+        context, frozen_rows, apply_operation_rules=True,
+        allow_unscheduled=True, allow_replan=True,
+    )
+
+    # Fill the reset period only with whole Orders that consume remaining RM.
+    # Each trial starts from the frozen work, never from the old adjustable
+    # schedule.  Orders not selected are deliberately deferred beyond this
+    # planning window.
+    while True:
+        best = None
+        current_shortage = _rm_shortage(current)
+        for job in candidates:
+            if any(row['job'] == job['id'] for row in current['rows']):
+                continue
+            for target in _eligible_days(job, days):
+                trial = evaluate(
+                    context, [*current['rows'], dict(job=job['id'], day=target, qty=job['qty'])],
+                    apply_operation_rules=True, allow_unscheduled=True, allow_replan=True,
+                )
+                if (_adds_structural_errors(trial, current)
+                        or not _complete_order_is_covered(trial, job['id'])
+                        or _rm_shortage(trial) > current_shortage + EPS
+                        or trial['remaining'] >= current['remaining'] - EPS):
+                    continue
+                if require_cost_reduction:
+                    if current['cost'] is None or trial['cost'] is None or trial['cost'] >= current['cost'] - EPS:
+                        continue
+                score = (trial['remaining'], _rm_shortage(trial), trial['changes'],
+                         job['due'], job['id'], target)
+                if best is None or score < best[0]:
+                    best = (score, trial)
+        if best is None:
+            break
+        current = best[1]
+
+    return evaluate(
+        context, current['rows'], apply_operation_rules=True,
+        allow_unscheduled=True, allow_replan=True,
+    )
+
+
 def compare(context):
-    """Three bounded greedy policies, always validated against the entire window."""
+    """Build baseline plus whole-order alternatives for the planning window."""
+
     base = evaluate(context, baseline_rows(context))
-    results = [dict(base, id='baseline', title=TITLES['baseline'])]
-    jobs = {j['id']: j for j in context['jobs']}
-    for policy in ('material', 'balanced'):
-        # Only proposed plans follow the visual Operation order rule.  The
-        # baseline remains a faithful view of the imported production plan.
-        current = evaluate(context, baseline_rows(context), apply_operation_rules=True)
-        if not base['errors'] and (policy != 'balanced' or base['cost'] is not None):
-            # Start earliest; a moved job is considered only once, preserving readiness caps.
-            used = set()
-            first_adjustable = (date.fromisoformat(context['settings']['adjust_from']) - date.fromisoformat(context['start'])).days
-            for offset in range(first_adjustable, int(context['settings']['lookahead'])):
-                target = (date.fromisoformat(context['start']) + timedelta(days=offset)).isoformat()
-                available = sorted(context['jobs'], key=lambda j: (-j['qty'] / max(j['yield_rate'], EPS), j['due'], j['id']))
-                for j in available[:60]:
-                    if (j['id'] in used or j['locked'] or j['day'] <= target or not j['earliest']
-                            or j['earliest'] > target or not j['egg'] or j['soup_rank'] is None
-                            or j['status'] == 'blocked' or j['yield_rate'] <= 0):
-                        continue
-                    cap = j['qty']
-                    if j['status'] in ('ready', 'partial'):
-                        if j['ready_date'] != target or not j['reviewer']:
-                            continue
-                        cap = min(cap, j['max_qty'])
-                    best = None
-                    low, high = 0., cap
-                    for attempt in range(19):
-                        amount = high if attempt == 0 else (low + high) / 2
-                        if amount < EPS:
-                            break
-                        rows = [dict(r) for r in current['rows'] if r['job'] != j['id']]
-                        rows.append(dict(job=j['id'], day=target, qty=amount))
-                        if j['qty'] - amount > EPS:
-                            rows.append(dict(job=j['id'], day=j['day'], qty=j['qty'] - amount))
-                        trial = evaluate(context, rows, apply_operation_rules=True)
-                        if trial['errors']:
-                            high = amount
-                        else:
-                            best = trial
-                            low = amount
-                            if attempt == 0:
-                                break
-                    if best is None:
-                        continue
-                    if policy == 'balanced' and best['cost'] >= current['cost'] - EPS:
-                        continue
-                    # Do not change a plan without reducing residual at the comparison boundary.
-                    if best['remaining'] >= current['remaining'] - EPS:
-                        continue
-                    current, used = best, used | {j['id']}
-        results.append(dict(current, id=policy, title=TITLES[policy]))
-    return results
+    material = _reduce_material_plan(context)
+    balanced = _reduce_material_plan(context, require_cost_reduction=True)
+    return [
+        dict(base, id='baseline', title=TITLES['baseline']),
+        dict(material, id='material', title=TITLES['material']),
+        dict(balanced, id='balanced', title=TITLES['balanced']),
+    ]

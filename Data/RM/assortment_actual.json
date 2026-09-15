@@ -1,55 +1,130 @@
 {
-  "version": 7,
+  "version": 8,
   "records": [
     {
-      "id": "04d5a470-df8e-4085-8918-61c42b758f3a",
+      "id": "428e9afc-ff44-401a-9df0-62b2d3f41fc5",
       "rm_id": "RM-000001",
-      "farm_name": "ดกหฟ",
-      "lot": "1565",
-      "date": "2026-09-14",
+      "farm_name": "test",
+      "date": "2026-09-17",
       "record_type": "actual",
-      "market_type": "domestic",
+      "market_type": "unassigned",
       "entries": [
         {
-          "size": "M",
-          "weight": 2500.0,
-          "size_class": "M",
+          "size": "BK",
+          "weight": 800.0,
+          "market_type": "export",
+          "size_class": "BK",
           "pieces_per_kg": null
         },
         {
-          "size": "S+",
-          "weight": 2000.0,
-          "size_class": "S+",
+          "size": "SS",
+          "weight": 800.0,
+          "market_type": "domestic",
+          "size_class": "SS",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "S",
+          "weight": 2550.0,
+          "market_type": "export",
+          "size_class": "S",
           "pieces_per_kg": null
         }
       ],
-      "created_at": "2026-09-14T12:00:51.514293+00:00",
-      "updated_at": "2026-09-14T12:01:18.566143+00:00"
+      "created_at": "2026-09-15T11:10:30.887060+00:00",
+      "updated_at": "2026-09-15T15:48:04.042778+00:00"
     },
     {
-      "id": "4cd716c9-b35a-468c-bdf4-431033930964",
+      "id": "be9a0026-3cce-42e7-9a76-e950bb0a4fc2",
       "rm_id": "RM-000002",
-      "farm_name": "ื้เ",
-      "lot": "อดหอดก",
-      "date": "2026-09-15",
+      "farm_name": "test",
+      "date": "2026-09-12",
       "record_type": "actual",
-      "market_type": "domestic",
+      "market_type": "unassigned",
+      "entries": [
+        {
+          "size": "S",
+          "weight": 200.0,
+          "market_type": "export",
+          "size_class": "S",
+          "pieces_per_kg": null
+        }
+      ],
+      "created_at": "2026-09-15T11:12:31.626266+00:00",
+      "updated_at": "2026-09-15T11:12:31.626266+00:00"
+    },
+    {
+      "id": "e07602d3-8656-45f1-bdd5-3b088168b8fc",
+      "rm_id": "RM-000003",
+      "farm_name": "test",
+      "date": "2026-09-18",
+      "record_type": "actual",
+      "market_type": "unassigned",
       "entries": [
         {
           "size": "M",
-          "weight": 2575.0,
+          "weight": 540.0,
+          "market_type": "export",
           "size_class": "M",
           "pieces_per_kg": null
         },
         {
-          "size": "S+",
-          "weight": 4178.0,
-          "size_class": "S+",
+          "size": "S",
+          "weight": 1944.0,
+          "market_type": "export",
+          "size_class": "S",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "SS",
+          "weight": 982.0,
+          "market_type": "export",
+          "size_class": "SS",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "BK",
+          "weight": 900.0,
+          "market_type": "export",
+          "size_class": "BK",
           "pieces_per_kg": null
         }
       ],
-      "created_at": "2026-09-14T12:01:44.494983+00:00",
-      "updated_at": "2026-09-14T12:01:44.494983+00:00"
+      "created_at": "2026-09-15T15:13:00.270805+00:00",
+      "updated_at": "2026-09-15T15:13:17.649038+00:00"
+    },
+    {
+      "id": "004a7dda-5782-49bc-b1c8-43133f4ade69",
+      "rm_id": "RM-000004",
+      "farm_name": "test",
+      "date": "2026-09-19",
+      "record_type": "actual",
+      "market_type": "unassigned",
+      "entries": [
+        {
+          "size": "M",
+          "weight": 1500.0,
+          "market_type": "export",
+          "size_class": "M",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "HC",
+          "weight": 1200.0,
+          "market_type": "export",
+          "size_class": "HC",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "BK",
+          "weight": 800.0,
+          "market_type": "domestic",
+          "size_class": "BK",
+          "pieces_per_kg": null
+        }
+      ],
+      "created_at": "2026-09-15T15:14:20.971573+00:00",
+      "updated_at": "2026-09-15T15:14:20.971573+00:00"
     }
   ]
 }

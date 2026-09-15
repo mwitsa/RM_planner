@@ -35,7 +35,7 @@ class ProductionStartStoreTests(unittest.TestCase):
         self.assertEqual(load_production_start_settings(self.store_path), settings)
 
     def test_off_window_hours_are_rejected(self) -> None:
-        for hour in (9, 12, 15):
+        for hour in (5, 9, 12, 15):
             with self.subTest(hour=hour):
                 with self.assertRaises(ValueError):
                     save_production_start_settings(
@@ -45,7 +45,7 @@ class ProductionStartStoreTests(unittest.TestCase):
 
     def test_ui_time_options_follow_the_visible_timeline_window(self) -> None:
         self.assertEqual(production_time_options()[0], "16:00")
-        self.assertEqual(production_time_options()[-1], "08:00")
+        self.assertEqual(production_time_options()[-1], "04:00")
         self.assertEqual(hour_from_time_label("00:00"), 0)
         with self.assertRaises(ValueError):
             hour_from_time_label("18:30")

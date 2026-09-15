@@ -1,7 +1,11 @@
 {
-  "version": 3,
+  "version": 5,
   "raw_percentage": 100,
   "cooked_percentage": 100,
-  "raw_wonton": 320000,
-  "cooked_wonton": 400000
+  "raw_wonton": null,
+  "cooked_wonton": null,
+  "raw_cups_per_hour": 100000,
+  "cooked_cups_per_hour": 100000,
+  "cooked_noodle_cups_per_hour": 100000,
+  "work_hours_per_day": 8
 }

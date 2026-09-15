@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "name": "ใน/นอก",
+      "nodes": [
+        {
+          "class": "Country",
+          "group": "E"
+        },
+        {
+          "class": "Country",
+          "group": "D"
+        }
+      ]
+    },
+    {
+      "name": "ไข่",
+      "nodes": [
+        {
+          "class": "Group 1",
+          "group": "NE"
+        },
+        {
+          "class": "Group 1",
+          "group": "E"
+        }
+      ]
+    },
+    {
+      "name": "ซุป",
+      "nodes": [
+        {
+          "class": "Soup",
+          "group": "ใส"
+        },
+        {
+          "class": "Soup",
+          "group": "ข้น"
+        }
+      ]
+    }
+  ]
+}

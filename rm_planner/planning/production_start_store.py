@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 PRODUCTION_WINDOW_START_HOUR = 16
-PRODUCTION_WINDOW_END_HOUR = 8
+PRODUCTION_WINDOW_END_HOUR = 4
 DEFAULT_COOKED_START_HOUR = 18
 DEFAULT_RAW_START_HOUR = 19
 
@@ -22,7 +22,7 @@ class ProductionStartSettings:
 
 
 def production_time_options() -> tuple[str, ...]:
-    """Return valid hourly choices in the displayed 16:00–08:00 order."""
+    """Return valid hourly choices in the displayed 16:00–04:00 order."""
 
     return tuple(
         f"{hour:02d}:00"
@@ -108,5 +108,5 @@ def _validate_hour(value: object) -> int:
     if not 0 <= value <= 23:
         raise ValueError("Production start hour must be between 00:00 and 23:00.")
     if PRODUCTION_WINDOW_END_HOUR < value < PRODUCTION_WINDOW_START_HOUR:
-        raise ValueError("Production start time must be within the 16:00–08:00 production window.")
+        raise ValueError("Production start time must be within the 16:00–04:00 production window.")
     return value

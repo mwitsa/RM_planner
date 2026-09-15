@@ -35,9 +35,11 @@ class AlternativeTests(unittest.TestCase):
         b = replace(a, record_id='b', order_no='B', prod_date='18')
         profiles = {j: dict(egg='มีไข่', soup_rank=0, status='ready', earliest='2026-09-14',
                            date='2026-09-14', max_qty=1000, reviewer='staff') for j in ('a', 'b')}
+        options = dict(freeze_cost=10, stop_cost=100, freeze_percent=100)
+        options.update(settings)
         return build_context([a,b], [stock((('51-55',100),), market_type='domestic')], RANGES,
             balanced_capacity(3000,3000), [class_definition('Country','AUS','2')],
-            WontonWeightSettings(10,10), '2026-09-14', dict(freeze_cost=10,stop_cost=100,freeze_percent=100,**settings), profiles)
+            WontonWeightSettings(10,10), '2026-09-14', options, profiles)
 
     def test_pull_from_day_five_conserves_demand_and_stock(self):
         c = self.context()
@@ -50,6 +52,108 @@ class AlternativeTests(unittest.TestCase):
         for j in c['jobs']:
             self.assertAlmostEqual(sum(r['qty'] for r in p['rows'] if r['job']==j['id']), j['qty'])
         self.assertEqual(p['daily'][-1]['remaining'], plans[0]['daily'][-1]['remaining'])
+
+    def test_material_plan_pulls_a_complete_order_without_splitting(self):
+        context = {
+            'start': '2026-09-17',
+            'settings': {'lookahead': 2, 'adjust_from': '2026-09-17', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                dict(id='future', order='Future order', code='', sku='M', product='Product M', qty=100,
+                     day='2026-09-18', due='2026-09-18', cups=10, yield_rate=10,
+                     line='COOKED', market='domestic', stock_size='M', size='M',
+                     locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                     max_qty=0, egg='มีไข่', soup_rank=0, class_groups={}),
+            ],
+            # This lot freezes on the original production day.  Pulling the
+            # whole order to 17 Sep uses it; splitting the order is forbidden.
+            'lots': [dict(day='2026-09-17', freeze_day='2026-09-18',
+                          market='domestic', size='M', kg=10)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        material = compare(context)[1]
+
+        self.assertEqual(material['remaining'], 0)
+        self.assertEqual(material['rows'], [dict(job='future', day='2026-09-17', qty=100)])
+
+    def test_material_plan_can_pull_a_future_only_order_into_the_timeframe(self):
+        context = {
+            'start': '2026-09-17',
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-17', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                dict(id='later', order='Later order', code='', sku='M', product='Product M', qty=100,
+                     day='2026-09-24', due='2026-09-24', cups=10, yield_rate=10,
+                     line='COOKED', market='domestic', stock_size='M', size='M',
+                     locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                     max_qty=0, egg='มีไข่', soup_rank=0, class_groups={}, candidate_only=True),
+            ],
+            'lots': [dict(day='2026-09-17', market='domestic', size='M', kg=10)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        self.assertEqual(baseline_rows(context), [])
+        material = compare(context)[1]
+
+        self.assertEqual(material['remaining'], 0)
+        self.assertEqual(material['rows'], [dict(job='later', day='2026-09-17', qty=100)])
+
+    def test_material_plan_rebuilds_adjustable_rows_instead_of_preserving_dates(self):
+        def job(job_id, planned_day, size, yield_rate):
+            return dict(
+                id=job_id, order=job_id, code='', sku=job_id, product=job_id, qty=100,
+                day=planned_day, due=planned_day, cups=10, yield_rate=yield_rate,
+                line='COOKED', market='domestic', stock_size=size, size=size,
+                locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                max_qty=0, egg='มีไข่', soup_rank=0, class_groups={},
+            )
+
+        context = {
+            'start': '2026-09-17',
+            'settings': {'lookahead': 2, 'adjust_from': '2026-09-17', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [job('scheduled', '2026-09-17', 'M', 10), job('replanned', '2026-09-18', 'S', 10)],
+            # S would freeze before its original 18 Sep placement, so the
+            # rebuilt plan must choose 17 Sep instead of keeping the old row.
+            'lots': [dict(day='2026-09-17', market='domestic', size='M', kg=10),
+                     dict(day='2026-09-17', freeze_day='2026-09-18', market='domestic', size='S', kg=10)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        material = compare(context)[1]
+
+        self.assertEqual({row['job']: row['day'] for row in material['rows']},
+                         {'scheduled': '2026-09-17', 'replanned': '2026-09-17'})
+        self.assertEqual(material['remaining'], 0)
+
+    def test_material_plan_defers_a_partially_ready_order_instead_of_splitting_it(self):
+        context = {
+            'start': '2026-09-17',
+            'settings': {'lookahead': 2, 'adjust_from': '2026-09-17', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                dict(id='partial', order='Partial order', code='', sku='M', product='Product M', qty=100,
+                     day='2026-09-18', due='2026-09-18', cups=10, yield_rate=10,
+                     line='COOKED', market='domestic', stock_size='M', size='M',
+                     locked=False, earliest='2026-09-17', status='partial',
+                     ready_date='2026-09-18', reviewer='staff', max_qty=50,
+                     egg='มีไข่', soup_rank=0, class_groups={}),
+            ],
+            'lots': [dict(day='2026-09-17', freeze_day='2026-09-18',
+                          market='domestic', size='M', kg=10)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        material = compare(context)[1]
+
+        self.assertEqual(material['remaining'], 10)
+        self.assertEqual(material['rows'], [])
+        self.assertEqual(material['deferred'], ('partial',))
 
     def test_locked_cannot_move(self):
         c = self.context()
@@ -150,7 +254,7 @@ class AlternativeTests(unittest.TestCase):
 
         self.assertEqual(plan['changes'], 0)
         self.assertEqual(len(raw_schedule), 2)
-        self.assertAlmostEqual(raw_schedule[1]['start_hours'], 0.4)
+        self.assertAlmostEqual(raw_schedule[1]['start_hours'], 4.0)
 
         # RAW products with different CODEs still run continuously: unlike
         # cooked work, a raw change must not insert the 30-minute break.
@@ -158,7 +262,7 @@ class AlternativeTests(unittest.TestCase):
         plan = compare(context)[0]
         raw_schedule = [entry for entry in plan['schedule'] if entry['line'] == 'RAW']
         self.assertEqual(plan['changes'], 0)
-        self.assertAlmostEqual(raw_schedule[1]['start_hours'], 0.4)
+        self.assertAlmostEqual(raw_schedule[1]['start_hours'], 4.0)
 
     def test_workflow_rules_order_only_proposed_cooked_plans(self):
         base_job = dict(order='test', code='', qty=100, day='2026-09-16', locked=False,
@@ -270,6 +374,16 @@ class AlternativeTests(unittest.TestCase):
 
         self.assertEqual(entry['rm_allocated_kg'], 0)
         self.assertEqual(entry['rm_shortage_kg'], 10)
+        # Opening stock from before the selected timeframe is intentionally
+        # excluded from the plan-card residual, while the daily operational
+        # balance still exposes it for today's allocation.
+        result = evaluate(context, baseline_rows(context))
+        self.assertEqual(result['remaining'], 0)
+        self.assertEqual(result['daily'][0]['remaining'], 20)
+        in_window = dict(context)
+        in_window['lots'] = [dict(day='2026-09-17', freeze_day='2026-09-17',
+                                  market='domestic', size='M', kg=20)]
+        self.assertEqual(evaluate(in_window, baseline_rows(in_window))['remaining'], 20)
 
     def test_bk_run_is_fully_uncovered_when_no_bk_stock_exists(self):
         context = {
@@ -321,8 +435,9 @@ class AlternativeTests(unittest.TestCase):
         self.assertTrue(compare(c)[0]['errors'])
 
     def test_freeze_cost_is_once_at_boundary(self):
-        c=self.context()
+        c=self.context(freeze_percent=30)
         p=compare(c)[0]
+        self.assertEqual(p['freeze_kg'], p['remaining'])
         self.assertEqual(p['freeze_cost'],p['remaining']*10)
 
     def test_unknown_egg_and_forecast_block_review_status(self):

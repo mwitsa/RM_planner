@@ -1,4 +1,4 @@
-"""Persistent production-capacity settings."""
+"""Persistent production-capacity settings, measured in wontons per hour."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ class CapacitySettings:
     cooked_percentage: int = 50
     raw_wonton: int | float | None = None
     cooked_wonton: int | float | None = None
+    # Field names remain for backward-compatible saved JSON; values are
+    # production output in wontons per hour, not cups.
     raw_cups_per_hour: int | float | None = None
     cooked_cups_per_hour: int | float | None = None
     cooked_noodle_cups_per_hour: int | float | None = None
@@ -140,10 +142,10 @@ def _validate_settings(settings: CapacitySettings) -> CapacitySettings:
         cooked_percentage=_required_percentage(settings.cooked_percentage, "Cooked"),
         raw_wonton=_optional_nonnegative_number(settings.raw_wonton, "เกี๊ยวดิบ"),
         cooked_wonton=_optional_nonnegative_number(settings.cooked_wonton, "เกี๊ยวสุก"),
-        raw_cups_per_hour=_optional_nonnegative_number(settings.raw_cups_per_hour, "Raw cups / hr"),
-        cooked_cups_per_hour=_optional_nonnegative_number(settings.cooked_cups_per_hour, "Cooked cups / hr"),
+        raw_cups_per_hour=_optional_nonnegative_number(settings.raw_cups_per_hour, "Raw wontons / hr"),
+        cooked_cups_per_hour=_optional_nonnegative_number(settings.cooked_cups_per_hour, "Cooked wontons / hr"),
         cooked_noodle_cups_per_hour=_optional_nonnegative_number(
-            settings.cooked_noodle_cups_per_hour, "Cooked noodle cups / hr"),
+            settings.cooked_noodle_cups_per_hour, "Cooked noodle wontons / hr"),
         work_hours_per_day=_required_work_hours(settings.work_hours_per_day),
     )
 
