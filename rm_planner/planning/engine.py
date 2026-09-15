@@ -367,14 +367,21 @@ def market_type_for_order(
 ) -> str:
     """Map the Country master-data group to the order's RM market.
 
-    Country group 1 is ต่างประเทศ and group 2 is ในประเทศ. Any missing or other
-    value remains unassigned and can only consume unassigned RM.
+    Country group ``D`` is ในประเทศ and ``E`` is ต่างประเทศ.  The class
+    master is therefore the single source for both RM selection and the
+    timeline border style. Any missing or other value remains unassigned.
     """
 
-    group = _group_priority(record, "Country", definitions)
-    if group == 1:
+    group = _class_group(record, "Country", definitions).casefold()
+    if group == "e":
         return "export"
-    if group == 2:
+    if group == "d":
+        return "domestic"
+    # Existing saved masters may still contain the former numeric groups.
+    # Keep those plans usable while new/edited Country definitions use D/E.
+    if group == "1":
+        return "export"
+    if group == "2":
         return "domestic"
     return "unassigned"
 
@@ -550,6 +557,16 @@ def _group_priority(
     class_name: str,
     definitions: Iterable[ClassDefinition],
 ) -> int:
+    return _numeric_group(_class_group(record, class_name, definitions))
+
+
+def _class_group(
+    record: OrderRecord,
+    class_name: str,
+    definitions: Iterable[ClassDefinition],
+) -> str:
+    """Return the saved class group for an Order field, if one exists."""
+
     name_by_class = {
         "Country": record.country,
         "Group 1": record.group_1,
@@ -560,8 +577,8 @@ def _group_priority(
             item.class_value.strip().casefold() == class_name.casefold()
             and item.name.strip().casefold() == target_name
         ):
-            return _numeric_group(item.group)
-    return MISSING_PRIORITY
+            return item.group.strip()
+    return ""
 
 
 def _market_priority(market_type: str) -> int:

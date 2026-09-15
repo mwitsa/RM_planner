@@ -311,8 +311,8 @@ class PlanEngineTests(unittest.TestCase):
 
     def test_country_group_maps_order_to_export_or_domestic(self) -> None:
         definitions = [
-            class_definition("Country", "USA", "1"),
-            class_definition("Country", "7-11", "2"),
+            class_definition("Country", "USA", "E"),
+            class_definition("Country", "7-11", "D"),
         ]
 
         self.assertEqual(market_type_for_order(order("export", country="USA"), definitions), "export")
