@@ -18,16 +18,19 @@ def load_operation_rules(path: str | Path) -> list[dict]:
     if not isinstance(rules, list):
         raise ValueError("ไฟล์ Operation order rule ไม่ถูกต้อง")
     normalized = []
-    for rule in rules:
+    for index, rule in enumerate(rules, start=1):
         nodes = rule.get("nodes") if isinstance(rule, dict) else None
         if not isinstance(nodes, list):
             raise ValueError("ข้อมูล Rule ไม่ถูกต้อง")
+        name = rule.get("name", f"RULE {index}")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("ชื่อ Rule ไม่ถูกต้อง")
         normalized_nodes = []
         for node in nodes:
             if not isinstance(node, dict) or not all(isinstance(node.get(key), str) for key in ("class", "group")):
                 raise ValueError("ข้อมูลกล่อง Rule ไม่ถูกต้อง")
             normalized_nodes.append({"class": node["class"].strip(), "group": node["group"].strip()})
-        normalized.append({"nodes": normalized_nodes})
+        normalized.append({"name": name.strip(), "nodes": normalized_nodes})
     return normalized
 
 

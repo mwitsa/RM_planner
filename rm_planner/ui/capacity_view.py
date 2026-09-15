@@ -204,7 +204,8 @@ class CapacityViewMixin:
         toolbar.pack(fill=tk.X, pady=(0, 10))
         ttk.Button(toolbar, text="+ Add rule", command=self._add_operation_rule).pack(side=tk.LEFT)
         ttk.Button(toolbar, text="Remove selected box", command=self._remove_selected_operation_rule_node).pack(side=tk.LEFT, padx=8)
-        ttk.Button(toolbar, text="Remove selected rule", command=self._remove_selected_operation_rule).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text="Rename selected rule", command=self._rename_selected_operation_rule).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text="Remove selected rule", command=self._remove_selected_operation_rule).pack(side=tk.LEFT, padx=(8, 0))
         order_help = ttk.Label(toolbar, text="ⓘ Order help", foreground="#24567b", cursor="hand2")
         order_help.pack(side=tk.RIGHT)
         order_help.bind("<Enter>", self._show_operation_rule_order_tip)
@@ -262,9 +263,27 @@ class CapacityViewMixin:
         return True
 
     def _add_operation_rule(self) -> None:
-        self.operation_rules.append({"nodes": []})
+        self.operation_rules.append({"name": f"RULE {len(self.operation_rules) + 1}", "nodes": []})
         self._operation_rule_selected = None
         self._operation_rule_selected_row = len(self.operation_rules) - 1
+        self._save_operation_rules()
+        self._render_operation_rule_canvas()
+
+    def _rename_selected_operation_rule(self) -> None:
+        rule_index = self._operation_rule_selected_row
+        if rule_index is None or not 0 <= rule_index < len(self.operation_rules):
+            messagebox.showinfo("Operation order rule", "คลิกชื่อ Rule ที่ต้องการแก้ไขก่อน", parent=self)
+            return
+        rule = self.operation_rules[rule_index]
+        current_name = rule.get("name") or f"RULE {rule_index + 1}"
+        name = simpledialog.askstring("Rename rule", "Rule name:", initialvalue=current_name, parent=self)
+        if name is None:
+            return
+        name = name.strip()
+        if not name:
+            messagebox.showwarning("Rename rule", "กรุณาระบุชื่อ Rule", parent=self)
+            return
+        rule["name"] = name
         self._save_operation_rules()
         self._render_operation_rule_canvas()
 
@@ -377,12 +396,15 @@ class CapacityViewMixin:
             canvas.create_rectangle(8, y + 12, 132, y + node_height - 12,
                                     fill="#dceeff" if row_selected else "#f2f6fa",
                                     outline="#24567b" if row_selected else "", tags=(rule_tag,))
-            canvas.create_text(18, y + node_height / 2, text=f"RULE {rule_index + 1}  ↕", anchor=tk.W,
+            rule_name = rule.get("name") or f"RULE {rule_index + 1}"
+            canvas.create_text(18, y + node_height / 2, text=f"{rule_name}  ↕", anchor=tk.W,
                                fill="#1f2937", font=("Segoe UI", 13, "bold"), tags=(rule_tag,))
             canvas.tag_bind(rule_tag, "<ButtonPress-1>",
                             lambda event, r=rule_index: self._start_operation_rule_row_drag(event, r))
             canvas.tag_bind(rule_tag, "<B1-Motion>", self._move_operation_rule_row_drag)
             canvas.tag_bind(rule_tag, "<ButtonRelease-1>", self._finish_operation_rule_row_drag)
+            canvas.tag_bind(rule_tag, "<Double-1>",
+                            lambda _event, r=rule_index: self._rename_operation_rule(r))
             nodes = rule["nodes"]
             for node_index, node in enumerate(nodes):
                 x = first_x + node_index * (node_width + gap)
@@ -416,6 +438,10 @@ class CapacityViewMixin:
         self._operation_rule_selected_row = rule_index
         self._operation_rule_selected = None
         self._operation_rule_row_drag = {"rule": rule_index, "y": self.operation_rule_canvas.canvasy(event.y)}
+
+    def _rename_operation_rule(self, rule_index: int) -> None:
+        self._operation_rule_selected_row = rule_index
+        self._rename_selected_operation_rule()
 
     def _move_operation_rule_row_drag(self, event) -> None:
         if not hasattr(self, "_operation_rule_row_drag") or self._operation_rule_row_drag is None:

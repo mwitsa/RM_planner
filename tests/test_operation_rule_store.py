@@ -10,8 +10,8 @@ from rm_planner.planning.operation_rule_store import load_operation_rules, save_
 class OperationRuleStoreTests(unittest.TestCase):
     def test_rules_round_trip_in_visual_order(self) -> None:
         rules = [
-            {"nodes": [{"class": "Country", "group": "E"}, {"class": "Country", "group": "D"}]},
-            {"nodes": [{"class": "Group 1", "group": "NE"}]},
+            {"name": "Export before domestic", "nodes": [{"class": "Country", "group": "E"}, {"class": "Country", "group": "D"}]},
+            {"name": "Allergen sequence", "nodes": [{"class": "Group 1", "group": "NE"}]},
         ]
         with TemporaryDirectory() as temporary:
             path = Path(temporary) / "rules.json"
