@@ -17,8 +17,8 @@ class CapacityViewMixin:
 
         page = ttk.Frame(self.capacity_tab, padding=18)
         page.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(page, text="Production Capacity", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
-        ttk.Label(page, text="กรอกกำลังผลิตต่อชั่วโมงและชั่วโมงทำงาน ระบบจะคำนวณ Capacity ต่อวันให้อัตโนมัติ").pack(
+        ttk.Label(page, text="Operations Settings", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
+        ttk.Label(page, text="ตั้งค่าการดำเนินงานของโรงงาน เช่น กำลังผลิตต่อชั่วโมงและชั่วโมงทำงาน").pack(
             anchor=tk.W, pady=(3, 18))
 
         hours_card = ttk.LabelFrame(page, text="เวลาทำงาน", padding=14)
@@ -68,7 +68,7 @@ class CapacityViewMixin:
         action_frame.pack(fill=tk.X, pady=(18, 0))
         ttk.Button(
             action_frame,
-            text="Save capacity settings",
+            text="Save operations settings",
             command=self._save_all_capacity_settings,
         ).pack(anchor=tk.E)
 
