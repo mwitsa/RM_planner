@@ -237,6 +237,7 @@ class ClassDefineMixin:
         action = "Updated" if self._editing_class_id else "Saved"
         self._load_saved_class_definitions()
         self._new_class_form(set_status=False)
+        self._refresh_after_class_definition_change()
         self.class_status_var.set(f"{action} class {saved.class_value}.")
 
     def _sync_order_classes(self, records: list[OrderRecord]) -> None:
@@ -277,6 +278,23 @@ class ClassDefineMixin:
         self._refresh_class_table()
         if definitions:
             self.class_status_var.set(f"Loaded {len(definitions)} saved classes.")
+
+    def _refresh_after_class_definition_change(self) -> None:
+        """Refresh all dependent views after a saved class-master change.
+
+        The calculated plan retains a snapshot of Country classification, so
+        simply redrawing its canvas would keep a stale domestic/export border.
+        Rebuilding the plan context applies the new Class Define value at once.
+        """
+
+        if self.result is not None:
+            self._refresh_preview()
+        self._refresh_summary_table()
+        if not hasattr(self, "_proposal_tables"):
+            return
+        self._invalidate_proposals()
+        self.after_idle(self._render_baseline_preview)
+        self.after_idle(lambda: self._calculate_proposals(quiet=True))
 
     def _refresh_class_table(self) -> None:
         definitions = filter_class_definitions(
@@ -391,6 +409,7 @@ class ClassDefineMixin:
                 return
             dialog.destroy()
             self._load_saved_class_definitions()
+            self._refresh_after_class_definition_change()
             self.class_status_var.set(f"Updated {len(updated):,} classes.")
 
         ttk.Button(actions, text="บันทึกทั้งหมด", command=save_bulk_changes).pack(

@@ -617,29 +617,24 @@ class PlanViewMixin:
                         x2 = max(x2, entry_start + max(duration * hour_width, 3))
                     x2 = min(left + timeline_hours * hour_width, x2)
                     colour = colours.get(job['size'], '#98a6b3')
-                    order_numbers = list(dict.fromkeys(jobs[entry['job']]['order'] for entry in entries))
+                    products = list(dict.fromkeys(
+                        jobs[entry['job']].get('product', '').strip() or '—'
+                        for entry in entries
+                    ))
                     code = period['operation'] or '—'
                     total_quantity = sum(entry['qty'] for entry in entries)
                     rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
                     size_text = ', '.join(rm_sizes)
-                    colour_meaning = colour_meanings.get(job['size'], 'สีเทา = RM Size อื่น เช่น HC หรือ BK')
                     market = job.get('market', 'unassigned')
                     market_label = {
                         'domestic': 'ในประเทศ',
                         'export': 'ต่างประเทศ',
                     }.get(market, 'ยังไม่กำหนดตลาด')
-                    border_meaning = (
-                        'ขอบเส้นปะ = ในประเทศ'
-                        if market == 'domestic'
-                        else 'ขอบเส้นทึบ = ต่างประเทศ'
-                        if market == 'export'
-                        else 'ขอบเส้นทึบ = ยังไม่กำหนดตลาด'
-                    )
                     detail = (
-                        f"Order No.: {', '.join(order_numbers)}\n"
+                        f"Product: {', '.join(products)}\n"
                         f"CODE: {code}\n"
-                        f"RM Size: {size_text} ({colour_meaning})\n"
-                        f"ตลาด: {market_label} ({border_meaning})\n"
+                        f"RM Size: {size_text}\n"
+                        f"ตลาด: {market_label}\n"
                         f"{line} • {fmt(total_quantity)} เกี๊ยว"
                     )
                     border_options = {'outline': '#18324a', 'width': 2}
