@@ -112,13 +112,45 @@ class CapacityViewMixin:
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(14, 0))
 
+        self.operation_order_rule_tab = ttk.Frame(content_host)
+        ttk.Label(
+            self.operation_order_rule_tab,
+            text="Operation order rule",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.operation_order_rule_tab,
+            text="กำหนดกฎและลำดับการเปลี่ยนงานของแต่ละไลน์ผลิต",
+        ).pack(anchor=tk.W, pady=(3, 18))
+        ttk.LabelFrame(
+            self.operation_order_rule_tab,
+            text="Operation order rules",
+            padding=16,
+        ).pack(fill=tk.X)
+
         self.class_define_tab = ttk.Frame(content_host)
         self._operations_sections = {
             "capacity": capacity_content,
+            "operation_order_rule": self.operation_order_rule_tab,
             "class_define": self.class_define_tab,
         }
         self._operations_section_buttons = {
             "capacity": self.operations_capacity_button,
+            "operation_order_rule": tk.Button(
+                sidebar,
+                text="Operation order rule",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("operation_order_rule"),
+            ),
             "class_define": tk.Button(
                 sidebar,
                 text="Class Define",
@@ -136,6 +168,7 @@ class CapacityViewMixin:
             ),
         }
         self.operations_capacity_button.configure(command=lambda: self._select_operations_section("capacity"))
+        self._operations_section_buttons["operation_order_rule"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["class_define"].pack(fill=tk.X, pady=(4, 0))
         self._build_class_define_tab()
         self._select_operations_section("capacity")
