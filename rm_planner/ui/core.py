@@ -81,6 +81,9 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self.capacity_file_path = (
             PROJECT_ROOT / "Data" / "Capacity" / "capacity.json"
         )
+        self.operation_rule_file_path = (
+            PROJECT_ROOT / "Data" / "Operations" / "operation_order_rules.json"
+        )
         self.master_workbook_file_path = (
             PROJECT_ROOT / "Data" / "Master" / "Master PCK ING.xlsx"
         )
