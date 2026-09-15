@@ -19,6 +19,7 @@ from .capacity_store import capacities_at_percentage
 from rm_planner.inventory.range_store import normalize_size_class
 
 EPS = 1e-6
+SPECIAL_RM_SIZES = frozenset(("HC", "BK"))
 TITLES = {"baseline": "แผนเดิม", "material": "ลดการเก็บ RM", "balanced": "สมดุล"}
 # The factory is closed every Monday and Tuesday.  Keep this rule in the
 # calculation layer as well as the date picker so a saved or imported plan
@@ -109,6 +110,12 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
         p = profiles.get(order.record_id, {})
         size = normalize_size_class(order.rm_size)
         supported = size in ('M', 'S', 'SS')
+        special_required_kg = None
+        if size in SPECIAL_RM_SIZES:
+            wt_pd_required_kg = number(order.wt_pd_kg, 'WT/PD kg', optional=True)
+            special_required_kg = wt_pd_required_kg or number(
+                order.ho_weight_kg, 'WT/HO kg', optional=True
+            )
         ready = p.get('status', 'unknown')
         if ready not in ('unknown', 'ready', 'partial', 'blocked'):
             raise ValueError("สถานะความพร้อมไม่ถูกต้อง")
@@ -131,6 +138,7 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
             day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
+            rm_required_kg=special_required_kg,
             locked=bool(p.get('locked', False)), egg=p.get('egg', ''), soup_rank=rank,
             earliest=earliest, status=ready, ready_date=ready_date,
             max_qty=number(p.get('max_qty', 0), 'จำนวนที่พร้อม'), reviewer=p.get('reviewer', '').strip()))
@@ -144,7 +152,14 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     # Calculate each record separately to preserve its arrival date.
     for r in stock:
         classified = sum(l.remaining_kg for l in _inventory_lots((r,), tuple(ranges), weights))
-        unused = sum(float(e.weight) for e in r.entries) - classified
+        special_stock = 0.0
+        for entry in r.entries:
+            special_size = normalize_size_class(entry.size_class)
+            if special_size in SPECIAL_RM_SIZES:
+                weight = float(entry.weight)
+                lots.append(dict(day=r.record_date, market=r.market_type, size=special_size, kg=weight))
+                special_stock += weight
+        unused = sum(float(e.weight) for e in r.entries) - classified - special_stock
         if unused > EPS:
             lots.append(dict(day=r.record_date, market=r.market_type, size='Unused', kg=unused))
     for lot in lots:
@@ -278,12 +293,17 @@ def evaluate(context, rows, apply_operation_rules=False):
         for entry in sorted(day_schedule, key=lambda item: (item['start_hours'], item['line'], item['job'])):
             r = entry
             j = jobs[r['job']]
-            if j['line'] not in context['capacity'] or j['yield_rate'] <= 0:
+            special_required = j.get('rm_required_kg')
+            if (j['line'] not in context['capacity'] or
+                    (j['yield_rate'] <= 0 and (special_required is None or special_required <= EPS))):
                 errors.append(f"{j['order']}: ยังไม่รองรับไลน์หรือ RM {j['size']}")
                 entry.update(rm_required_kg=None, rm_allocated_kg=None,
                              rm_shortage_kg=None, rm_coverage=0.0)
                 continue
-            required = r['qty'] / j['yield_rate']
+            required = (
+                r['qty'] / j['qty'] * special_required
+                if special_required is not None else r['qty'] / j['yield_rate']
+            )
             balance_key = (j['market'], j['stock_size'])
             available = max(0.0, balances[balance_key])
             allocated = min(required, available)
@@ -298,7 +318,8 @@ def evaluate(context, rows, apply_operation_rules=False):
         for (market, size), qty in balances.items():
             if qty < -EPS:
                 errors.append(f"{day}: RM {market} {size} ขาด {-qty:,.1f} kg")
-        by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size) for size in ('M', 'S', 'SS', 'Unused')}
+        by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size)
+                   for size in ('M', 'S', 'SS', 'HC', 'BK', 'Unused')}
         daily.append(dict(day=day, remaining=sum(by_size.values()), by_size=by_size,
                           changes=changes, hours=hours))
     active = [day for day in daily if day['day'] >= adjust_from]
