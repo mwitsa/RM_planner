@@ -17,11 +17,39 @@ class CapacityViewMixin:
 
         page = ttk.Frame(self.capacity_tab, padding=18)
         page.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(page, text="Operations Settings", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
-        ttk.Label(page, text="ตั้งค่าการดำเนินงานของโรงงาน เช่น กำลังผลิตต่อชั่วโมงและชั่วโมงทำงาน").pack(
+        page.columnconfigure(1, weight=1)
+        page.rowconfigure(0, weight=1)
+
+        sidebar = tk.Frame(page, bg="#f5f7fa", width=210, padx=14, pady=16)
+        sidebar.grid(row=0, column=0, sticky="nsw", padx=(0, 18))
+        sidebar.grid_propagate(False)
+        tk.Label(sidebar, text="Operations", bg="#f5f7fa", fg="#1f2937",
+                 font=("Segoe UI", 13, "bold")).pack(anchor=tk.W)
+        tk.Label(sidebar, text="Settings categories", bg="#f5f7fa", fg="#64748b",
+                 font=("Segoe UI", 9)).pack(anchor=tk.W, pady=(2, 16))
+        self.operations_capacity_button = tk.Button(
+            sidebar,
+            text="Capacity",
+            anchor=tk.W,
+            relief=tk.FLAT,
+            borderwidth=0,
+            padx=12,
+            pady=10,
+            bg="#dceeff",
+            activebackground="#dceeff",
+            fg="#24567b",
+            activeforeground="#24567b",
+            font=("Segoe UI", 10, "bold"),
+        )
+        self.operations_capacity_button.pack(fill=tk.X)
+
+        content = ttk.Frame(page)
+        content.grid(row=0, column=1, sticky="nsew")
+        ttk.Label(content, text="Capacity", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
+        ttk.Label(content, text="ตั้งค่ากำลังผลิตต่อชั่วโมงและชั่วโมงทำงานของโรงงาน").pack(
             anchor=tk.W, pady=(3, 18))
 
-        hours_card = ttk.LabelFrame(page, text="เวลาทำงาน", padding=14)
+        hours_card = ttk.LabelFrame(content, text="เวลาทำงาน", padding=14)
         hours_card.pack(fill=tk.X)
         ttk.Label(hours_card, text="Working hours per day", font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
         hours_entry = ttk.Entry(hours_card, textvariable=self.work_hours_per_day_var, width=12,
@@ -29,7 +57,7 @@ class CapacityViewMixin:
         hours_entry.pack(anchor=tk.W, pady=(6, 3))
         ttk.Label(hours_card, text="ชั่วโมง/วัน  •  ใช้คูณกับ Prod Cap / hr ของทุกประเภท").pack(anchor=tk.W)
 
-        inputs = ttk.LabelFrame(page, text="Prod Cap / hr", padding=14)
+        inputs = ttk.LabelFrame(content, text="Prod Cap / hr", padding=14)
         inputs.pack(fill=tk.X, pady=(14, 0))
         for column in range(3):
             inputs.columnconfigure(column, weight=1)
@@ -48,7 +76,7 @@ class CapacityViewMixin:
             entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
         hours_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
 
-        summary = ttk.LabelFrame(page, text="Calculated capacity per day", padding=14)
+        summary = ttk.LabelFrame(content, text="Calculated capacity per day", padding=14)
         summary.pack(fill=tk.X, pady=(14, 0))
         for column in range(3):
             summary.columnconfigure(column, weight=1)
@@ -64,7 +92,7 @@ class CapacityViewMixin:
                 fill=tk.X, pady=(5, 0))
             tk.Label(card, text="ถ้วย / วัน", bg="#edf6fb", anchor="w").pack(fill=tk.X)
 
-        action_frame = ttk.Frame(page)
+        action_frame = ttk.Frame(content)
         action_frame.pack(fill=tk.X, pady=(18, 0))
         ttk.Button(
             action_frame,
@@ -73,7 +101,7 @@ class CapacityViewMixin:
         ).pack(anchor=tk.E)
 
         ttk.Label(
-            page,
+            content,
             textvariable=self.capacity_status_var,
             relief=tk.SUNKEN,
             anchor=tk.W,
