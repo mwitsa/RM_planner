@@ -23,7 +23,9 @@ from rm_planner.planning.market_labels import market_internal_value
 
 STORE_VERSION = 7
 RECORD_TYPES = {"actual", "prediction", "existing"}
-STOCK_SIZE_CLASSES = (*SIZE_CLASSES, "Unused")
+# HC and BK are tracked as direct RM stock classes.  They are not generated
+# from Assortment STD physical-size ranges, which continue to classify M/S/SS.
+STOCK_SIZE_CLASSES = (*SIZE_CLASSES, "HC", "BK", "Unused")
 RM_ID_PREFIX = "RM-"
 RM_ID_WIDTH = 6
 RM_ID_PATTERN = re.compile(r"^RM-(\d+)$", re.IGNORECASE)
@@ -126,7 +128,7 @@ def aggregate_entries_by_size_class(
     entries: Iterable[ActualAssortmentEntry],
     ranges: Iterable[AssortmentSizeRange],
 ) -> tuple[ActualAssortmentEntry, ...]:
-    """Combine physical size rows and class rows into M, S, SS, and Unused totals."""
+    """Combine physical rows and direct classes into tracked stock totals."""
 
     direct_totals = {size_class: 0.0 for size_class in STOCK_SIZE_CLASSES}
     physical_entries: list[tuple[str, str, float]] = []
@@ -152,7 +154,9 @@ def aggregate_entries_by_size_class(
 
     aggregated: list[ActualAssortmentEntry] = []
     for size_class in STOCK_SIZE_CLASSES:
-        total = direct_totals[size_class] + float(summarized[size_class].total)
+        total = direct_totals[size_class] + float(
+            summarized.get(size_class, SizeClassWeightSummary(0)).total
+        )
         if total > 0:
             aggregated.append(
                 ActualAssortmentEntry(
@@ -371,7 +375,7 @@ def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
         raise ValueError(f"Weight for size {size} must be greater than zero.")
     pieces_per_kg = entry.pieces_per_kg
     if size_class and size_class not in STOCK_SIZE_CLASSES:
-        raise ValueError("Stock class must be M, S, SS, or Unused.")
+        raise ValueError("Stock class must be M, S, SS, HC, BK, or Unused.")
     if pieces_per_kg is not None:
         if size_class not in SIZE_CLASSES:
             raise ValueError("Legacy pieces/kg is supported only for M, S, or SS stock.")

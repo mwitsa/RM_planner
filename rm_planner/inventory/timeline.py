@@ -7,6 +7,7 @@ from typing import Iterable
 
 from rm_planner.inventory.actual_store import (
     ActualAssortmentRecord,
+    STOCK_SIZE_CLASSES,
     split_size_range,
 )
 from rm_planner.inventory.range_store import (
@@ -28,6 +29,8 @@ class RmTimelineRow:
     m_stock: SizeClassWeightSummary
     s_stock: SizeClassWeightSummary
     ss_stock: SizeClassWeightSummary
+    hc_stock: SizeClassWeightSummary
+    bk_stock: SizeClassWeightSummary
     m_wontons: float
     s_wontons: float
     ss_wontons: float
@@ -58,7 +61,7 @@ def build_rm_timeline(
 
     cumulative_kg = 0.0
     cumulative_wontons = 0.0
-    summary_classes = (*SIZE_CLASSES, "Unused")
+    summary_classes = STOCK_SIZE_CLASSES
     cumulative_totals = {key: 0.0 for key in summary_classes}
     cumulative_class_wontons = {key: 0.0 for key in summary_classes}
     rows: list[RmTimelineRow] = []
@@ -70,13 +73,12 @@ def build_rm_timeline(
         incoming_kg = sum(record.total_weight for record in dated_records)
         daily_summaries = _summarize_records(dated_records, range_list)
         daily_class_wontons = {
-            size_class: weight_settings.estimate_wontons(
-                size_class,
-                daily_summaries[size_class].total,
+            size_class: (
+                weight_settings.estimate_wontons(size_class, daily_summaries[size_class].total)
+                if size_class in SIZE_CLASSES else 0.0
             )
-            for size_class in SIZE_CLASSES
+            for size_class in summary_classes
         }
-        daily_class_wontons["Unused"] = 0.0
         incoming_wontons = sum(daily_class_wontons.values())
         cumulative_kg += incoming_kg
         cumulative_wontons += incoming_wontons
@@ -93,6 +95,8 @@ def build_rm_timeline(
                 m_stock=_summary(cumulative_totals["M"]),
                 s_stock=_summary(cumulative_totals["S"]),
                 ss_stock=_summary(cumulative_totals["SS"]),
+                hc_stock=_summary(cumulative_totals["HC"]),
+                bk_stock=_summary(cumulative_totals["BK"]),
                 m_wontons=_number(cumulative_class_wontons["M"]),
                 s_wontons=_number(cumulative_class_wontons["S"]),
                 ss_wontons=_number(cumulative_class_wontons["SS"]),
@@ -104,20 +108,15 @@ def build_rm_timeline(
     return tuple(rows)
 
 
-def stock_distribution_percentages(
-    m_stock: int | float,
-    s_stock: int | float,
-    ss_stock: int | float,
-    unused_stock: int | float,
-) -> tuple[float, float, float, float]:
-    """Return the M, S, SS, and Unused shares of total stock."""
+def stock_distribution_percentages(*stock_weights: int | float) -> tuple[float, ...]:
+    """Return percentage shares for the supplied stock-class weights."""
 
-    weights = tuple(float(value) for value in (m_stock, s_stock, ss_stock, unused_stock))
+    weights = tuple(float(value) for value in stock_weights)
     if any(value < 0 for value in weights):
         raise ValueError("Stock distribution weights cannot be negative.")
     total = sum(weights)
     if total == 0:
-        return (0.0, 0.0, 0.0, 0.0)
+        return tuple(0.0 for _ in weights)
     return tuple(value / total * 100 for value in weights)
 
 
@@ -125,16 +124,8 @@ def _summarize_records(
     records: Iterable[ActualAssortmentRecord],
     ranges: tuple[AssortmentSizeRange, ...],
 ) -> dict[str, SizeClassWeightSummary]:
-    if not ranges:
-        total = sum(record.total_weight for record in records)
-        return {
-            "M": SizeClassWeightSummary(0),
-            "S": SizeClassWeightSummary(0),
-            "SS": SizeClassWeightSummary(0),
-            "Unused": SizeClassWeightSummary(total),
-        }
     entries: list[tuple[str, str, float]] = []
-    direct_totals = {key: 0.0 for key in (*SIZE_CLASSES, "Unused")}
+    direct_totals = {key: 0.0 for key in STOCK_SIZE_CLASSES}
     for record in records:
         for entry in record.entries:
             size_class = normalize_size_class(entry.size_class)
@@ -143,12 +134,15 @@ def _summarize_records(
                 continue
             start, end = split_size_range(entry.size)
             entries.append((start, end, entry.weight))
-    summarized = summarize_size_class_weight_details(entries, ranges)
+    summarized = (
+        summarize_size_class_weight_details(entries, ranges)
+        if ranges else {"Unused": SizeClassWeightSummary(sum(weight for _, _, weight in entries))}
+    )
     return {
         size_class: SizeClassWeightSummary(
-            summarized[size_class].total + direct_totals.get(size_class, 0),
+            summarized.get(size_class, SizeClassWeightSummary(0)).total + direct_totals[size_class],
         )
-        for size_class in (*SIZE_CLASSES, "Unused")
+        for size_class in STOCK_SIZE_CLASSES
     }
 
 

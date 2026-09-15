@@ -163,6 +163,27 @@ class RmTimelineTests(unittest.TestCase):
         self.assertEqual(rows[0].cumulative_kg, 25)
         self.assertEqual(rows[0].cumulative_wontons, 0)
 
+    def test_direct_hc_and_bk_stock_are_tracked_without_wonton_estimates(self) -> None:
+        stock = ActualAssortmentRecord(
+            record_id="special-sizes",
+            rm_id="RM-SPECIAL",
+            record_date="2026-08-28",
+            entries=(
+                ActualAssortmentEntry("HC", 20, size_class="HC"),
+                ActualAssortmentEntry("BK", 30, size_class="BK"),
+            ),
+            record_type="actual",
+            market_type="domestic",
+            created_at="2026-08-28T00:00:00+00:00",
+            updated_at="2026-08-28T00:00:00+00:00",
+        )
+
+        row = build_rm_timeline([stock], RANGES)[0]
+
+        self.assertEqual(row.hc_stock.total, 20)
+        self.assertEqual(row.bk_stock.total, 30)
+        self.assertEqual(row.cumulative_wontons, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

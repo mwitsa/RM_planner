@@ -23,6 +23,7 @@ from rm_planner.inventory.range_store import (
 from rm_planner.inventory.actual_store import (
     ActualAssortmentEntry,
     ActualAssortmentRecord,
+    STOCK_SIZE_CLASSES,
     aggregate_entries_by_size_class,
     delete_actual_record,
     load_actual_records,
@@ -115,6 +116,8 @@ RM_STOCK_DISTRIBUTION_COLORS = {
     "M": "#4f91c3",
     "S": "#d58a2a",
     "SS": "#63a967",
+    "HC": "#8d70bd",
+    "BK": "#667482",
     "Unused": "#91979d",
 }
 ORDER_COLUMN_FILTER_KEYS = {

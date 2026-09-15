@@ -321,7 +321,7 @@ class StockEditorMixin:
         ttk.Combobox(
             box,
             textvariable=size_class_var,
-            values=(*SIZE_CLASSES, "Unused"),
+            values=STOCK_SIZE_CLASSES,
             state="readonly",
         ).grid(row=0, column=1, sticky="ew", padx=(0, 12))
         ttk.Entry(box, textvariable=weight_var).grid(
@@ -463,7 +463,7 @@ class StockEditorMixin:
                 continue
             if not size_class or not weight_text:
                 raise ValueError(f"Row {number} needs Class and Weight.")
-            if size_class not in (*SIZE_CLASSES, "Unused"):
+            if size_class not in STOCK_SIZE_CLASSES:
                 raise ValueError(f"Row {number} has an invalid Class.")
             if size_class in used_classes:
                 raise ValueError(f"Class {size_class} is already used in another row.")
@@ -595,12 +595,12 @@ class StockEditorMixin:
             record.entries,
             self._current_assortment_size_range_definitions(),
         )
-        totals = {size_class: 0.0 for size_class in (*SIZE_CLASSES, "Unused")}
+        totals = {size_class: 0.0 for size_class in STOCK_SIZE_CLASSES}
         for entry in aggregated:
             totals[entry.size_class] += float(entry.weight)
         return {
             size_class: SizeClassWeightSummary(totals[size_class])
-            for size_class in (*SIZE_CLASSES, "Unused")
+            for size_class in STOCK_SIZE_CLASSES
         }
 
     def _format_size_class_summary(self, summary: SizeClassWeightSummary) -> str:
