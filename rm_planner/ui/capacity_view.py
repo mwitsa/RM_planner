@@ -43,13 +43,17 @@ class CapacityViewMixin:
         )
         self.operations_capacity_button.pack(fill=tk.X)
 
-        content = ttk.Frame(page)
-        content.grid(row=0, column=1, sticky="nsew")
-        ttk.Label(content, text="Capacity", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
-        ttk.Label(content, text="ตั้งค่ากำลังผลิตต่อชั่วโมงและชั่วโมงทำงานของโรงงาน").pack(
+        content_host = ttk.Frame(page)
+        content_host.grid(row=0, column=1, sticky="nsew")
+        content_host.columnconfigure(0, weight=1)
+        content_host.rowconfigure(0, weight=1)
+        capacity_content = ttk.Frame(content_host)
+        capacity_content.grid(row=0, column=0, sticky="nsew")
+        ttk.Label(capacity_content, text="Capacity", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
+        ttk.Label(capacity_content, text="ตั้งค่ากำลังผลิตต่อชั่วโมงและชั่วโมงทำงานของโรงงาน").pack(
             anchor=tk.W, pady=(3, 18))
 
-        hours_card = ttk.LabelFrame(content, text="เวลาทำงาน", padding=14)
+        hours_card = ttk.LabelFrame(capacity_content, text="เวลาทำงาน", padding=14)
         hours_card.pack(fill=tk.X)
         ttk.Label(hours_card, text="Working hours per day", font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
         hours_entry = ttk.Entry(hours_card, textvariable=self.work_hours_per_day_var, width=12,
@@ -57,7 +61,7 @@ class CapacityViewMixin:
         hours_entry.pack(anchor=tk.W, pady=(6, 3))
         ttk.Label(hours_card, text="ชั่วโมง/วัน  •  ใช้คูณกับ Prod Cap / hr ของทุกประเภท").pack(anchor=tk.W)
 
-        inputs = ttk.LabelFrame(content, text="Prod Cap / hr", padding=14)
+        inputs = ttk.LabelFrame(capacity_content, text="Prod Cap / hr", padding=14)
         inputs.pack(fill=tk.X, pady=(14, 0))
         for column in range(3):
             inputs.columnconfigure(column, weight=1)
@@ -76,7 +80,7 @@ class CapacityViewMixin:
             entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
         hours_entry.bind("<KeyRelease>", lambda _event: self._update_capacity_preview())
 
-        summary = ttk.LabelFrame(content, text="Calculated capacity per day", padding=14)
+        summary = ttk.LabelFrame(capacity_content, text="Calculated capacity per day", padding=14)
         summary.pack(fill=tk.X, pady=(14, 0))
         for column in range(3):
             summary.columnconfigure(column, weight=1)
@@ -92,7 +96,7 @@ class CapacityViewMixin:
                 fill=tk.X, pady=(5, 0))
             tk.Label(card, text="ถ้วย / วัน", bg="#edf6fb", anchor="w").pack(fill=tk.X)
 
-        action_frame = ttk.Frame(content)
+        action_frame = ttk.Frame(capacity_content)
         action_frame.pack(fill=tk.X, pady=(18, 0))
         ttk.Button(
             action_frame,
@@ -101,12 +105,58 @@ class CapacityViewMixin:
         ).pack(anchor=tk.E)
 
         ttk.Label(
-            content,
+            capacity_content,
             textvariable=self.capacity_status_var,
             relief=tk.SUNKEN,
             anchor=tk.W,
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(14, 0))
+
+        self.class_define_tab = ttk.Frame(content_host)
+        self._operations_sections = {
+            "capacity": capacity_content,
+            "class_define": self.class_define_tab,
+        }
+        self._operations_section_buttons = {
+            "capacity": self.operations_capacity_button,
+            "class_define": tk.Button(
+                sidebar,
+                text="Class Define",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("class_define"),
+            ),
+        }
+        self.operations_capacity_button.configure(command=lambda: self._select_operations_section("capacity"))
+        self._operations_section_buttons["class_define"].pack(fill=tk.X, pady=(4, 0))
+        self._build_class_define_tab()
+        self._select_operations_section("capacity")
+
+    def _select_operations_section(self, section: str) -> None:
+        """Show one Operations Settings category in the shared content area."""
+
+        for name, frame in self._operations_sections.items():
+            if name == section:
+                frame.grid(row=0, column=0, sticky="nsew")
+            else:
+                frame.grid_remove()
+            selected = name == section
+            button = self._operations_section_buttons[name]
+            button.configure(
+                bg="#dceeff" if selected else "#f5f7fa",
+                activebackground="#dceeff" if selected else "#e7edf5",
+                fg="#24567b" if selected else "#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10, "bold") if selected else ("Segoe UI", 10),
+            )
 
     def _update_capacity_preview(self) -> None:
         work_hours = self._preview_capacity_number(self.work_hours_per_day_var.get())

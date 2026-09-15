@@ -168,10 +168,6 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self.notebook.add(self.rm_tab, text="RM")
         self._build_rm_tab()
 
-        self.class_define_tab = ttk.Frame(self.notebook, padding=14)
-        self.notebook.add(self.class_define_tab, text="Class Define")
-        self._build_class_define_tab()
-
         self.capacity_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.capacity_tab, text="Operations Settings")
         self._build_capacity_tab()
