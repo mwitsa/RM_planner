@@ -16,6 +16,12 @@ import math
 from .engine import (class_group_for_order, order_due_date, production_type_for_order, market_type_for_order,
                      outstanding_order_quantities, _inventory_lots)
 from .capacity_store import capacities_at_percentage
+from .production_start_store import (
+    DEFAULT_COOKED_START_HOUR,
+    DEFAULT_RAW_START_HOUR,
+    PRODUCTION_WINDOW_START_HOUR,
+    ProductionStartSettings,
+)
 from rm_planner.inventory.range_store import normalize_size_class
 
 EPS = 1e-6
@@ -45,7 +51,7 @@ def settings_defaults():
 
 
 def build_context(orders, stock, ranges, capacity, classes, weights, start, settings, profiles,
-                  operation_rules=()):
+                  operation_rules=(), chill_days=None, production_start_settings=None):
     """Adapt saved application records without mutating those records."""
     start = date.fromisoformat(start)
     classes = tuple(classes)
@@ -89,6 +95,16 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
     if not start <= adjust_from <= end:
         raise ValueError("วันเริ่มปรับแผนต้องอยู่ระหว่างวันเริ่มและวันสุดท้ายที่มองล่วงหน้า")
     s['adjust_from'] = adjust_from.isoformat()
+    if chill_days is not None and (isinstance(chill_days, bool) or not isinstance(chill_days, int) or chill_days < 0):
+        raise ValueError("Chill days must be a whole number of 0 or greater.")
+    if production_start_settings is None:
+        production_start_settings = ProductionStartSettings()
+    if not isinstance(production_start_settings, ProductionStartSettings):
+        raise ValueError("Production-start settings have an invalid structure.")
+    production_start_hours = {
+        'COOKED': production_start_settings.cooked_hour,
+        'RAW': production_start_settings.raw_hour,
+    }
     jobs, notices, seen = [], [], set()
     for order in orders:
         try:
@@ -157,16 +173,26 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             special_size = normalize_size_class(entry.size_class)
             if special_size in SPECIAL_RM_SIZES:
                 weight = float(entry.weight)
-                lots.append(dict(day=r.record_date, market=r.market_type, size=special_size, kg=weight))
+                lots.append(dict(
+                    day=r.record_date,
+                    market=entry.market_type or r.market_type,
+                    size=special_size,
+                    kg=weight,
+                ))
                 special_stock += weight
         unused = sum(float(e.weight) for e in r.entries) - classified - special_stock
         if unused > EPS:
             lots.append(dict(day=r.record_date, market=r.market_type, size='Unused', kg=unused))
     for lot in lots:
         number(lot['kg'], 'Stock kg')
+        lot['freeze_day'] = (
+            (date.fromisoformat(lot['day']) + timedelta(days=chill_days)).isoformat()
+            if chill_days is not None else None
+        )
     return dict(start=start.isoformat(), settings=s, jobs=jobs, lots=lots,
                 capacity={'RAW': float(raw), 'COOKED': float(cooked)}, notices=notices,
-                forecasts=forecasts, operation_rules=operation_rules)
+                forecasts=forecasts, operation_rules=operation_rules, chill_days=chill_days,
+                production_start_hours=production_start_hours)
 
 
 def signature(context):
@@ -224,13 +250,13 @@ def evaluate(context, rows, apply_operation_rules=False):
     for j in jobs.values():
         if abs(totals[j['id']] - j['qty']) > EPS:
             errors.append(f"{j['order']}: จำนวนไม่ตรงกับออเดอร์คงเหลือ")
-    balances = defaultdict(float)
+    # Preserve each lot while allocating RM.  Besides making the consumption
+    # order deterministic, this lets an unconsumed chilled lot leave the
+    # usable-RM balance on its configured Freeze day.
+    lot_balances = [dict(lot, remaining_kg=float(lot['kg'])) for lot in context['lots']]
     daily, schedule = [], []
     for offset in range(int(s['lookahead'])):
         day = (start + timedelta(days=offset)).isoformat()
-        for lot in context['lots']:
-            if lot['day'] == day or (offset == 0 and lot['day'] < day):
-                balances[(lot['market'], lot['size'])] += lot['kg']
         # Do not put work on a closed day even while displaying an invalid
         # imported/manual plan.  The error above tells the user what to fix.
         selected = [] if date.fromisoformat(day).weekday() in FACTORY_HOLIDAY_WEEKDAYS else [r for r in rows if r['day'] == day]
@@ -290,7 +316,19 @@ def evaluate(context, rows, apply_operation_rules=False):
         # Allocate RM in the same time order displayed by the timeline.  This
         # does not change feasibility (the final balance is identical), but it
         # identifies exactly how much of each production run is covered.
-        for entry in sorted(day_schedule, key=lambda item: (item['start_hours'], item['line'], item['job'])):
+        start_hours = context.get(
+            'production_start_hours',
+            {'COOKED': DEFAULT_COOKED_START_HOUR, 'RAW': DEFAULT_RAW_START_HOUR},
+        )
+        for entry in sorted(
+            day_schedule,
+            key=lambda item: (
+                (start_hours.get(item['line'], PRODUCTION_WINDOW_START_HOUR)
+                 - PRODUCTION_WINDOW_START_HOUR) % 24 + item['start_hours'],
+                item['line'],
+                item['job'],
+            ),
+        ):
             r = entry
             j = jobs[r['job']]
             special_required = j.get('rm_required_kg')
@@ -305,21 +343,44 @@ def evaluate(context, rows, apply_operation_rules=False):
                 if special_required is not None else r['qty'] / j['yield_rate']
             )
             balance_key = (j['market'], j['stock_size'])
-            available = max(0.0, balances[balance_key])
+            available_lots = sorted(
+                (
+                    lot for lot in lot_balances
+                    if lot['market'] == balance_key[0]
+                    and lot['size'] == balance_key[1]
+                    and lot['day'] <= day
+                    and (lot.get('freeze_day') is None or day < lot['freeze_day'])
+                    and lot['remaining_kg'] > EPS
+                ),
+                key=lambda lot: lot['day'],
+            )
+            available = sum(lot['remaining_kg'] for lot in available_lots)
             allocated = min(required, available)
             shortage = required - allocated
+            amount_to_allocate = allocated
+            for lot in available_lots:
+                used = min(amount_to_allocate, lot['remaining_kg'])
+                lot['remaining_kg'] -= used
+                amount_to_allocate -= used
+                if amount_to_allocate <= EPS:
+                    break
             entry.update(
                 rm_required_kg=required,
                 rm_allocated_kg=allocated,
                 rm_shortage_kg=shortage,
                 rm_coverage=allocated / required if required > EPS else 1.0,
             )
-            balances[balance_key] -= required
-        for (market, size), qty in balances.items():
-            if qty < -EPS:
-                errors.append(f"{day}: RM {market} {size} ขาด {-qty:,.1f} kg")
-        by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size)
-                   for size in ('M', 'S', 'SS', 'HC', 'BK', 'Unused')}
+            if shortage > EPS:
+                errors.append(f"{day}: RM {balance_key[0]} {balance_key[1]} ขาด {shortage:,.1f} kg")
+        by_size = {
+            size: sum(
+                lot['remaining_kg'] for lot in lot_balances
+                if lot['size'] == size
+                and lot['day'] <= day
+                and (lot.get('freeze_day') is None or day < lot['freeze_day'])
+            )
+            for size in ('M', 'S', 'SS', 'HC', 'BK', 'Unused')
+        }
         daily.append(dict(day=day, remaining=sum(by_size.values()), by_size=by_size,
                           changes=changes, hours=hours))
     active = [day for day in daily if day['day'] >= adjust_from]

@@ -8,10 +8,27 @@ from pathlib import Path
 from rm_planner.planning.alternatives import build_context, evaluate, compare, baseline_rows, signature
 from rm_planner.planning.proposal_store import load_preferences, save_preferences, save_approval
 from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
+from rm_planner.inventory.actual_store import ActualAssortmentEntry, ActualAssortmentRecord
 from test_plan_engine import order, stock, class_definition, balanced_capacity, RANGES
 
 
 class AlternativeTests(unittest.TestCase):
+    def test_build_context_accepts_non_special_direct_stock(self):
+        stock_record = ActualAssortmentRecord(
+            record_id='m-stock', rm_id='RM-M', record_date='2026-09-16',
+            entries=(ActualAssortmentEntry('M', 10, size_class='M'),),
+            record_type='actual', market_type='domestic',
+            created_at='2026-09-16T00:00:00+00:00',
+            updated_at='2026-09-16T00:00:00+00:00',
+        )
+
+        context = build_context(
+            [], [stock_record], (), balanced_capacity(1_000, 1_000), [],
+            WontonWeightSettings(10, 10), '2026-09-16', {}, {},
+        )
+
+        self.assertEqual([(lot['size'], lot['kg']) for lot in context['lots']], [('M', 10)])
+
     def context(self, **settings):
         a = order('a', day='30', month='09')
         a = replace(a, prod_date='14', prod_month='09', prod_year='2026', order_no='A')
@@ -203,6 +220,56 @@ class AlternativeTests(unittest.TestCase):
         self.assertEqual(entry['rm_allocated_kg'], 5)
         self.assertEqual(entry['rm_shortage_kg'], 5)
         self.assertEqual(entry['rm_coverage'], 0.5)
+
+    def test_configured_line_start_times_control_rm_use_order(self):
+        def job(job_id, line):
+            return dict(
+                id=job_id, order=job_id, code='', sku=job_id, product=job_id,
+                qty=100, day='2026-09-16', due='2026-09-16', cups=10,
+                yield_rate=10, line=line, market='domestic', stock_size='M', size='M',
+                locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                max_qty=0, egg='มีไข่', soup_rank=0, class_groups={},
+            )
+
+        context = {
+            'start': '2026-09-16',
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-16', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [job('cooked', 'COOKED'), job('raw', 'RAW')],
+            'lots': [dict(day='2026-09-16', market='domestic', size='M', kg=10)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [],
+            'operation_rules': (), 'production_start_hours': {'COOKED': 20, 'RAW': 17},
+        }
+
+        schedule = evaluate(context, baseline_rows(context))['schedule']
+        covered = {entry['job']: entry['rm_allocated_kg'] for entry in schedule}
+
+        self.assertEqual(covered, {'cooked': 0, 'raw': 10})
+
+    def test_chill_days_freezes_an_unconsumed_lot_before_the_freeze_day(self):
+        context = {
+            'start': '2026-09-17',
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-17', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                dict(id='expired', order='Expired RM', code='', sku='M', product='Product M', qty=100,
+                     day='2026-09-17', due='2026-09-17', cups=10, yield_rate=10,
+                     line='COOKED', market='domestic', stock_size='M', size='M',
+                     locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                     max_qty=0, egg='มีไข่', soup_rank=0, class_groups={}),
+            ],
+            # RM arrived on 14 Sep.  With a three-day chill window it freezes
+            # on 17 Sep and is no longer usable by production that day.
+            'lots': [dict(day='2026-09-14', freeze_day='2026-09-17', market='domestic', size='M', kg=20)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        entry = evaluate(context, baseline_rows(context))['schedule'][0]
+
+        self.assertEqual(entry['rm_allocated_kg'], 0)
+        self.assertEqual(entry['rm_shortage_kg'], 10)
 
     def test_bk_run_is_fully_uncovered_when_no_bk_stock_exists(self):
         context = {

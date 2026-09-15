@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable
 
 from rm_planner.inventory.actual_store import (
@@ -50,11 +50,14 @@ def build_rm_timeline(
     range_list = tuple(ranges)
     weight_settings = wonton_weight_settings or WontonWeightSettings()
     normalized_market = _normalize_filter(market_type)
-    filtered = [
-        record
-        for record in records
-        if normalized_market is None or record.market_type == normalized_market
-    ]
+    filtered = []
+    for record in records:
+        entries = tuple(
+            entry for entry in record.entries
+            if normalized_market is None or (entry.market_type or record.market_type) == normalized_market
+        )
+        if entries:
+            filtered.append(replace(record, entries=entries))
     by_date: dict[str, list[ActualAssortmentRecord]] = {}
     for record in filtered:
         by_date.setdefault(record.record_date, []).append(record)

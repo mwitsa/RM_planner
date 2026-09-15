@@ -54,6 +54,15 @@ from rm_planner.orders.extractor import (
     list_sheets,
 )
 from rm_planner.planning.operation_rule_store import load_operation_rules, save_operation_rules
+from rm_planner.planning.chill_days_store import load_chill_days, save_chill_days
+from rm_planner.planning.production_start_store import (
+    PRODUCTION_WINDOW_START_HOUR,
+    ProductionStartSettings,
+    hour_from_time_label,
+    load_production_start_settings,
+    production_time_options,
+    save_production_start_settings,
+)
 from rm_planner.master.store import (
     MasterComponentRecord,
     extract_master_data,
@@ -107,18 +116,28 @@ ASSORTMENT_OUTPUT_WIDTH = 150
 ASSORTMENT_BASE_WIDTH = 76
 ASSORTMENT_HEADER_HEIGHT = 34
 ASSORTMENT_ROW_HEIGHT = 29
-ASSORTMENT_CLASS_COLORS = {
-    "M": ("#d8edff", "#2374ab"),
-    "S": ("#fff0d8", "#c57617"),
-    "SS": ("#dcf5df", "#338a3e"),
-}
-RM_STOCK_DISTRIBUTION_COLORS = {
-    "M": "#4f91c3",
-    "S": "#d58a2a",
-    "SS": "#63a967",
-    "HC": "#8d70bd",
+# One palette for every size indicator in the application.  Timeline is the
+# source of truth because it is the primary planning view.
+RM_SIZE_COLORS = {
+    "M": "#4f83cc",
+    "S": "#2f9d8f",
+    "SS": "#8268bd",
+    "HC": "#d99422",
     "BK": "#667482",
-    "Unused": "#91979d",
+    "Unused": "#98a6b3",
+}
+ASSORTMENT_CLASS_COLORS = {
+    "M": ("#eaf3fb", RM_SIZE_COLORS["M"]),
+    "S": ("#e6f5f2", RM_SIZE_COLORS["S"]),
+    "SS": ("#f0ecfa", RM_SIZE_COLORS["SS"]),
+}
+RM_STOCK_DISTRIBUTION_COLORS = RM_SIZE_COLORS
+RM_STOCK_CARD_COLORS = {
+    "M": ("#eaf3fb", RM_SIZE_COLORS["M"], "#174f78"),
+    "S": ("#e6f5f2", RM_SIZE_COLORS["S"], "#17695f"),
+    "SS": ("#f0ecfa", RM_SIZE_COLORS["SS"], "#56428a"),
+    "HC": ("#fff4e3", RM_SIZE_COLORS["HC"], "#87520c"),
+    "BK": ("#f0f2f4", RM_SIZE_COLORS["BK"], "#374151"),
 }
 ORDER_COLUMN_FILTER_KEYS = {
     "order_no": "order_no",

@@ -14,6 +14,13 @@ class CapacityViewMixin:
         self.raw_wonton_daily_var = tk.StringVar(value="—")
         self.cooked_wonton_daily_var = tk.StringVar(value="—")
         self.cooked_wonton_noodle_daily_var = tk.StringVar(value="—")
+        self.chill_days_var = tk.StringVar(value="0")
+        self.chill_days_status_var = tk.StringVar(value="Chill-days setting has not been saved yet.")
+        self.production_cooked_start_var = tk.StringVar(value="18:00")
+        self.production_raw_start_var = tk.StringVar(value="19:00")
+        self.production_start_status_var = tk.StringVar(
+            value="Production start times have not been saved yet."
+        )
 
         page = ttk.Frame(self.capacity_tab, padding=18)
         page.pack(fill=tk.BOTH, expand=True)
@@ -124,14 +131,52 @@ class CapacityViewMixin:
         ).pack(anchor=tk.W, pady=(3, 18))
         self._build_operation_rule_builder()
 
+        self.chill_days_tab = ttk.Frame(content_host)
+        self._build_chill_days_settings()
+
+        self.production_start_tab = ttk.Frame(content_host)
+        self._build_production_start_settings()
+
         self.class_define_tab = ttk.Frame(content_host)
         self._operations_sections = {
             "capacity": capacity_content,
+            "chill_days": self.chill_days_tab,
+            "production_start": self.production_start_tab,
             "operation_order_rule": self.operation_order_rule_tab,
             "class_define": self.class_define_tab,
         }
         self._operations_section_buttons = {
             "capacity": self.operations_capacity_button,
+            "chill_days": tk.Button(
+                sidebar,
+                text="Chill days",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("chill_days"),
+            ),
+            "production_start": tk.Button(
+                sidebar,
+                text="เวลาเริ่มผลิต",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("production_start"),
+            ),
             "operation_order_rule": tk.Button(
                 sidebar,
                 text="Operation order rule",
@@ -164,10 +209,104 @@ class CapacityViewMixin:
             ),
         }
         self.operations_capacity_button.configure(command=lambda: self._select_operations_section("capacity"))
+        self._operations_section_buttons["chill_days"].pack(fill=tk.X, pady=(4, 0))
+        self._operations_section_buttons["production_start"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["operation_order_rule"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["class_define"].pack(fill=tk.X, pady=(4, 0))
         self._build_class_define_tab()
         self._select_operations_section("capacity")
+
+    def _build_chill_days_settings(self) -> None:
+        """Build the future planning constraint for chilled RM usage."""
+
+        ttk.Label(self.chill_days_tab, text="Chill days", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
+        ttk.Label(
+            self.chill_days_tab,
+            text="กำหนดจำนวนวันที่ใช้ RM แบบแช่เย็นได้ ก่อนต้อง Freeze เป็น Stock",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        setting_card = ttk.LabelFrame(self.chill_days_tab, text="Chilled RM window", padding=14)
+        setting_card.pack(fill=tk.X)
+        ttk.Label(setting_card, text="Usable days before freezing", font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
+        entry = ttk.Entry(setting_card, textvariable=self.chill_days_var, width=12, font=("Segoe UI", 14))
+        entry.pack(anchor=tk.W, pady=(6, 3))
+        ttk.Label(
+            setting_card,
+            text="วัน • ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป; ระบบจะนำค่านี้ไปใช้กับ Timeline ในขั้นถัดไป",
+        ).pack(anchor=tk.W)
+
+        actions = ttk.Frame(self.chill_days_tab)
+        actions.pack(fill=tk.X, pady=(18, 0))
+        ttk.Button(actions, text="Save chill days", command=self._save_chill_days_settings).pack(anchor=tk.E)
+        ttk.Label(
+            self.chill_days_tab,
+            textvariable=self.chill_days_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(14, 0))
+
+    def _build_production_start_settings(self) -> None:
+        """Build the daily start-time controls used by the production timeline."""
+
+        ttk.Label(
+            self.production_start_tab,
+            text="เวลาเริ่มผลิต",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.production_start_tab,
+            text="กำหนดเวลาเริ่มงานของแต่ละไลน์ใน Production Timeline",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        setting_card = ttk.LabelFrame(
+            self.production_start_tab,
+            text="Production line start time",
+            padding=14,
+        )
+        setting_card.pack(fill=tk.X)
+        for column in range(2):
+            setting_card.columnconfigure(column, weight=1)
+        for column, (label, variable) in enumerate((
+            ("Cooked wonton", self.production_cooked_start_var),
+            ("Raw wonton", self.production_raw_start_var),
+        )):
+            field = ttk.Frame(setting_card)
+            field.grid(
+                row=0,
+                column=column,
+                sticky="ew",
+                padx=(0 if column == 0 else 10, 10 if column == 0 else 0),
+            )
+            ttk.Label(field, text=label, font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
+            ttk.Combobox(
+                field,
+                textvariable=variable,
+                values=production_time_options(),
+                state="readonly",
+                width=12,
+                font=("Segoe UI", 13),
+            ).pack(anchor=tk.W, pady=(6, 3))
+            ttk.Label(field, text="เวลาเริ่มผลิตของวันนั้น").pack(anchor=tk.W)
+        ttk.Label(
+            setting_card,
+            text="เลือกได้เฉพาะช่วง 16:00 ถึง 08:00 ตาม Timeframe ของ Timeline",
+        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(14, 0))
+
+        actions = ttk.Frame(self.production_start_tab)
+        actions.pack(fill=tk.X, pady=(18, 0))
+        ttk.Button(
+            actions,
+            text="Save production start times",
+            command=self._save_production_start_settings,
+        ).pack(anchor=tk.E)
+        ttk.Label(
+            self.production_start_tab,
+            textvariable=self.production_start_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(14, 0))
 
     def _select_operations_section(self, section: str) -> None:
         """Show one Operations Settings category in the shared content area."""
@@ -531,6 +670,62 @@ class CapacityViewMixin:
         if not math.isfinite(numeric) or numeric < 0:
             return None
         return int(numeric) if numeric.is_integer() else numeric
+
+    def _load_chill_days_settings(self) -> None:
+        try:
+            chill_days = load_chill_days(self.chill_days_file_path)
+        except ValueError as exc:
+            self.chill_days_status_var.set(str(exc))
+            return
+        self.chill_days_var.set(str(chill_days))
+        if self.chill_days_file_path.exists():
+            self.chill_days_status_var.set("Loaded saved chill-days setting.")
+
+    def _save_chill_days_settings(self) -> None:
+        value = self.chill_days_var.get().strip()
+        try:
+            if not value or not value.isdecimal():
+                raise ValueError("Chill days must be a whole number of 0 or greater.")
+            chill_days = save_chill_days(self.chill_days_file_path, int(value))
+        except ValueError as exc:
+            messagebox.showerror("Save chill days", str(exc), parent=self)
+            return
+        self.chill_days_var.set(str(chill_days))
+        self.chill_days_status_var.set(
+            f"Saved: RM can remain chilled for {chill_days:,} day(s) before freezing."
+        )
+
+    def _load_production_start_settings(self) -> None:
+        try:
+            settings = load_production_start_settings(self.production_start_file_path)
+        except ValueError as exc:
+            self.production_start_status_var.set(str(exc))
+            return
+        self.production_cooked_start_var.set(f"{settings.cooked_hour:02d}:00")
+        self.production_raw_start_var.set(f"{settings.raw_hour:02d}:00")
+        if self.production_start_file_path.exists():
+            self.production_start_status_var.set("Loaded saved production start times.")
+
+    def _save_production_start_settings(self) -> None:
+        try:
+            settings = ProductionStartSettings(
+                cooked_hour=hour_from_time_label(self.production_cooked_start_var.get()),
+                raw_hour=hour_from_time_label(self.production_raw_start_var.get()),
+            )
+            settings = save_production_start_settings(
+                self.production_start_file_path,
+                settings,
+            )
+        except ValueError as exc:
+            messagebox.showerror("Save production start times", str(exc), parent=self)
+            return
+        self.production_cooked_start_var.set(f"{settings.cooked_hour:02d}:00")
+        self.production_raw_start_var.set(f"{settings.raw_hour:02d}:00")
+        self.production_start_status_var.set(
+            f"Saved: Cooked starts {settings.cooked_hour:02d}:00 • "
+            f"Raw starts {settings.raw_hour:02d}:00."
+        )
+        self._plan_inputs_changed()
 
     def _load_capacity_settings(self) -> None:
         try:

@@ -80,7 +80,7 @@ class ActualAssortmentStoreTests(unittest.TestCase):
         self.assertEqual(saved.market_type, "export")
         self.assertEqual(load_actual_records(self.store_path)[0].market_type, "export")
 
-    def test_saves_manual_farm_and_lot_as_stock_identity(self) -> None:
+    def test_saves_farm_without_retaining_legacy_lot(self) -> None:
         saved = upsert_actual_record(
             self.store_path,
             "2026-08-27",
@@ -91,26 +91,18 @@ class ActualAssortmentStoreTests(unittest.TestCase):
         loaded = load_actual_records(self.store_path)[0]
 
         self.assertEqual(saved.farm_name, "Farm A")
-        self.assertEqual(saved.lot, "LOT-42")
-        self.assertEqual(loaded.source_label, "Farm A / LOT-42")
+        self.assertEqual(saved.lot, "")
+        self.assertEqual(loaded.source_label, "Farm A")
 
-    def test_manual_stock_identity_requires_both_farm_and_lot(self) -> None:
-        with self.assertRaisesRegex(ValueError, "farm name"):
-            upsert_actual_record(
-                self.store_path,
-                "2026-08-27",
-                [ActualAssortmentEntry("M", 100, size_class="M")],
-                farm_name="",
-                lot="LOT-42",
-            )
-        with self.assertRaisesRegex(ValueError, "LOT"):
-            upsert_actual_record(
-                self.store_path,
-                "2026-08-27",
-                [ActualAssortmentEntry("M", 100, size_class="M")],
-                farm_name="Farm A",
-                lot="",
-            )
+    def test_stock_can_be_saved_without_a_farm_name(self) -> None:
+        saved = upsert_actual_record(
+            self.store_path,
+            "2026-08-27",
+            [ActualAssortmentEntry("M", 100, size_class="M")],
+        )
+
+        self.assertEqual(saved.farm_name, "")
+        self.assertEqual(saved.lot, "")
 
     def test_saves_existing_stock_with_explicit_class_and_pieces_per_kg(self) -> None:
         saved = upsert_actual_record(
@@ -130,7 +122,7 @@ class ActualAssortmentStoreTests(unittest.TestCase):
 
         loaded = load_actual_records(self.store_path)[0]
         self.assertEqual(saved.record_type, "existing")
-        self.assertEqual(loaded.entries[0].size_class, "S+")
+        self.assertEqual(loaded.entries[0].size_class, "S")
         self.assertEqual(loaded.entries[0].pieces_per_kg, 65)
         self.assertEqual(estimate_wonton_pieces(loaded.entries), 6500)
 
@@ -140,19 +132,19 @@ class ActualAssortmentStoreTests(unittest.TestCase):
             "2026-08-20",
             [
                 ActualAssortmentEntry("M", 100, size_class="M"),
-                ActualAssortmentEntry("S+", 200, size_class="S+"),
+                ActualAssortmentEntry("S", 200, size_class="S"),
                 ActualAssortmentEntry("Unused", 50, size_class="Unused"),
             ],
         )
 
         self.assertEqual(
             [(entry.size_class, entry.weight) for entry in saved.entries],
-            [("M", 100), ("S+", 200), ("Unused", 50)],
+            [("M", 100), ("S", 200), ("Unused", 50)],
         )
         self.assertTrue(all(entry.pieces_per_kg is None for entry in saved.entries))
 
     def test_stock_requires_valid_size_class(self) -> None:
-        with self.assertRaisesRegex(ValueError, r"M, S\+, or Unused"):
+        with self.assertRaisesRegex(ValueError, r"M, S, SS, HC, BK, or Unused"):
             upsert_actual_record(
                 self.store_path,
                 "2026-08-20",
@@ -170,7 +162,7 @@ class ActualAssortmentStoreTests(unittest.TestCase):
     def test_aggregates_physical_assortment_rows_into_class_totals(self) -> None:
         ranges = (
             AssortmentSizeRange("M", "46-50", "56-60"),
-            AssortmentSizeRange("S+", "61-65", "81-85"),
+            AssortmentSizeRange("S", "61-65", "81-85"),
         )
 
         aggregated = aggregate_entries_by_size_class(
@@ -186,8 +178,24 @@ class ActualAssortmentStoreTests(unittest.TestCase):
 
         self.assertEqual(
             [(entry.size_class, entry.weight) for entry in aggregated],
-            [("M", 1162), ("S+", 1845), ("Unused", 188)],
+            [("M", 1162), ("S", 1845), ("Unused", 188)],
         )
+
+    def test_saves_market_per_stock_row_without_a_lot_field(self) -> None:
+        upsert_actual_record(
+            self.store_path,
+            "2026-08-27",
+            [
+                ActualAssortmentEntry("M", 100, size_class="M", market_type="ในประเทศ"),
+                ActualAssortmentEntry("BK", 50, size_class="BK", market_type="ต่างประเทศ"),
+            ],
+            farm_name="Farm A",
+        )
+
+        payload = json.loads(self.store_path.read_text(encoding="utf-8"))
+        entries = payload["records"][0]["entries"]
+        self.assertNotIn("lot", payload["records"][0])
+        self.assertEqual([entry["market_type"] for entry in entries], ["domestic", "export"])
 
     def test_legacy_record_without_type_loads_as_actual(self) -> None:
         self.store_path.write_text(

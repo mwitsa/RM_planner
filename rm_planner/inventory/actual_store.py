@@ -21,7 +21,7 @@ from rm_planner.inventory.range_store import (
 from rm_planner.planning.market_labels import market_internal_value
 
 
-STORE_VERSION = 7
+STORE_VERSION = 8
 RECORD_TYPES = {"actual", "prediction", "existing"}
 # HC and BK are tracked as direct RM stock classes.  They are not generated
 # from Assortment STD physical-size ranges, which continue to classify M/S/SS.
@@ -37,6 +37,7 @@ class ActualAssortmentEntry:
     weight: float
     size_class: str = ""
     pieces_per_kg: float | None = None
+    market_type: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,10 +59,7 @@ class ActualAssortmentRecord:
 
     @property
     def source_label(self) -> str:
-        identity = " / ".join(
-            value for value in (self.farm_name.strip(), self.lot.strip()) if value
-        )
-        return identity or self.rm_id or self.record_id
+        return self.farm_name.strip() or self.rm_id or self.record_id
 
 
 def split_size_range(size: str) -> tuple[str, str]:
@@ -215,7 +213,7 @@ def load_actual_records(store_path: str | Path) -> list[ActualAssortmentRecord]:
         _validate_date(record_date)
         if not isinstance(raw_entries, list) or not raw_entries:
             raise ValueError("Every saved actual assortment record must contain at least one entry.")
-        entries = tuple(_entry_from_json(entry) for entry in raw_entries)
+        entries = tuple(_entry_from_json(entry, market_type) for entry in raw_entries)
         records.append(
             ActualAssortmentRecord(
                 record_id=record_id,
@@ -257,10 +255,14 @@ def upsert_actual_record(
         saved_record_type = _normalize_record_type(record_type or "actual")
         saved_market_type = _normalize_market_type(market_type or "unassigned")
         saved_farm_name, saved_lot = _normalize_source_identity(farm_name, lot)
+        saved_entries = tuple(
+            replace(entry, market_type=_normalize_market_type(entry.market_type or saved_market_type))
+            for entry in normalized_entries
+        )
         saved_record = ActualAssortmentRecord(
             record_id=str(uuid4()),
             record_date=record_date,
-            entries=normalized_entries,
+            entries=saved_entries,
             record_type=saved_record_type,
             created_at=now,
             updated_at=now,
@@ -292,10 +294,14 @@ def upsert_actual_record(
                         farm_name,
                         lot,
                     )
+                saved_entries = tuple(
+                    replace(entry, market_type=_normalize_market_type(entry.market_type or saved_market_type))
+                    for entry in normalized_entries
+                )
                 saved_record = ActualAssortmentRecord(
                     record_id=record_id,
                     record_date=record_date,
-                    entries=normalized_entries,
+                    entries=saved_entries,
                     record_type=saved_record_type,
                     created_at=existing.created_at,
                     updated_at=now,
@@ -351,15 +357,10 @@ def _normalize_source_identity(
     farm_name: str | None,
     lot: str | None,
 ) -> tuple[str, str]:
-    if farm_name is None and lot is None:
-        return "", ""
     normalized_farm = str(farm_name or "").strip()
-    normalized_lot = str(lot or "").strip()
-    if not normalized_farm:
-        raise ValueError("Enter the farm name before saving stock.")
-    if not normalized_lot:
-        raise ValueError("Enter the LOT before saving stock.")
-    return normalized_farm, normalized_lot
+    # LOT was removed from the stock form.  Legacy values remain readable but
+    # edited/new records deliberately save no LOT value.
+    return normalized_farm, ""
 
 
 def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
@@ -394,10 +395,14 @@ def _validate_entry(entry: ActualAssortmentEntry) -> ActualAssortmentEntry:
         weight=weight,
         size_class=size_class,
         pieces_per_kg=pieces_per_kg,
+        market_type=(
+            _normalize_market_type(entry.market_type)
+            if str(entry.market_type).strip() else ""
+        ),
     )
 
 
-def _entry_from_json(raw_entry: object) -> ActualAssortmentEntry:
+def _entry_from_json(raw_entry: object, legacy_market_type: str) -> ActualAssortmentEntry:
     if not isinstance(raw_entry, dict):
         raise ValueError("Actual assortment history contains an invalid Size/Weight entry.")
     return _validate_entry(
@@ -406,6 +411,7 @@ def _entry_from_json(raw_entry: object) -> ActualAssortmentEntry:
             weight=raw_entry.get("weight", 0),
             size_class=str(raw_entry.get("size_class", "")),
             pieces_per_kg=raw_entry.get("pieces_per_kg"),
+            market_type=str(raw_entry.get("market_type", legacy_market_type)),
         )
     )
 
@@ -420,7 +426,6 @@ def _write_records(path: Path, records: list[ActualAssortmentRecord]) -> None:
                 "id": record.record_id,
                 "rm_id": record.rm_id,
                 "farm_name": record.farm_name,
-                "lot": record.lot,
                 "date": record.record_date,
                 "record_type": record.record_type,
                 "market_type": record.market_type,
@@ -428,6 +433,7 @@ def _write_records(path: Path, records: list[ActualAssortmentRecord]) -> None:
                     {
                         "size": entry.size,
                         "weight": entry.weight,
+                        "market_type": entry.market_type,
                         **(
                             {
                                 "size_class": entry.size_class,

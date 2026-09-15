@@ -8,7 +8,13 @@ from rm_planner.inventory.range_store import AssortmentSizeRange
 from rm_planner.planning.capacity_store import CapacitySettings
 from rm_planner.planning.class_store import ClassDefinition
 from rm_planner.orders.extractor import OrderRecord
-from rm_planner.planning.engine import generate_plan, market_type_for_order, order_due_date, priority_for_order
+from rm_planner.planning.engine import (
+    _inventory_lots,
+    generate_plan,
+    market_type_for_order,
+    order_due_date,
+    priority_for_order,
+)
 from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
@@ -101,6 +107,28 @@ def balanced_capacity(raw_wonton: float, cooked_wonton: float) -> CapacitySettin
 
 
 class PlanEngineTests(unittest.TestCase):
+    def test_inventory_uses_the_market_saved_on_each_stock_row(self) -> None:
+        record = ActualAssortmentRecord(
+            record_id="mixed-market-stock",
+            rm_id="RM-MIXED",
+            record_date="2026-08-28",
+            entries=(
+                ActualAssortmentEntry("M", 10, size_class="M", market_type="domestic"),
+                ActualAssortmentEntry("S", 5, size_class="S", market_type="export"),
+            ),
+            record_type="actual",
+            market_type="unassigned",
+            created_at="2026-08-28T00:00:00+00:00",
+            updated_at="2026-08-28T00:00:00+00:00",
+        )
+
+        lots = _inventory_lots([record], (), WontonWeightSettings())
+
+        self.assertEqual(
+            [(lot.size_range, lot.market_type) for lot in lots],
+            [("M", "domestic"), ("S", "export")],
+        )
+
     def test_legacy_stock_type_does_not_change_lot_priority(self) -> None:
         result = generate_plan(
             [

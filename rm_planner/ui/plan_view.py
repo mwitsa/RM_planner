@@ -8,7 +8,13 @@ from tkinter import ttk, messagebox
 from uuid import uuid4
 import threading
 import json
-from .common import PROJECT_ROOT
+from .common import (
+    PROJECT_ROOT,
+    PRODUCTION_WINDOW_START_HOUR,
+    RM_SIZE_COLORS,
+    load_chill_days,
+    load_production_start_settings,
+)
 from rm_planner.planning.alternatives import (FACTORY_HOLIDAY_WEEKDAYS, build_context,
                                                compare, settings_defaults, signature, number)
 from rm_planner.planning.operation_rule_store import load_operation_rules
@@ -414,6 +420,10 @@ class PlanViewMixin:
     def _proposal_context(self):
         records = self.result.records if self.result is not None else list(self.saved_order_records.values())
         operation_rules = load_operation_rules(self.operation_rule_file_path)
+        chill_days = load_chill_days(self.chill_days_file_path)
+        production_start_settings = load_production_start_settings(
+            self.production_start_file_path
+        )
         return build_context(records, self.assortment_actual_records.values(),
             self._current_assortment_size_range_definitions(), self.capacity_settings,
             tuple(self.class_definitions.values()), self.wonton_weight_settings,
@@ -421,7 +431,8 @@ class PlanViewMixin:
                 **{k: v.get() for k, v in self._proposal_vars.items()},
                 'adjust_from': self.adjust_from_var.get(),
             },
-            self._proposal_preferences['profiles'], operation_rules)
+            self._proposal_preferences['profiles'], operation_rules, chill_days,
+            production_start_settings)
 
     def _calculate_proposals(self, quiet=False):
         try:
@@ -499,7 +510,7 @@ class PlanViewMixin:
         self._render_plan_timeline()
 
     def _render_plan_timeline(self):
-        """Draw the selected plan in production-day time (12:00 to 08:00)."""
+        """Draw the selected plan in production-day time (16:00 to 08:00)."""
         if not hasattr(self, '_proposal_timeline_canvas'):
             return
         canvas = self._proposal_timeline_canvas
@@ -513,19 +524,153 @@ class PlanViewMixin:
             return
         plan = self._proposals[self._proposal_selected]
         jobs = {job['id']: job for job in self._proposal_context_used['jobs']}
-        hours = tuple(range(12, 24)) + tuple(range(0, 9))
-        label_width, hour_width, row_height, left = 140, 70, 58, 140
-        timeline_hours = len(hours) - 1  # 12:00 through 08:00 next morning = 20 hours.
+        production_start_hour = PRODUCTION_WINDOW_START_HOUR
+        hours = tuple(range(production_start_hour, 24)) + tuple(range(0, 9))
+        label_width, row_height, left = 140, 58, 140
+        timeline_hours = len(hours) - 1  # 16:00 through 08:00 next morning = 16 hours.
+        # Keep the entire timeline as wide as before (20 × 70 px), making the
+        # shorter 16-hour window more legible instead of shrinking the canvas.
+        hour_width = (20 * 70) / timeline_hours
         timeline_right = left + timeline_hours * hour_width
-        width = timeline_right + 20
+        rm_sizes = ('M', 'S', 'SS', 'HC', 'BK')
+        rm_colours = {size: RM_SIZE_COLORS[size] for size in rm_sizes}
         entries_by_day = {}
         for entry in plan['schedule']:
             entries_by_day.setdefault(entry['day'], {}).setdefault(entry['line'], []).append(entry)
-        colours = {'M': '#4f83cc', 'S': '#2f9d8f', 'SS': '#8268bd'}
+        timeline_days = sorted(
+            set(entries_by_day) | {item['day'] for item in plan.get('daily', ())}
+        )
+        if not timeline_days:
+            canvas.configure(scrollregion=(0, 0, max(canvas.winfo_width(), 1), max(canvas.winfo_height(), 1)))
+            return
+
+        # Attribute the available RM to individual arrival lots (FIFO) for the
+        # rail.  Planning itself remains aggregate by market/size; this is a
+        # visual explanation of when each received lot is consumed.
+        first_day, last_day = timeline_days[0], timeline_days[-1]
+        rm_lots = []
+        for lot_index, source_lot in enumerate(self._proposal_context_used.get('lots', ())):
+            size = source_lot.get('size')
+            amount = float(source_lot.get('kg', 0) or 0)
+            arrival_day = source_lot.get('day', '')
+            freeze_day = source_lot.get('freeze_day')
+            if (size not in rm_sizes or amount <= 0 or arrival_day > last_day
+                    or (freeze_day is not None and freeze_day <= first_day)):
+                continue
+            rm_lots.append({
+                'id': lot_index,
+                'arrival_day': arrival_day,
+                'display_day': max(arrival_day, first_day),
+                'market': source_lot.get('market', 'unassigned'),
+                'size': size,
+                'freeze_day': freeze_day,
+                'initial_kg': amount,
+                'remaining_kg': amount,
+                'depleted_day': None,
+                'opening_by_day': {},
+                'usage_by_day': {},
+                'usage_by_product': {},
+                'usage_by_day_product': {},
+            })
+        for entry in sorted(
+            plan['schedule'], key=lambda item: (item['day'], item['start_hours'], item['line'], item['job'])
+        ):
+            required = entry.get('rm_required_kg')
+            if required is None or required <= 0:
+                continue
+            job = jobs[entry['job']]
+            amount_to_allocate = float(required)
+            eligible_lots = sorted(
+                (
+                    lot for lot in rm_lots
+                    if lot['market'] == job.get('market')
+                    and lot['size'] == job.get('stock_size')
+                    and lot['arrival_day'] <= entry['day']
+                    and (lot['freeze_day'] is None or entry['day'] < lot['freeze_day'])
+                    and lot['remaining_kg'] > 1e-6
+                ),
+                key=lambda lot: (lot['arrival_day'], lot['id']),
+            )
+            for lot in eligible_lots:
+                lot['opening_by_day'].setdefault(entry['day'], lot['remaining_kg'])
+                used = min(amount_to_allocate, lot['remaining_kg'])
+                lot['remaining_kg'] -= used
+                amount_to_allocate -= used
+                lot['usage_by_day'][entry['day']] = lot['usage_by_day'].get(entry['day'], 0.0) + used
+                product = job.get('product', '').strip() or job.get('code', '').strip() or 'ไม่ระบุ Product'
+                lot['usage_by_product'][product] = lot['usage_by_product'].get(product, 0.0) + used
+                daily_products = lot['usage_by_day_product'].setdefault(entry['day'], {})
+                daily_products[product] = daily_products.get(product, 0.0) + used
+                if lot['remaining_kg'] <= 1e-6:
+                    lot['remaining_kg'] = 0.0
+                    lot['depleted_day'] = entry['day']
+                if amount_to_allocate <= 1e-6:
+                    break
+        lot_groups = {}
+        for lot in rm_lots:
+            # Keep each receiving date separate even when an older lot is
+            # displayed at the top of the current planning horizon.
+            lot_groups.setdefault(lot['arrival_day'], []).append(lot)
+        # Leave the 08:00 label fully visible before the first RM-arrival box.
+        rm_rail_x = timeline_right + 92
+        rm_bar_width, rm_bar_gap, rm_group_gap = 16, 5, 14
+        market_group_gap, market_header_min_width = 12, 54
+        rm_size_order = {size: index for index, size in enumerate(('BK', 'HC', 'M', 'S', 'SS'))}
+        market_labels = {
+            'domestic': 'ในประเทศ',
+            'export': 'ต่างประเทศ',
+            'unassigned': 'ไม่ระบุ',
+        }
+        market_header_colours = {
+            'domestic': ('#eaf3fb', '#8bb8dd'),
+            'export': ('#f4f6f8', '#93a1af'),
+            'unassigned': ('#f8f1e7', '#c7a469'),
+        }
+
+        def market_groups(group):
+            grouped = {}
+            for lot in group:
+                grouped.setdefault(lot['market'], []).append(lot)
+            market_order = {'domestic': 0, 'export': 1, 'unassigned': 2}
+            return tuple(
+                (
+                    market,
+                    tuple(sorted(
+                        lots,
+                        key=lambda lot: (rm_size_order.get(lot['size'], 99), lot['id']),
+                    )),
+                )
+                for market, lots in sorted(
+                    grouped.items(), key=lambda item: (market_order.get(item[0], 99), item[0])
+                )
+            )
+
+        def market_group_width(market_lots):
+            bar_width = (
+                len(market_lots) * rm_bar_width
+                + max(0, len(market_lots) - 1) * rm_bar_gap
+            )
+            return max(market_header_min_width, bar_width)
+
+        def arrival_group_width(group):
+            groups = market_groups(group)
+            return (
+                sum(market_group_width(lots) for _market, lots in groups)
+                + max(0, len(groups) - 1) * market_group_gap
+            )
+
+        rm_rail_width = sum(
+            arrival_group_width(group) + rm_group_gap
+            for _day, group in sorted(lot_groups.items())
+        )
+        width = timeline_right + 28 if not lot_groups else rm_rail_x + rm_rail_width + 24
+        colours = {size: RM_SIZE_COLORS[size] for size in ('M', 'S', 'SS')}
         colour_meanings = {
             'M': 'สีน้ำเงิน = RM Size M',
             'S': 'สีเขียว = RM Size S',
             'SS': 'สีม่วง = RM Size SS',
+            'HC': 'สีทอง = RM Size HC',
+            'BK': 'สีเทาเข้ม = RM Size BK',
         }
 
         def hide_timeline_tip(_event=None):
@@ -549,39 +694,54 @@ class PlanViewMixin:
                 padx=9,
                 pady=6,
             ).pack()
-            tip.geometry(f'+{event.x_root + 12}+{event.y_root + 14}')
+            tip.update_idletasks()
+            x = event.x_root + 12
+            if x + tip.winfo_reqwidth() > tip.winfo_screenwidth():
+                x = max(0, event.x_root - tip.winfo_reqwidth() - 12)
+            tip.geometry(f'+{x}+{event.y_root + 14}')
             self._timeline_hover_tip = tip
 
-        def draw_shortage_hatching(x1, y1, x2, y2, shortage_ratio, tag):
-            """Draw red diagonal lines inside only the RM-short portion."""
-            shortage_ratio = max(0.0, min(1.0, shortage_ratio))
-            if shortage_ratio <= 0 or x2 <= x1:
+        def draw_shortage_hatching(x1, y1, x2, y2, hatch_ratio, tag, colour='#df2f2f', direction='right'):
+            """Hatch an affected share either right-to-left or top-to-bottom."""
+            hatch_ratio = max(0.0, min(1.0, hatch_ratio))
+            if hatch_ratio <= 0 or x2 <= x1:
                 return
-            hatch_left = x2 - (x2 - x1) * shortage_ratio
-            canvas.create_rectangle(hatch_left, y1, x2, y2, fill='', outline='', tags=(tag,))
-            height = y2 - y1
-            for bottom_x in range(int(hatch_left - height), int(x2) + 1, 12):
+            if direction == 'top':
+                hatch_top, hatch_bottom = y1, y1 + (y2 - y1) * hatch_ratio
+                hatch_left, hatch_right = x1, x2
+            else:
+                hatch_top, hatch_bottom = y1, y2
+                hatch_left, hatch_right = x2 - (x2 - x1) * hatch_ratio, x2
+            canvas.create_rectangle(hatch_left, hatch_top, hatch_right, hatch_bottom,
+                                    fill='', outline='', tags=(tag,))
+            hatch_height = hatch_bottom - hatch_top
+            for bottom_x in range(int(hatch_left - hatch_height), int(hatch_right) + 1, 10):
                 line_x1 = max(hatch_left, bottom_x)
-                line_x2 = min(x2, bottom_x + height)
+                line_x2 = min(hatch_right, bottom_x + hatch_height)
                 if line_x1 < line_x2:
                     canvas.create_line(
-                        line_x1, y2 - (line_x1 - bottom_x),
-                        line_x2, y2 - (line_x2 - bottom_x),
-                        fill='#df2f2f', width=2, tags=(tag,),
+                        line_x1, hatch_bottom - (line_x1 - bottom_x),
+                        line_x2, hatch_bottom - (line_x2 - bottom_x),
+                        fill=colour, width=2, tags=(tag,),
                     )
+            if hatch_ratio < 1 and direction == 'top':
+                canvas.create_line(
+                    x1, hatch_bottom, x2, hatch_bottom, fill=colour, width=3, tags=(tag,),
+                )
+            elif hatch_ratio < 1:
+                canvas.create_line(
+                    hatch_left, y1, hatch_left, y2, fill=colour, width=3, tags=(tag,),
+                )
 
         legend_x = left
-        for label, colour, detail in (
-            ('M', colours['M'], colour_meanings['M']),
-            ('S', colours['S'], colour_meanings['S']),
-            ('SS', colours['SS'], colour_meanings['SS']),
-            ('อื่น ๆ', '#98a6b3', 'สีเทา = RM Size อื่น เช่น HC หรือ BK'),
-        ):
+        for label in ('M', 'S', 'SS', 'HC', 'BK'):
+            colour = rm_colours[label]
+            detail = colour_meanings[label]
             swatch = canvas.create_rectangle(legend_x, 8, legend_x + 12, 20, fill=colour, outline='')
             canvas.create_text(legend_x + 17, 14, text=label, anchor='w', fill='#40566b', font=('Segoe UI', 8))
             canvas.tag_bind(swatch, '<Enter>', lambda event, tooltip_text=detail: show_timeline_tip(event, tooltip_text))
             canvas.tag_bind(swatch, '<Leave>', hide_timeline_tip)
-            legend_x += 54 if label != 'อื่น ๆ' else 70
+            legend_x += 54
 
         for label, dashed, detail in (
             ('ในประเทศ', True, 'ขอบเส้นปะ = ใช้ RM สำหรับในประเทศ'),
@@ -600,22 +760,44 @@ class PlanViewMixin:
         sample = canvas.create_rectangle(legend_x, 8, legend_x + 16, 20, fill='#f2f6fa', outline='#df2f2f', tags=(shortage_legend_tag,))
         draw_shortage_hatching(legend_x, 8, legend_x + 16, 20, 1.0, shortage_legend_tag)
         canvas.create_text(legend_x + 21, 14, text='RM ขาด', anchor='w', fill='#40566b', font=('Segoe UI', 8), tags=(shortage_legend_tag,))
-        shortage_detail = 'ลายเฉียงสีแดง = สัดส่วน RM ที่ขาดสำหรับงานนั้น (พื้นที่ที่ไม่ขีดคือ RM ที่มีเพียงพอ)'
+        shortage_detail = (
+            'ลายเฉียงสีแดง = สัดส่วน RM ที่ขาดสำหรับงานนั้น '
+            '(fill จากขวาไปซ้าย; เส้นแดงแนวตั้งคือจุดแบ่งกับส่วนที่ RM เพียงพอ)'
+        )
         canvas.tag_bind(shortage_legend_tag, '<Enter>', lambda event: show_timeline_tip(event, shortage_detail))
         canvas.tag_bind(shortage_legend_tag, '<Leave>', hide_timeline_tip)
+        legend_x += 72
+        usage_legend_tag = 'timeline-rm-usage-legend'
+        sample = canvas.create_rectangle(legend_x, 8, legend_x + 16, 20, fill='#f2f6fa', outline='#1f2937', tags=(usage_legend_tag,))
+        draw_shortage_hatching(legend_x, 8, legend_x + 16, 20, 1.0, usage_legend_tag,
+                               colour='#1f2937', direction='top')
+        canvas.create_text(legend_x + 21, 14, text='RM ใช้', anchor='w', fill='#40566b', font=('Segoe UI', 8), tags=(usage_legend_tag,))
+        usage_detail = (
+            'ลายเฉียงสีดำในแท่ง RM = สัดส่วนของล็อต RM Size นั้นที่ถูกใช้ในวันนั้น '
+            '(fill จากบนลงล่าง; เส้นดำแนวนอนคือจุดแบ่งกับส่วนที่เหลือ)'
+        )
+        canvas.tag_bind(usage_legend_tag, '<Enter>', lambda event: show_timeline_tip(event, usage_detail))
+        canvas.tag_bind(usage_legend_tag, '<Leave>', hide_timeline_tip)
 
+        production_start_hours = self._proposal_context_used.get(
+            'production_start_hours', {'COOKED': 18, 'RAW': 19}
+        )
+        day_positions = {}
         y = 30
-        for day in sorted(entries_by_day):
+        for day in timeline_days:
+            day_top = y
+            day_entries = entries_by_day.get(day, {})
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
             for offset, hour in enumerate(hours):
                 x = left + offset * hour_width
                 canvas.create_text(x + hour_width / 2, y + 14, text=f'{hour:02d}:00', fill='#557188', font=('Segoe UI', 9))
                 canvas.create_line(x, y + 28, x, y + 28 + row_height * 2, fill='#d9e3eb', dash=(2, 3))
             y += 30
-            for line, start_hour, thai_label in (('COOKED', 18, 'เกี๊ยวสุก'), ('RAW', 19, 'เกี๊ยวดิบ')):
+            for line, thai_label in (('COOKED', 'เกี๊ยวสุก'), ('RAW', 'เกี๊ยวดิบ')):
+                start_hour = production_start_hours[line]
                 canvas.create_rectangle(left, y, timeline_right, y + row_height - 8,
                                         fill='#f2f6fa', outline='')
-                line_quantity = sum(entry['qty'] for entry in entries_by_day[day].get(line, ()))
+                line_quantity = sum(entry['qty'] for entry in day_entries.get(line, ()))
                 canvas.create_text(
                     12, y + 13, text=line, anchor='w',
                     fill='#18324a', font=('Segoe UI', 10, 'bold'),
@@ -625,7 +807,7 @@ class PlanViewMixin:
                     fill='#6b7d8d', font=('Segoe UI', 8),
                 )
                 periods = []
-                for entry in entries_by_day[day].get(line, []):
+                for entry in day_entries.get(line, []):
                     job = jobs[entry['job']]
                     operation = job.get('code', '').strip() if line == 'RAW' else ''
                     if operation and periods and periods[-1]['operation'] == operation:
@@ -636,14 +818,14 @@ class PlanViewMixin:
                     entries = period['entries']
                     job = jobs[entries[0]['job']]
                     capacity = self._proposal_context_used['capacity'][line]
-                    start_offset = (start_hour - 12) + entries[0]['start_hours']
+                    start_offset = ((start_hour - production_start_hour) % 24) + entries[0]['start_hours']
                     x1 = left + start_offset * hour_width
                     x2 = x1
                     for entry in entries:
                         entry_job = jobs[entry['job']]
                         cup_quantity = entry['qty'] / entry_job['qty'] * entry_job['cups'] if entry_job['qty'] else 0
                         duration = cup_quantity / capacity * self._proposal_context_used['settings']['shift_hours'] if capacity else 0
-                        entry_start = left + ((start_hour - 12) + entry['start_hours']) * hour_width
+                        entry_start = left + (((start_hour - production_start_hour) % 24) + entry['start_hours']) * hour_width
                         x2 = max(x2, entry_start + max(duration * hour_width, 3))
                     x2 = min(left + timeline_hours * hour_width, x2)
                     colour = colours.get(job['size'], '#98a6b3')
@@ -653,8 +835,8 @@ class PlanViewMixin:
                     ))
                     code = period['operation'] or '—'
                     total_quantity = sum(entry['qty'] for entry in entries)
-                    rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
-                    size_text = ', '.join(rm_sizes)
+                    period_rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
+                    size_text = ', '.join(period_rm_sizes)
                     market = job.get('market', 'unassigned')
                     rm_entries = [entry for entry in entries if entry.get('rm_required_kg') is not None]
                     rm_required = sum(entry['rm_required_kg'] for entry in rm_entries)
@@ -704,7 +886,138 @@ class PlanViewMixin:
                             tags=(tooltip_tag,),
                         )
                 y += row_height
+            day_positions[day] = (day_top, y - 12)
             y += 14
+
+        # Each group starts with the date that RM arrives.  The coloured bars
+        # then continue down to the production day that consumes that lot.
+        day_grid_ends = {
+            day: (
+                day_positions[timeline_days[index + 1]][0]
+                if index + 1 < len(timeline_days) else day_positions[day][1]
+            )
+            for index, day in enumerate(timeline_days)
+        }
+        rail_x = rm_rail_x
+        for arrival_day, group in sorted(lot_groups.items()):
+            display_day = group[0]['display_day']
+            header_y = day_positions[display_day][0] + 2
+            grouped_by_market = market_groups(group)
+            group_width = arrival_group_width(group)
+            canvas.create_rectangle(
+                rail_x - 4, header_y, rail_x + group_width + 4, header_y + 22,
+                fill='#ffffff', outline='#40566b', width=1,
+            )
+            canvas.create_text(
+                rail_x + group_width / 2, header_y + 11, text=arrival_day[5:],
+                fill='#31465a', font=('Segoe UI', 9, 'bold'),
+            )
+            market_x = rail_x
+            for market, market_lots in grouped_by_market:
+                market_width = market_group_width(market_lots)
+                market_header_y = header_y + 25
+                header_fill, header_outline = market_header_colours.get(
+                    market, market_header_colours['unassigned']
+                )
+                canvas.create_rectangle(
+                    market_x, market_header_y,
+                    market_x + market_width, market_header_y + 18,
+                    fill=header_fill, outline=header_outline, width=1,
+                )
+                canvas.create_text(
+                    market_x + market_width / 2, market_header_y + 9,
+                    text=market_labels.get(market, market_labels['unassigned']),
+                    fill='#31465a', font=('Segoe UI', 7, 'bold'),
+                )
+                for index, lot in enumerate(market_lots):
+                    bar_x = market_x + index * (rm_bar_width + rm_bar_gap)
+                    bar_top = market_header_y + 23
+                    freeze_day = lot['freeze_day']
+                    if lot['depleted_day']:
+                        # Finish at the next grid boundary, not part way through
+                        # the final day, so every visible daily cell is equal.
+                        bar_bottom = day_grid_ends[lot['depleted_day']]
+                    elif freeze_day and freeze_day <= last_day:
+                        # The lot becomes frozen at the beginning of this day, so
+                        # the usable-RM bar stops exactly at that date's position.
+                        bar_bottom = day_positions[max(freeze_day, first_day)][0] + 2
+                    else:
+                        bar_bottom = day_positions[last_day][1]
+                    bar_bottom = max(bar_top + 10, bar_bottom)
+                    rail_tag = f"timeline-rm-lot:{lot['id']}"
+                    border_options = {'outline': '#18324a', 'width': 1, 'tags': (rail_tag,)}
+                    if lot['market'] == 'domestic':
+                        border_options['dash'] = (3, 2)
+                    canvas.create_rectangle(
+                        bar_x, bar_top, bar_x + rm_bar_width, bar_bottom,
+                        fill=rm_colours[lot['size']], **border_options,
+                    )
+                    # Keep one continuous lot bar, but mark each production day
+                    # so its remaining chilled lifetime is easy to read at a glance.
+                    for grid_day in timeline_days:
+                        cell_top = max(bar_top, day_positions[grid_day][0])
+                        cell_bottom = min(bar_bottom, day_grid_ends[grid_day])
+                        opening_kg = lot['opening_by_day'].get(grid_day, 0.0)
+                        used_kg = lot['usage_by_day'].get(grid_day, 0.0)
+                        usage_ratio = used_kg / opening_kg if opening_kg > 1e-6 else 0.0
+                        if cell_top < cell_bottom:
+                            cell_tag = f"timeline-rm-lot:{lot['id']}:{grid_day}"
+                            canvas.create_rectangle(
+                                bar_x + 1, cell_top + 1, bar_x + rm_bar_width - 1, cell_bottom - 1,
+                                fill=rm_colours[lot['size']], outline='', tags=(cell_tag,),
+                            )
+                            draw_shortage_hatching(
+                                bar_x, cell_top, bar_x + rm_bar_width, cell_bottom,
+                                usage_ratio, cell_tag, colour='#1f2937', direction='top',
+                            )
+                            daily_products = lot['usage_by_day_product'].get(grid_day, {})
+                            daily_product_lines = [
+                                f"• {product}: {fmt(quantity)} kg"
+                                for product, quantity in sorted(daily_products.items())
+                            ]
+                            carried_kg = max(
+                                0.0,
+                                lot['initial_kg'] - sum(
+                                    quantity for usage_day, quantity in lot['usage_by_day'].items()
+                                    if usage_day < grid_day
+                                ),
+                            )
+                            cell_detail = (
+                                f"คงเหลือจากวันก่อน: {fmt(carried_kg)} kg\n"
+                                f"{'\n'.join(daily_product_lines) or 'ยังไม่ได้ใช้ผลิต Product ใด'}"
+                            )
+                            canvas.tag_bind(
+                                cell_tag, '<Enter>',
+                                lambda event, tooltip_text=cell_detail: show_timeline_tip(event, tooltip_text),
+                            )
+                            canvas.tag_bind(cell_tag, '<Leave>', hide_timeline_tip)
+                        grid_y = day_positions[grid_day][0]
+                        if bar_top < grid_y < bar_bottom:
+                            canvas.create_line(
+                                bar_x, grid_y, bar_x + rm_bar_width, grid_y,
+                                fill='#ffffff', width=2, tags=(rail_tag,),
+                            )
+                    if bar_bottom - bar_top >= 16:
+                        canvas.create_text(
+                            bar_x + rm_bar_width / 2,
+                            bar_top + 8,
+                            text=lot['size'],
+                            fill='white',
+                            font=('Segoe UI', 7, 'bold'),
+                            tags=(rail_tag,),
+                        )
+                    product_lines = [
+                        f"• {product}: {fmt(quantity)} kg"
+                        for product, quantity in sorted(lot['usage_by_product'].items())
+                    ]
+                    rail_detail = '\n'.join(product_lines) or 'ยังไม่ได้ใช้ผลิต Product ใด'
+                    canvas.tag_bind(
+                        rail_tag, '<Enter>',
+                        lambda event, tooltip_text=rail_detail: show_timeline_tip(event, tooltip_text),
+                    )
+                    canvas.tag_bind(rail_tag, '<Leave>', hide_timeline_tip)
+                market_x += market_width + market_group_gap
+            rail_x += group_width + rm_group_gap
         canvas.configure(scrollregion=(0, 0, width, max(y, canvas.winfo_height())))
 
     def _proposal_history(self):

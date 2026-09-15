@@ -11,9 +11,7 @@ class StockEditorMixin:
         self.actual_day_var = tk.StringVar(value=f"{today.day:02d}")
         self.actual_month_var = tk.StringVar(value=f"{today.month:02d}")
         self.actual_year_var = tk.StringVar(value=f"{today.year:04d}")
-        self.actual_market_type_var = tk.StringVar(value=market_display_label("domestic"))
         self.actual_farm_name_var = tk.StringVar()
-        self.actual_lot_var = tk.StringVar()
         self.stock_harvest_size_var = tk.StringVar()
         self.stock_harvest_weight_var = tk.StringVar()
 
@@ -34,18 +32,14 @@ class StockEditorMixin:
 
         details_frame = ttk.LabelFrame(form_panel, text="1. Stock details", padding=10)
         details_frame.pack(fill=tk.X, pady=(0, 12))
-        details_frame.columnconfigure(0, weight=2)
-        details_frame.columnconfigure(1, weight=1)
+        details_frame.columnconfigure(0, weight=1)
 
         ttk.Label(details_frame, text="Availability date").grid(
-            row=0, column=0, sticky=tk.W, padx=(0, 12)
-        )
-        ttk.Label(details_frame, text="Use for").grid(
-            row=0, column=1, sticky=tk.W
+            row=0, column=0, sticky=tk.W
         )
 
         date_inputs = ttk.Frame(details_frame)
-        date_inputs.grid(row=1, column=0, sticky="ew", padx=(0, 12), pady=(4, 0))
+        date_inputs.grid(row=1, column=0, sticky="ew", pady=(4, 0))
         ttk.Combobox(
             date_inputs,
             textvariable=self.actual_day_var,
@@ -68,27 +62,13 @@ class StockEditorMixin:
             values=[str(year) for year in range(today.year - 5, today.year + 6)],
             width=7,
         ).pack(side=tk.LEFT)
-        ttk.Combobox(
-            details_frame,
-            textvariable=self.actual_market_type_var,
-            values=MARKET_DISPLAY_OPTIONS,
-            state="readonly",
-            width=10,
-        ).grid(row=1, column=1, sticky="ew", pady=(4, 0))
         ttk.Label(details_frame, text="ชื่อฟาร์ม").grid(
-            row=2, column=0, sticky=tk.W, padx=(0, 12), pady=(10, 0)
-        )
-        ttk.Label(details_frame, text="LOT").grid(
-            row=2, column=1, sticky=tk.W, pady=(10, 0)
+            row=2, column=0, sticky=tk.W, pady=(10, 0)
         )
         ttk.Entry(
             details_frame,
             textvariable=self.actual_farm_name_var,
-        ).grid(row=3, column=0, sticky="ew", padx=(0, 12), pady=(4, 0))
-        ttk.Entry(
-            details_frame,
-            textvariable=self.actual_lot_var,
-        ).grid(row=3, column=1, sticky="ew", pady=(4, 0))
+        ).grid(row=3, column=0, sticky="ew", pady=(4, 0))
 
         std_fill_frame = ttk.LabelFrame(
             form_panel,
@@ -161,10 +141,12 @@ class StockEditorMixin:
         entry_headings.pack(fill=tk.X)
         entry_headings.columnconfigure(1, weight=1)
         entry_headings.columnconfigure(2, weight=1)
+        entry_headings.columnconfigure(3, weight=1)
         ttk.Label(entry_headings, text="#", width=4).grid(row=0, column=0, sticky=tk.W)
         ttk.Label(entry_headings, text="Class").grid(row=0, column=1, sticky=tk.W)
         ttk.Label(entry_headings, text="Weight (kg)").grid(row=0, column=2, sticky=tk.W)
-        ttk.Label(entry_headings, text="", width=8).grid(row=0, column=3)
+        ttk.Label(entry_headings, text="Use for").grid(row=0, column=3, sticky=tk.W)
+        ttk.Label(entry_headings, text="", width=8).grid(row=0, column=4)
 
         list_container = ttk.Frame(form_panel)
         list_container.pack(fill=tk.BOTH, expand=True)
@@ -227,8 +209,6 @@ class StockEditorMixin:
             history_table,
             columns=(
                 "farm_name",
-                "lot",
-                "market",
                 "date",
                 "weight",
                 "M",
@@ -241,8 +221,6 @@ class StockEditorMixin:
             selectmode="browse",
         )
         self.assortment_actual_history_tree.heading("farm_name", text="ชื่อฟาร์ม")
-        self.assortment_actual_history_tree.heading("lot", text="LOT")
-        self.assortment_actual_history_tree.heading("market", text="Use for")
         self.assortment_actual_history_tree.heading("date", text="Date")
         self.assortment_actual_history_tree.heading("weight", text="Total weight")
         self.assortment_actual_history_tree.heading("M", text="M (kg)")
@@ -251,8 +229,6 @@ class StockEditorMixin:
         self.assortment_actual_history_tree.heading("unused", text="Unused (kg)")
         self.assortment_actual_history_tree.heading("est_wonton", text="Est. wonton")
         self.assortment_actual_history_tree.column("farm_name", width=130, anchor=tk.W)
-        self.assortment_actual_history_tree.column("lot", width=100, anchor=tk.W)
-        self.assortment_actual_history_tree.column("market", width=90, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("date", width=95, anchor=tk.CENTER)
         self.assortment_actual_history_tree.column("weight", width=95, anchor=tk.E)
         self.assortment_actual_history_tree.column("M", width=105, anchor=tk.E)
@@ -304,9 +280,11 @@ class StockEditorMixin:
         self,
         size_class: str = "",
         weight: str = "",
+        market_type: str = "domestic",
     ) -> None:
         size_class_var = tk.StringVar(value=normalize_size_class(size_class))
         weight_var = tk.StringVar(value=weight)
+        market_type_var = tk.StringVar(value=market_display_label(market_type))
         row_number_var = tk.StringVar()
         box = ttk.Frame(self.assortment_actual_list, padding=(6, 5))
         self.assortment_actual_add_row_footer.pack_forget()
@@ -314,6 +292,7 @@ class StockEditorMixin:
         self.assortment_actual_add_row_footer.pack(fill=tk.X)
         box.columnconfigure(1, weight=1)
         box.columnconfigure(2, weight=1)
+        box.columnconfigure(3, weight=1)
 
         ttk.Label(box, textvariable=row_number_var, width=4).grid(
             row=0, column=0, sticky=tk.W
@@ -325,19 +304,29 @@ class StockEditorMixin:
             state="readonly",
         ).grid(row=0, column=1, sticky="ew", padx=(0, 12))
         ttk.Entry(box, textvariable=weight_var).grid(
-            row=0, column=2, sticky="ew"
+            row=0, column=2, sticky="ew", padx=(0, 12)
+        )
+        ttk.Combobox(
+            box,
+            textvariable=market_type_var,
+            values=MARKET_DISPLAY_OPTIONS,
+            state="readonly",
+            width=12,
+        ).grid(
+            row=0, column=3, sticky="ew"
         )
 
         ttk.Button(
             box,
             text="Remove",
             command=lambda current_box=box: self._remove_assortment_actual_box(current_box),
-        ).grid(row=0, column=3, sticky=tk.E, padx=(8, 0))
+        ).grid(row=0, column=4, sticky=tk.E, padx=(8, 0))
 
         box_entry: dict[str, object] = {
             "frame": box,
             "size_class": size_class_var,
             "weight": weight_var,
+            "market_type": market_type_var,
             "row_number": row_number_var,
         }
         size_class_var.trace_add(
@@ -417,9 +406,7 @@ class StockEditorMixin:
         self.actual_month_var.set(f"{today.month:02d}")
         self.actual_year_var.set(f"{today.year:04d}")
         self._editing_actual_record_id = None
-        self.actual_market_type_var.set(market_display_label("domestic"))
         self.actual_farm_name_var.set("")
-        self.actual_lot_var.set("")
         self.stock_harvest_size_var.set("")
         self.stock_harvest_weight_var.set("")
         self.assortment_actual_save_button.configure(text="Save stock")
@@ -434,14 +421,19 @@ class StockEditorMixin:
                 frame.destroy()
         self.assortment_actual_boxes.clear()
         if entries:
-            class_entries = aggregate_entries_by_size_class(
-                entries,
-                self._current_assortment_size_range_definitions(),
+            class_entries = (
+                tuple(entries)
+                if all(normalize_size_class(entry.size_class) in STOCK_SIZE_CLASSES for entry in entries)
+                else aggregate_entries_by_size_class(
+                    entries,
+                    self._current_assortment_size_range_definitions(),
+                )
             )
             for entry in class_entries:
                 self._add_assortment_actual_box(
                     entry.size_class,
                     self._format_weight(entry.weight),
+                    entry.market_type or "domestic",
                 )
         else:
             self._add_assortment_actual_box()
@@ -452,9 +444,10 @@ class StockEditorMixin:
         for number, box_entry in enumerate(self.assortment_actual_boxes, start=1):
             size_class_var = box_entry["size_class"]
             weight_var = box_entry["weight"]
+            market_type_var = box_entry["market_type"]
             if not all(
                 isinstance(value, tk.StringVar)
-                for value in (size_class_var, weight_var)
+                for value in (size_class_var, weight_var, market_type_var)
             ):
                 continue
             size_class = normalize_size_class(size_class_var.get())
@@ -462,7 +455,7 @@ class StockEditorMixin:
             if not size_class and not weight_text:
                 continue
             if not size_class or not weight_text:
-                raise ValueError(f"Row {number} needs Class and Weight.")
+                raise ValueError(f"Row {number} needs Class, Weight, and Use for.")
             if size_class not in STOCK_SIZE_CLASSES:
                 raise ValueError(f"Row {number} has an invalid Class.")
             if size_class in used_classes:
@@ -477,6 +470,7 @@ class StockEditorMixin:
                     size=size_class,
                     weight=weight,
                     size_class=size_class,
+                    market_type=market_type_var.get(),
                 )
             )
         return entries
@@ -500,9 +494,7 @@ class StockEditorMixin:
                 self._collect_assortment_actual_entries(),
                 record_id=self._editing_actual_record_id,
                 record_type="actual",
-                market_type=self.actual_market_type_var.get(),
                 farm_name=self.actual_farm_name_var.get(),
-                lot=self.actual_lot_var.get(),
             )
         except ValueError as exc:
             messagebox.showerror("Save stock", str(exc))
@@ -511,9 +503,7 @@ class StockEditorMixin:
         self._load_assortment_actual_history()
         self._new_assortment_actual_form(set_status=False)
         self.assortment_actual_status_var.set(
-            f"{action} stock {record.source_label} for "
-            f"{market_display_label(record.market_type)} "
-            f"with {len(record.entries)} entries "
+            f"{action} stock {record.source_label} with {len(record.entries)} entries "
             f"for {record.record_date}."
         )
         self.rm_timeline_status_var.set(
@@ -558,8 +548,6 @@ class StockEditorMixin:
                 iid=record.record_id,
                 values=(
                     record.farm_name or "—",
-                    record.lot or record.rm_id,
-                    market_display_label(record.market_type),
                     record.record_date,
                     self._format_weight(record.total_weight),
                     self._format_size_class_summary(class_summaries["M"]),
@@ -631,9 +619,7 @@ class StockEditorMixin:
         self.actual_day_var.set(day)
         self.actual_month_var.set(month)
         self.actual_year_var.set(year)
-        self.actual_market_type_var.set(market_display_label(record.market_type))
         self.actual_farm_name_var.set(record.farm_name)
-        self.actual_lot_var.set(record.lot)
         self.stock_harvest_size_var.set("")
         self.stock_harvest_weight_var.set("")
         self._set_assortment_actual_boxes(list(record.entries))

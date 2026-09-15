@@ -467,7 +467,7 @@ def _inventory_lots(
             lots.append(
                 _InventoryLot(
                     available_date=available_date,
-                    market_type=_normalize_market_type(record.market_type),
+                    market_type=_normalize_market_type(entry.market_type or record.market_type),
                     stock_source=record.source_label,
                     record_id=record.record_id,
                     size_range=entry.size,

@@ -84,6 +84,12 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self.operation_rule_file_path = (
             PROJECT_ROOT / "Data" / "Operations" / "operation_order_rules.json"
         )
+        self.chill_days_file_path = (
+            PROJECT_ROOT / "Data" / "Operations" / "chill_days.json"
+        )
+        self.production_start_file_path = (
+            PROJECT_ROOT / "Data" / "Operations" / "production_start_times.json"
+        )
         self.master_workbook_file_path = (
             PROJECT_ROOT / "Data" / "Master" / "Master PCK ING.xlsx"
         )
@@ -138,6 +144,8 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self._load_saved_orders()
         self._load_saved_class_definitions()
         self._load_capacity_settings()
+        self._load_chill_days_settings()
+        self._load_production_start_settings()
         self._load_saved_master_data()
         self._load_saved_assortment_upload()
         # Use the selected workbook as the active Order/Plan source.  Saved

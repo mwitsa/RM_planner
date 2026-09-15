@@ -180,16 +180,9 @@ class StockOverviewMixin:
 
         size_sections = ttk.Frame(self.rm_timeline_tab)
         size_sections.pack(fill=tk.X, pady=(0, 8))
-        stock_card_colors = {
-            "M": ("#eaf3fb", "#8bb8dd", "#174f78"),
-            "S": ("#fff4e6", "#e1ac62", "#87520c"),
-            "SS": ("#edf7ee", "#97c79b", "#285f2d"),
-            "HC": ("#f3edff", "#bba7df", "#5d468d"),
-            "BK": ("#f0f2f4", "#9ba6b1", "#374151"),
-        }
         for column, size_class in enumerate(RM_STOCK_CARD_CLASSES):
             size_sections.columnconfigure(column, weight=1)
-            background, border, foreground = stock_card_colors[size_class]
+            background, border, foreground = RM_STOCK_CARD_COLORS[size_class]
             section = tk.Frame(
                 size_sections,
                 background=background,
@@ -313,7 +306,7 @@ class StockOverviewMixin:
         self.rm_timeline_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         headings = {
             "date": "Date",
-            "sources": "ชื่อฟาร์ม / LOT",
+            "sources": "ชื่อฟาร์ม",
             "incoming": "RM in (kg)",
             "stock": "Stock (kg)",
             "M": "M stock (kg)",
