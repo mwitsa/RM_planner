@@ -13,7 +13,7 @@ from hashlib import sha256
 import json
 import math
 
-from .engine import (order_due_date, production_type_for_order, market_type_for_order, class_value_for_order,
+from .engine import (order_due_date, production_type_for_order, market_type_for_order,
                      outstanding_order_quantities, _inventory_lots)
 from .capacity_store import capacities_at_percentage
 from rm_planner.inventory.range_store import normalize_size_class
@@ -108,8 +108,8 @@ def build_context(orders, stock, ranges, capacity, classes, weights, start, sett
             sku=' | '.join((order.group_1, order.group_2, order.packaging, order.soup, order.rm_size)),
             code=order.code.strip(),
             product=order.product.strip(),
+            country=order.country.strip(),
             line=production_type_for_order(order), market=market_type_for_order(order, classes),
-            country_value=class_value_for_order(order, 'Country', classes),
             size=order.rm_size, stock_size=size, due=order_due_date(order).isoformat(),
             day=planned.isoformat(), qty=qty, cups=cups, yield_rate=weights.wontons_per_kg(size) if supported else 0,
             locked=bool(p.get('locked', False)), egg=p.get('egg', ''), soup_rank=rank,

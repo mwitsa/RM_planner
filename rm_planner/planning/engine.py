@@ -386,17 +386,6 @@ def market_type_for_order(
     return "unassigned"
 
 
-def class_value_for_order(
-    record: OrderRecord,
-    class_name: str,
-    definitions: Iterable[ClassDefinition],
-) -> str:
-    """Return the configured Value for a matching Order class definition."""
-
-    definition = _class_definition(record, class_name, definitions)
-    return definition.value.strip() if definition is not None else ""
-
-
 def outstanding_order_quantities(record: OrderRecord) -> tuple[float, float, float]:
     """Return outstanding units, cups, and wontons after manual production."""
 

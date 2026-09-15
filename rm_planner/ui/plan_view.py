@@ -630,7 +630,7 @@ class PlanViewMixin:
                         f"Product: {', '.join(products)}\n"
                         f"CODE: {code}\n"
                         f"RM Size: {size_text}\n"
-                        f"Country: {job.get('country_value') or '—'}\n"
+                        f"Country: {job.get('country') or '—'}\n"
                         f"{line} • {fmt(total_quantity)} เกี๊ยว"
                     )
                     border_options = {'outline': '#18324a', 'width': 2}

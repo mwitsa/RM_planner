@@ -8,8 +8,7 @@ from rm_planner.inventory.range_store import AssortmentSizeRange
 from rm_planner.planning.capacity_store import CapacitySettings
 from rm_planner.planning.class_store import ClassDefinition
 from rm_planner.orders.extractor import OrderRecord
-from rm_planner.planning.engine import (class_value_for_order, generate_plan,
-                                        market_type_for_order, order_due_date, priority_for_order)
+from rm_planner.planning.engine import generate_plan, market_type_for_order, order_due_date, priority_for_order
 from rm_planner.inventory.wonton_weight_store import WontonWeightSettings
 
 
@@ -79,7 +78,7 @@ def stock(
     )
 
 
-def class_definition(class_value: str, name: str, group: str, value: str = "") -> ClassDefinition:
+def class_definition(class_value: str, name: str, group: str) -> ClassDefinition:
     return ClassDefinition(
         class_id=f"{class_value}:{name}",
         class_value=class_value,
@@ -87,7 +86,6 @@ def class_definition(class_value: str, name: str, group: str, value: str = "") -
         group=group,
         created_at="2026-08-28T00:00:00+00:00",
         updated_at="2026-08-28T00:00:00+00:00",
-        value=value,
     )
 
 
@@ -320,14 +318,6 @@ class PlanEngineTests(unittest.TestCase):
         self.assertEqual(market_type_for_order(order("export", country="USA"), definitions), "export")
         self.assertEqual(market_type_for_order(order("domestic", country="7-11"), definitions), "domestic")
         self.assertEqual(market_type_for_order(order("unknown", country="?"), definitions), "unassigned")
-
-    def test_country_value_is_available_for_timeline_display(self) -> None:
-        definitions = [class_definition("Country", "USA", "E", "United States")]
-
-        self.assertEqual(
-            class_value_for_order(order("export", country="USA"), "Country", definitions),
-            "United States",
-        )
 
     def test_export_precedes_domestic_even_when_export_group1_is_lower_priority(self) -> None:
         definitions = [
