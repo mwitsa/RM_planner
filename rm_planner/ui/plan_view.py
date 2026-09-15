@@ -550,6 +550,24 @@ class PlanViewMixin:
             tip.geometry(f'+{event.x_root + 12}+{event.y_root + 14}')
             self._timeline_hover_tip = tip
 
+        def draw_shortage_hatching(x1, y1, x2, y2, shortage_ratio, tag):
+            """Draw red diagonal lines inside only the RM-short portion."""
+            shortage_ratio = max(0.0, min(1.0, shortage_ratio))
+            if shortage_ratio <= 0 or x2 <= x1:
+                return
+            hatch_left = x2 - (x2 - x1) * shortage_ratio
+            canvas.create_rectangle(hatch_left, y1, x2, y2, fill='', outline='', tags=(tag,))
+            height = y2 - y1
+            for bottom_x in range(int(hatch_left - height), int(x2) + 1, 12):
+                line_x1 = max(hatch_left, bottom_x)
+                line_x2 = min(x2, bottom_x + height)
+                if line_x1 < line_x2:
+                    canvas.create_line(
+                        line_x1, y2 - (line_x1 - bottom_x),
+                        line_x2, y2 - (line_x2 - bottom_x),
+                        fill='#df2f2f', width=2, tags=(tag,),
+                    )
+
         legend_x = left
         for label, colour, detail in (
             ('M', colours['M'], colour_meanings['M']),
@@ -576,6 +594,14 @@ class PlanViewMixin:
             canvas.tag_bind(sample, '<Leave>', hide_timeline_tip)
             legend_x += 74
 
+        shortage_legend_tag = 'timeline-shortage-legend'
+        sample = canvas.create_rectangle(legend_x, 8, legend_x + 16, 20, fill='#f2f6fa', outline='#df2f2f', tags=(shortage_legend_tag,))
+        draw_shortage_hatching(legend_x, 8, legend_x + 16, 20, 1.0, shortage_legend_tag)
+        canvas.create_text(legend_x + 21, 14, text='RM ขาด', anchor='w', fill='#40566b', font=('Segoe UI', 8), tags=(shortage_legend_tag,))
+        shortage_detail = 'ลายเฉียงสีแดง = สัดส่วน RM ที่ขาดสำหรับงานนั้น (พื้นที่ที่ไม่ขีดคือ RM ที่มีเพียงพอ)'
+        canvas.tag_bind(shortage_legend_tag, '<Enter>', lambda event: show_timeline_tip(event, shortage_detail))
+        canvas.tag_bind(shortage_legend_tag, '<Leave>', hide_timeline_tip)
+
         y = 30
         for day in sorted(entries_by_day):
             canvas.create_text(12, y + 14, text=day, anchor='w', fill='#31465a', font=('Segoe UI', 10, 'bold'))
@@ -597,7 +623,7 @@ class PlanViewMixin:
                         periods[-1]['entries'].append(entry)
                     else:
                         periods.append(dict(operation=operation, entries=[entry]))
-                for period in periods:
+                for period_index, period in enumerate(periods):
                     entries = period['entries']
                     job = jobs[entries[0]['job']]
                     capacity = self._proposal_context_used['capacity'][line]
@@ -621,26 +647,40 @@ class PlanViewMixin:
                     rm_sizes = list(dict.fromkeys(jobs[entry['job']]['size'] for entry in entries))
                     size_text = ', '.join(rm_sizes)
                     market = job.get('market', 'unassigned')
+                    rm_entries = [entry for entry in entries if entry.get('rm_required_kg') is not None]
+                    rm_required = sum(entry['rm_required_kg'] for entry in rm_entries)
+                    rm_allocated = sum(entry['rm_allocated_kg'] for entry in rm_entries)
+                    rm_shortage = sum(entry['rm_shortage_kg'] for entry in rm_entries)
+                    rm_coverage = rm_allocated / rm_required if rm_required else 0.0
+                    rm_shortage_ratio = 1.0 - rm_coverage if rm_required else 0.0
+                    rm_detail = (
+                        f"RM เพียงพอ: {rm_coverage:.0%} ({fmt(rm_allocated)} / {fmt(rm_required)} kg)\n"
+                        f"RM ขาด: {rm_shortage_ratio:.0%} ({fmt(rm_shortage)} kg)"
+                        if rm_entries else 'RM: ตรวจสอบปริมาณไม่ได้'
+                    )
                     detail = (
                         f"Product: {', '.join(products)}\n"
                         f"CODE: {code}\n"
                         f"RM Size: {size_text}\n"
                         f"Country: {job.get('country') or '—'}\n"
+                        f"{rm_detail}\n"
                         f"{line} • {fmt(total_quantity)} เกี๊ยว"
                     )
                     border_options = {'outline': '#18324a', 'width': 2}
                     if market == 'domestic':
                         border_options['dash'] = (4, 2)
+                    tooltip_tag = f'timeline-run:{day}:{line}:{period_index}'
                     rectangle = canvas.create_rectangle(
                         x1, y + 4, x2, y + row_height - 12,
-                        fill=colour, **border_options,
+                        fill=colour, tags=(tooltip_tag,), **border_options,
                     )
+                    draw_shortage_hatching(x1, y + 4, x2, y + row_height - 12, rm_shortage_ratio, tooltip_tag)
                     canvas.tag_bind(
-                        rectangle,
+                        tooltip_tag,
                         '<Enter>',
                         lambda event, tooltip_text=detail: show_timeline_tip(event, tooltip_text),
                     )
-                    canvas.tag_bind(rectangle, '<Leave>', hide_timeline_tip)
+                    canvas.tag_bind(tooltip_tag, '<Leave>', hide_timeline_tip)
                     product = job.get('product', '')
                     if product and x2 - x1 > 65:
                         maximum_characters = max(5, int((x2 - x1 - 12) / 7))
@@ -652,6 +692,7 @@ class PlanViewMixin:
                             anchor='w',
                             fill='white',
                             font=('Segoe UI', 9, 'bold'),
+                            tags=(tooltip_tag,),
                         )
                 y += row_height
             y += 14

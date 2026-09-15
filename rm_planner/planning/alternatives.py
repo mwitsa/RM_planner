@@ -221,6 +221,7 @@ def evaluate(context, rows, apply_operation_rules=False):
         selected = [] if date.fromisoformat(day).weekday() in FACTORY_HOLIDAY_WEEKDAYS else [r for r in rows if r['day'] == day]
         changes = 0
         hours = {}
+        day_schedule = []
         for line in ('RAW', 'COOKED'):
             def operation_key(row):
                 job = jobs[row['job']]
@@ -264,17 +265,36 @@ def evaluate(context, rows, apply_operation_rules=False):
                 if not math.isfinite(duration):
                     errors.append(f"{day} {line}: capacity เป็นศูนย์")
                     duration = 0
-                schedule.append(dict(r, start_hours=elapsed, line=line))
+                entry = dict(r, start_hours=elapsed, line=line)
+                schedule.append(entry)
+                day_schedule.append(entry)
                 elapsed += duration
             hours[line] = elapsed
             if elapsed > s['shift_hours'] + EPS:
                 errors.append(f"{day} {line}: ใช้ {elapsed:.2f} ชม. เกิน {s['shift_hours']:g} ชม.")
-        for r in selected:
+        # Allocate RM in the same time order displayed by the timeline.  This
+        # does not change feasibility (the final balance is identical), but it
+        # identifies exactly how much of each production run is covered.
+        for entry in sorted(day_schedule, key=lambda item: (item['start_hours'], item['line'], item['job'])):
+            r = entry
             j = jobs[r['job']]
             if j['line'] not in context['capacity'] or j['yield_rate'] <= 0:
                 errors.append(f"{j['order']}: ยังไม่รองรับไลน์หรือ RM {j['size']}")
+                entry.update(rm_required_kg=None, rm_allocated_kg=None,
+                             rm_shortage_kg=None, rm_coverage=0.0)
                 continue
-            balances[(j['market'], j['stock_size'])] -= r['qty'] / j['yield_rate']
+            required = r['qty'] / j['yield_rate']
+            balance_key = (j['market'], j['stock_size'])
+            available = max(0.0, balances[balance_key])
+            allocated = min(required, available)
+            shortage = required - allocated
+            entry.update(
+                rm_required_kg=required,
+                rm_allocated_kg=allocated,
+                rm_shortage_kg=shortage,
+                rm_coverage=allocated / required if required > EPS else 1.0,
+            )
+            balances[balance_key] -= required
         for (market, size), qty in balances.items():
             if qty < -EPS:
                 errors.append(f"{day}: RM {market} {size} ขาด {-qty:,.1f} kg")

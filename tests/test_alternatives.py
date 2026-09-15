@@ -179,6 +179,30 @@ class AlternativeTests(unittest.TestCase):
         raw_order = [entry['job'] for entry in raw_plan['schedule'] if entry['line'] == 'RAW']
         self.assertEqual(raw_order, ['a', 'b'])
 
+    def test_schedule_marks_the_uncovered_rm_share(self):
+        context = {
+            'start': '2026-09-16',
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-16', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': None,
+                         'stop_cost': None},
+            'jobs': [
+                dict(id='a', order='A', code='', sku='A', product='Product A', qty=100,
+                     day='2026-09-16', due='2026-09-16', cups=10, yield_rate=10,
+                     line='COOKED', market='domestic', stock_size='M', size='M',
+                     locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                     max_qty=0, egg='มีไข่', soup_rank=0, class_groups={}),
+            ],
+            'lots': [dict(day='2026-09-16', market='domestic', size='M', kg=5)],
+            'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        entry = evaluate(context, baseline_rows(context))['schedule'][0]
+
+        self.assertEqual(entry['rm_required_kg'], 10)
+        self.assertEqual(entry['rm_allocated_kg'], 5)
+        self.assertEqual(entry['rm_shortage_kg'], 5)
+        self.assertEqual(entry['rm_coverage'], 0.5)
+
     def test_incompatible_allergens_and_earliest_date(self):
         c = self.context()
         c['jobs'][1]['egg']='ไม่มีไข่'
