@@ -228,9 +228,11 @@ def evaluate(context, rows, apply_operation_rules=False):
     daily, schedule = [], []
     for offset in range(int(s['lookahead'])):
         day = (start + timedelta(days=offset)).isoformat()
+        incoming_by_size = defaultdict(float)
         for lot in context['lots']:
             if lot['day'] == day or (offset == 0 and lot['day'] < day):
                 balances[(lot['market'], lot['size'])] += lot['kg']
+                incoming_by_size[lot['size']] += lot['kg']
         # Do not put work on a closed day even while displaying an invalid
         # imported/manual plan.  The error above tells the user what to fix.
         selected = [] if date.fromisoformat(day).weekday() in FACTORY_HOLIDAY_WEEKDAYS else [r for r in rows if r['day'] == day]
@@ -321,6 +323,7 @@ def evaluate(context, rows, apply_operation_rules=False):
         by_size = {size: sum(max(0, q) for (_, z), q in balances.items() if z == size)
                    for size in ('M', 'S', 'SS', 'HC', 'BK', 'Unused')}
         daily.append(dict(day=day, remaining=sum(by_size.values()), by_size=by_size,
+                          incoming_by_size=dict(incoming_by_size),
                           changes=changes, hours=hours))
     active = [day for day in daily if day['day'] >= adjust_from]
     residual = active[-1]['remaining']

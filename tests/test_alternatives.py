@@ -196,12 +196,14 @@ class AlternativeTests(unittest.TestCase):
             'capacity': {'RAW': 1000, 'COOKED': 1000}, 'forecasts': [], 'operation_rules': (),
         }
 
-        entry = evaluate(context, baseline_rows(context))['schedule'][0]
+        result = evaluate(context, baseline_rows(context))
+        entry = result['schedule'][0]
 
         self.assertEqual(entry['rm_required_kg'], 10)
         self.assertEqual(entry['rm_allocated_kg'], 5)
         self.assertEqual(entry['rm_shortage_kg'], 5)
         self.assertEqual(entry['rm_coverage'], 0.5)
+        self.assertEqual(result['daily'][0]['incoming_by_size'], {'M': 5.0})
 
     def test_bk_run_is_fully_uncovered_when_no_bk_stock_exists(self):
         context = {
