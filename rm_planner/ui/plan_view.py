@@ -11,6 +11,7 @@ import json
 from .common import PROJECT_ROOT
 from rm_planner.planning.alternatives import (FACTORY_HOLIDAY_WEEKDAYS, build_context,
                                                compare, settings_defaults, signature, number)
+from rm_planner.planning.operation_rule_store import load_operation_rules
 from rm_planner.planning.proposal_store import load_preferences, save_preferences, save_approval
 
 READY = {'unknown': 'ยังไม่ทราบ', 'ready': 'พร้อม', 'partial': 'พร้อมบางส่วน', 'blocked': 'ไม่พร้อม'}
