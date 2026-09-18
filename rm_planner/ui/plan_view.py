@@ -785,6 +785,7 @@ class PlanViewMixin:
                 'usage_by_product': {},
                 'usage_by_day_product': {},
             })
+        rm_lots_by_id = {lot['id']: lot for lot in rm_lots}
         for entry in sorted(
             plan['schedule'], key=lambda item: (item['day'], item['start_hours'], item['line'], item['job'])
         ):
@@ -794,12 +795,18 @@ class PlanViewMixin:
             job = jobs[entry['job']]
             # Use the engine's allocations, including Freeze top-ups, so the
             # stock rail and production boxes explain the same calculation.
-            allocations = {item['lot_id']: item['kg']
-                           for item in entry.get('rm_allocations', ())}
-            eligible_lots = [lot for lot in rm_lots if lot['id'] in allocations]
-            for lot in eligible_lots:
+            # Keep the engine's last-value behavior should malformed legacy
+            # data contain the same lot twice in an entry, while avoiding a
+            # full RM-lot scan for each allocation.
+            allocations = {
+                item['lot_id']: item['kg']
+                for item in entry.get('rm_allocations', ())
+            }
+            for lot_id, used in allocations.items():
+                lot = rm_lots_by_id.get(lot_id)
+                if lot is None:
+                    continue
                 lot['opening_by_day'].setdefault(entry['day'], lot['remaining_kg'])
-                used = allocations[lot['id']]
                 lot['remaining_kg'] -= used
                 lot['usage_by_day'][entry['day']] = lot['usage_by_day'].get(entry['day'], 0.0) + used
                 product = job.get('product', '').strip() or job.get('code', '').strip() or 'ไม่ระบุ Product'

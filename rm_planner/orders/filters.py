@@ -149,6 +149,30 @@ def cascading_filter_state(
     if preferred_key in filter_keys:
         evaluation_order = (*evaluation_order, preferred_key)
 
+    # The table can contain thousands of rows.  Formatting a cell value is
+    # noticeably more expensive than comparing it, so materialize each value
+    # once for this refresh and reuse it while calculating every column's
+    # contextual options.  Keep the original records alongside the values so
+    # this remains behaviorally identical to ``filter_orders``.
+    record_values = [
+        {key: filter_value(record, key) for key in filter_keys}
+        for record in record_list
+    ]
+
+    def candidates_except(excluded_key: str) -> list[OrderRecord]:
+        active = tuple(
+            (key, current[key])
+            for key in filter_keys
+            if key != excluded_key and current[key] != ALL_FILTER
+        )
+        if not active:
+            return record_list
+        return [
+            record
+            for record, values in zip(record_list, record_values)
+            if all(_matches_selection(values[key], selected) for key, selected in active)
+        ]
+
     # One pass normally settles the state; a second pass resolves any
     # cascading selection that became invalid after another column was
     # normalized.  Repeating once per column made a single click on a large
@@ -156,10 +180,7 @@ def cascading_filter_state(
     for _ in range(2):
         changed = False
         for key in evaluation_order:
-            candidates = filter_orders(
-                record_list,
-                {other: current[other] for other in filter_keys if other != key},
-            )
+            candidates = candidates_except(key)
             available = filter_options(candidates, key)
             normalized = _normalize_selection(current[key], available)
             if current[key] != normalized:
@@ -170,10 +191,7 @@ def cascading_filter_state(
 
     options: dict[str, list[str]] = {}
     for key in filter_keys:
-        candidates = filter_orders(
-            record_list,
-            {other: current[other] for other in filter_keys if other != key},
-        )
+        candidates = candidates_except(key)
         options[key] = filter_options(candidates, key)
     return current, options
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from .common import *  # shared UI types and domain services
+from rm_planner.planning.alternatives import number
+from rm_planner.planning.proposal_store import save_preferences
 
 
 class CapacityViewMixin:
@@ -134,6 +136,7 @@ class CapacityViewMixin:
             self.operation_order_rule_tab,
             text="กำหนดกฎและลำดับการเปลี่ยนงานของแต่ละไลน์ผลิต",
         ).pack(anchor=tk.W, pady=(3, 18))
+        self._build_changeover_cost_settings()
         self._build_operation_rule_builder()
 
         self.chill_days_tab = ttk.Frame(content_host)
@@ -260,6 +263,55 @@ class CapacityViewMixin:
         self._operations_section_buttons["class_define"].pack(fill=tk.X, pady=(4, 0))
         self._build_class_define_tab()
         self._select_operations_section("capacity")
+
+    def _build_changeover_cost_settings(self) -> None:
+        card = ttk.LabelFrame(self.operation_order_rule_tab, text="ค่าเปลี่ยนงาน", padding=12)
+        card.pack(fill=tk.X, pady=(0, 14))
+        self.changeover_cost_vars = {
+            key: tk.StringVar(value=self._proposal_vars[key].get())
+            for key in ('stop_cost', 'setup_minutes')
+        }
+        for column, (key, label) in enumerate((
+            ('stop_cost', 'อัตราค่าเปลี่ยนงาน (บาท/ชั่วโมง)'),
+            ('setup_minutes', 'เวลาเปลี่ยนงาน (นาที/ครั้ง)'),
+        )):
+            ttk.Label(card, text=label).grid(row=0, column=column, sticky=tk.W, padx=(0, 16))
+            ttk.Entry(card, textvariable=self.changeover_cost_vars[key], width=24).grid(
+                row=1, column=column, sticky=tk.W, padx=(0, 16), pady=6)
+            # Keep this editor in sync when the same setting is saved from Plan.
+            self._proposal_vars[key].trace_add(
+                'write', lambda *_args, k=key:
+                    self.changeover_cost_vars[k].set(self._proposal_vars[k].get()))
+        ttk.Label(
+            card,
+            text="ค่าเปลี่ยนงานรายวัน = จำนวนครั้ง × นาทีต่อครั้ง ÷ 60 × บาทต่อชั่วโมง",
+        ).grid(row=2, column=0, columnspan=3, sticky=tk.W)
+        self.changeover_cost_status = tk.StringVar()
+        ttk.Label(card, textvariable=self.changeover_cost_status).grid(
+            row=3, column=0, columnspan=3, sticky=tk.W, pady=(6, 0))
+        ttk.Button(card, text="บันทึกค่าเปลี่ยนงาน", command=self._save_changeover_cost_settings).grid(
+            row=1, column=2, padx=8)
+
+    def _save_changeover_cost_settings(self) -> None:
+        try:
+            values = {
+                key: number(var.get().strip().replace(',', ''), key, optional=key == 'stop_cost')
+                for key, var in self.changeover_cost_vars.items()
+            }
+            if values['setup_minutes'] > float(self.capacity_settings.work_hours_per_day) * 60:
+                raise ValueError("เวลาเปลี่ยนงานต้องไม่เกินชั่วโมงทำงานต่อวัน")
+            if self._proposal_load_error:
+                raise ValueError(self._proposal_load_error)
+            settings = dict(self._proposal_preferences['settings'], **values)
+            data = dict(self._proposal_preferences, settings=settings)
+            save_preferences(self._proposal_path, data)
+        except (ValueError, OSError) as exc:
+            messagebox.showerror("บันทึกค่าเปลี่ยนงาน", str(exc), parent=self)
+            return
+        self._proposal_preferences = data
+        for key, value in values.items():
+            self._proposal_vars[key].set('' if value is None else str(value))
+        self.changeover_cost_status.set("บันทึกแล้ว — กำลังคำนวณต้นทุนแผนใหม่")
 
     def _build_chill_days_settings(self) -> None:
         """Build the future planning constraint for chilled RM usage."""

@@ -348,12 +348,21 @@ def evaluate(context, rows, apply_operation_rules=False, allow_unscheduled=False
     # usable-RM balance on its configured Freeze day.
     lot_balances = [dict(lot, lot_id=index, remaining_kg=float(lot['kg']))
                     for index, lot in enumerate(context['lots'])]
+    # RM eligibility only depends on market and size.  Indexing the immutable
+    # pool membership avoids scanning unrelated lots for every production run;
+    # each list preserves the source order used as the final FIFO tie-breaker.
+    lots_by_pool = defaultdict(list)
+    for lot in lot_balances:
+        lots_by_pool[(lot['market'], lot['size'])].append(lot)
+    rows_by_day = defaultdict(list)
+    for row in rows:
+        rows_by_day[row['day']].append(row)
     daily, schedule = [], []
     for offset in range(int(s['lookahead'])):
         day = (start + timedelta(days=offset)).isoformat()
         # Do not put work on a closed day even while displaying an invalid
         # imported/manual plan.  The error above tells the user what to fix.
-        selected = [] if date.fromisoformat(day).weekday() in FACTORY_HOLIDAY_WEEKDAYS else [r for r in rows if r['day'] == day]
+        selected = [] if date.fromisoformat(day).weekday() in FACTORY_HOLIDAY_WEEKDAYS else rows_by_day[day]
         changes = 0
         hours = {}
         day_schedule = []
@@ -439,10 +448,8 @@ def evaluate(context, rows, apply_operation_rules=False, allow_unscheduled=False
             balance_key = (j['market'], j['stock_size'])
             available_lots = sorted(
                 (
-                    lot for lot in lot_balances
-                    if lot['market'] == balance_key[0]
-                    and lot['size'] == balance_key[1]
-                    and lot['day'] <= day
+                    lot for lot in lots_by_pool[balance_key]
+                    if lot['day'] <= day
                     and (context.get('allow_frozen_stock', False)
                          or not _is_frozen_lot(lot, day, context['start']))
                     and lot['remaining_kg'] > EPS
