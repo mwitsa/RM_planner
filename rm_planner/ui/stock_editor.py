@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .common import *  # shared UI types and domain services
+from rm_planner.planning.market_labels import market_internal_value
 
 
 class StockEditorMixin:
@@ -134,7 +135,7 @@ class StockEditorMixin:
 
         ttk.Label(
             form_panel,
-            text="Enter stock directly as M, S, SS, or Unused. Each class may be used once.",
+            text="Enter M, S, SS, HC, BK, or Unused. Each class may be used once per market (ในประเทศ / ต่างประเทศ).",
         ).pack(anchor=tk.W, pady=(0, 6))
 
         entry_headings = ttk.Frame(form_panel, padding=(6, 5))
@@ -440,7 +441,7 @@ class StockEditorMixin:
 
     def _collect_assortment_actual_entries(self) -> list[ActualAssortmentEntry]:
         entries: list[ActualAssortmentEntry] = []
-        used_classes: set[str] = set()
+        used_classes: set[tuple[str, str]] = set()
         for number, box_entry in enumerate(self.assortment_actual_boxes, start=1):
             size_class_var = box_entry["size_class"]
             weight_var = box_entry["weight"]
@@ -458,19 +459,23 @@ class StockEditorMixin:
                 raise ValueError(f"Row {number} needs Class, Weight, and Use for.")
             if size_class not in STOCK_SIZE_CLASSES:
                 raise ValueError(f"Row {number} has an invalid Class.")
-            if size_class in used_classes:
-                raise ValueError(f"Class {size_class} is already used in another row.")
+            market_type = market_internal_value(market_type_var.get())
+            class_market = (size_class, market_type)
+            if class_market in used_classes:
+                raise ValueError(
+                    f"Class {size_class} ({market_display_label(market_type)}) is already used in another row."
+                )
             try:
                 weight = float(weight_text)
             except ValueError as exc:
                 raise ValueError(f"Row {number} has an invalid Weight.") from exc
-            used_classes.add(size_class)
+            used_classes.add(class_market)
             entries.append(
                 ActualAssortmentEntry(
                     size=size_class,
                     weight=weight,
                     size_class=size_class,
-                    market_type=market_type_var.get(),
+                    market_type=market_type,
                 )
             )
         return entries

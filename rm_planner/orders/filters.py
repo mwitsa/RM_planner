@@ -149,7 +149,11 @@ def cascading_filter_state(
     if preferred_key in filter_keys:
         evaluation_order = (*evaluation_order, preferred_key)
 
-    for _ in range(len(filter_keys) + 1):
+    # One pass normally settles the state; a second pass resolves any
+    # cascading selection that became invalid after another column was
+    # normalized.  Repeating once per column made a single click on a large
+    # Order table needlessly expensive on the Tk main thread.
+    for _ in range(2):
         changed = False
         for key in evaluation_order:
             candidates = filter_orders(

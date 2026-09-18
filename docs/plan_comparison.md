@@ -1,5 +1,25 @@
 # Plan comparison
 
+## Freeze top-up policy (current)
+
+- Only the balanced proposal may use frozen stock. Baseline and reduced-RM
+  proposals allocate fresh RM only.
+- Saved existing-stock records and arrivals before the selected start date are
+  opening frozen stock. Chilled arrivals become frozen on their configured
+  freeze day.
+- Allocate fresh RM first, then frozen stock only for the unmet requirement,
+  matching market and size and respecting the arrival date. Allocations decrement
+  the same lot balances, so stock cannot be spent twice.
+- Replanned orders remain whole. Balanced search retains its existing cost and
+  residual reduction criteria; frozen stock enables otherwise infeasible top-ups.
+- Opening/existing stock is excluded from the card's timeframe residual.
+  Blue diagonal sections show the fraction supplied by Freeze; red shows the
+  remaining shortage. Production tooltips report fresh, Freeze and shortage kg.
+  The stock rail uses the engine's recorded lot allocations.
+
+The older workflow notes below describe the original implementation; where they
+conflict with this policy or current code, the current policy takes precedence.
+
 Plan now compares the imported Order production schedule with three bounded
 pull-forward policies. Data remains the raw workbook view. Default lookahead is
 7 days, with changes targeted at the first 3 days (both configurable, up to 31).

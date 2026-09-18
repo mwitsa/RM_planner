@@ -78,7 +78,7 @@
         {
           "size": "SS",
           "weight": 982.0,
-          "market_type": "export",
+          "market_type": "domestic",
           "size_class": "SS",
           "pieces_per_kg": null
         },
@@ -91,7 +91,7 @@
         }
       ],
       "created_at": "2026-09-15T15:13:00.270805+00:00",
-      "updated_at": "2026-09-15T15:13:17.649038+00:00"
+      "updated_at": "2026-09-16T04:19:53.808522+00:00"
     },
     {
       "id": "004a7dda-5782-49bc-b1c8-43133f4ade69",
@@ -125,6 +125,88 @@
       ],
       "created_at": "2026-09-15T15:14:20.971573+00:00",
       "updated_at": "2026-09-15T15:14:20.971573+00:00"
+    },
+    {
+      "id": "68d4dca4-bdf0-49db-81cc-e8247ba04937",
+      "rm_id": "RM-000005",
+      "farm_name": "test",
+      "date": "2026-09-10",
+      "record_type": "actual",
+      "market_type": "unassigned",
+      "entries": [
+        {
+          "size": "M",
+          "weight": 2000.0,
+          "market_type": "domestic",
+          "size_class": "M",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "S",
+          "weight": 2000.0,
+          "market_type": "domestic",
+          "size_class": "S",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "SS",
+          "weight": 2000.0,
+          "market_type": "domestic",
+          "size_class": "SS",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "HC",
+          "weight": 2000.0,
+          "market_type": "domestic",
+          "size_class": "HC",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "BK",
+          "weight": 2000.0,
+          "market_type": "domestic",
+          "size_class": "BK",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "M",
+          "weight": 2000.0,
+          "market_type": "export",
+          "size_class": "M",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "S",
+          "weight": 2000.0,
+          "market_type": "export",
+          "size_class": "S",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "SS",
+          "weight": 2000.0,
+          "market_type": "export",
+          "size_class": "SS",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "HC",
+          "weight": 2000.0,
+          "market_type": "export",
+          "size_class": "HC",
+          "pieces_per_kg": null
+        },
+        {
+          "size": "BK",
+          "weight": 2000.0,
+          "market_type": "export",
+          "size_class": "BK",
+          "pieces_per_kg": null
+        }
+      ],
+      "created_at": "2026-09-16T10:09:39.976783+00:00",
+      "updated_at": "2026-09-16T10:09:39.976783+00:00"
     }
   ]
 }

@@ -63,6 +63,11 @@ from rm_planner.planning.production_start_store import (
     production_time_options,
     save_production_start_settings,
 )
+from rm_planner.planning.labour_store import (
+    LabourSettings,
+    load_labour_settings,
+    save_labour_settings,
+)
 from rm_planner.master.store import (
     MasterComponentRecord,
     extract_master_data,

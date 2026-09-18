@@ -85,7 +85,6 @@ class StockOverviewMixin:
     def _build_rm_timeline_tab(self) -> None:
         self.rm_stock_as_of_var = tk.StringVar(value="—")
         self.rm_stock_total_var = tk.StringVar(value="0 kg")
-        self.rm_stock_wontons_var = tk.StringVar(value="0")
         self.rm_stock_distribution_weights = tuple(0.0 for _ in RM_STOCK_DISPLAY_CLASSES)
         self.rm_stock_distribution_vars = {
             size_class: tk.StringVar(value=f"{size_class} 0% | 0 kg")
@@ -96,8 +95,6 @@ class StockOverviewMixin:
                 "stock": tk.StringVar(value="0 kg"),
                 "domestic": tk.StringVar(value="0 kg"),
                 "export": tk.StringVar(value="0 kg"),
-                "domestic_wontons": tk.StringVar(value="0"),
-                "export_wontons": tk.StringVar(value="0"),
             }
             for size_class in RM_STOCK_CARD_CLASSES
         }
@@ -111,12 +108,11 @@ class StockOverviewMixin:
             padding=12,
         )
         overview.pack(fill=tk.X, pady=(0, 8))
-        for column in range(3):
+        for column in range(2):
             overview.columnconfigure(column, weight=1)
         overview_fields = (
             ("As of", self.rm_stock_as_of_var),
             ("Total stock", self.rm_stock_total_var),
-            ("Est. wontons", self.rm_stock_wontons_var),
         )
         for column, (label, variable) in enumerate(overview_fields):
             ttk.Label(overview, text=label).grid(
@@ -140,7 +136,7 @@ class StockOverviewMixin:
             overview,
             text="+ Add stock",
             command=self._open_stock_editor,
-        ).grid(row=0, column=3, rowspan=2, sticky=tk.E)
+        ).grid(row=0, column=2, rowspan=2, sticky=tk.E)
 
         self.rm_stock_distribution_canvas = tk.Canvas(
             overview,
@@ -152,7 +148,7 @@ class StockOverviewMixin:
         self.rm_stock_distribution_canvas.grid(
             row=2,
             column=0,
-            columnspan=4,
+            columnspan=3,
             sticky="ew",
             pady=(12, 8),
         )
@@ -162,7 +158,7 @@ class StockOverviewMixin:
         )
 
         distribution_legend = ttk.Frame(overview)
-        distribution_legend.grid(row=3, column=0, columnspan=4, sticky="ew")
+        distribution_legend.grid(row=3, column=0, columnspan=3, sticky="ew")
         for column, size_class in enumerate(RM_STOCK_DISPLAY_CLASSES):
             distribution_legend.columnconfigure(column, weight=1)
             legend_item = ttk.Frame(distribution_legend)
@@ -252,8 +248,6 @@ class StockOverviewMixin:
                 ).pack(anchor=tk.W, pady=(0, 8))
                 market_details = tk.Frame(market_panel, background="#ffffff")
                 market_details.pack(fill=tk.X)
-                market_details.columnconfigure(0, weight=1)
-                market_details.columnconfigure(1, weight=1)
                 tk.Label(
                     market_details,
                     text="Weight",
@@ -262,26 +256,11 @@ class StockOverviewMixin:
                 ).grid(row=0, column=0, sticky=tk.W)
                 tk.Label(
                     market_details,
-                    text="Est. wonton",
-                    background="#ffffff",
-                    foreground="#555555",
-                ).grid(row=0, column=1, sticky=tk.E)
-                tk.Label(
-                    market_details,
                     textvariable=self.rm_stock_size_vars[size_class][market],
                     background="#ffffff",
                     foreground=foreground,
                     font=("Segoe UI", 12, "bold"),
                 ).grid(row=1, column=0, sticky=tk.W, pady=(3, 0))
-                tk.Label(
-                    market_details,
-                    textvariable=self.rm_stock_size_vars[size_class][
-                        f"{market}_wontons"
-                    ],
-                    background="#ffffff",
-                    foreground=foreground,
-                    font=("Segoe UI", 11, "bold"),
-                ).grid(row=1, column=1, sticky=tk.E, pady=(3, 0))
 
         table_frame = ttk.LabelFrame(
             self.rm_timeline_tab,
@@ -462,7 +441,6 @@ class StockOverviewMixin:
             self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
             self.rm_stock_as_of_var.set("Unavailable")
             self.rm_stock_total_var.set("—")
-            self.rm_stock_wontons_var.set("—")
             self._set_rm_stock_distribution(*(0 for _ in RM_STOCK_DISPLAY_CLASSES))
             for variables in self.rm_stock_size_vars.values():
                 for variable in variables.values():
@@ -496,9 +474,6 @@ class StockOverviewMixin:
             self.rm_stock_total_var.set(
                 f"{self._format_optional_number(final.cumulative_kg)} kg"
             )
-            self.rm_stock_wontons_var.set(
-                self._format_optional_number(final.cumulative_wontons)
-            )
             self._set_rm_stock_distribution(
                 final.m_stock.total,
                 final.s_stock.total,
@@ -525,17 +500,8 @@ class StockOverviewMixin:
                         market_final = filtered_rows[-1]
                         market_summary = getattr(market_final, f"{size_class.lower()}_stock")
                         market_total = market_summary.total
-                        market_wontons = (
-                            getattr(market_final, f"{size_class.lower()}_wontons")
-                            if size_class in SIZE_CLASSES else 0
-                        )
-                    else:
-                        market_wontons = 0
                     variables[market].set(
                         f"{self._format_optional_number(market_total)} kg"
-                    )
-                    variables[f"{market}_wontons"].set(
-                        self._format_optional_number(market_wontons)
                     )
             self.rm_timeline_status_var.set(
                 f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
@@ -544,13 +510,11 @@ class StockOverviewMixin:
         else:
             self.rm_stock_as_of_var.set("—")
             self.rm_stock_total_var.set("0 kg")
-            self.rm_stock_wontons_var.set("0")
             self._set_rm_stock_distribution(*(0 for _ in RM_STOCK_DISPLAY_CLASSES))
             for variables in self.rm_stock_size_vars.values():
                 variables["stock"].set("0 kg")
                 for market in ("domestic", "export"):
                     variables[market].set("0 kg")
-                    variables[f"{market}_wontons"].set("0")
             self.rm_timeline_status_var.set(
                 "No RM stock records for these filters."
             )

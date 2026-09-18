@@ -13,6 +13,7 @@ from .common import (
     PRODUCTION_WINDOW_START_HOUR,
     RM_SIZE_COLORS,
     load_chill_days,
+    load_labour_settings,
     load_production_start_settings,
 )
 from rm_planner.planning.alternatives import (FACTORY_HOLIDAY_WEEKDAYS, build_context,
@@ -424,6 +425,7 @@ class PlanViewMixin:
         production_start_settings = load_production_start_settings(
             self.production_start_file_path
         )
+        labour_settings = load_labour_settings(self.labour_file_path)
         return build_context(records, self.assortment_actual_records.values(),
             self._current_assortment_size_range_definitions(), self.capacity_settings,
             tuple(self.class_definitions.values()), self.wonton_weight_settings,
@@ -432,7 +434,13 @@ class PlanViewMixin:
                 'adjust_from': self.adjust_from_var.get(),
             },
             self._proposal_preferences['profiles'], operation_rules, chill_days,
-            production_start_settings)
+            production_start_settings,
+            {
+                'raw_labour': labour_settings.raw_labour,
+                'raw_wage': labour_settings.raw_wage,
+                'cooked_labour': labour_settings.cooked_labour,
+                'cooked_wage': labour_settings.cooked_wage,
+            })
 
     def _calculate_proposals(self, quiet=False):
         try:
@@ -483,6 +491,10 @@ class PlanViewMixin:
         if existing_cost_tip is not None and existing_cost_tip.winfo_exists():
             existing_cost_tip.destroy()
         self._proposal_cost_tip = None
+        existing_logic_tip = getattr(self, '_proposal_logic_tip', None)
+        if existing_logic_tip is not None and existing_logic_tip.winfo_exists():
+            existing_logic_tip.destroy()
+        self._proposal_logic_tip = None
         for child in self._proposal_cards.winfo_children():
             child.destroy()
         context = self._proposal_context_used
@@ -526,6 +538,21 @@ class PlanViewMixin:
                 if not daily_changes:
                     details.append('  • ไม่มีวันที่มีการเปลี่ยนงาน = ฿ 0.0')
                 details.append(f"  • รวมค่าเปลี่ยนงาน: ฿ {fmt(plan['setup_cost'])}")
+            details.append(f"• ค่าแรงสูญเปล่า: ฿ {fmt(plan.get('free_labour_cost', 0))}")
+            details.append('  • ชั่วโมงว่าง = ชั่วโมงทำงานต่อวัน − ชั่วโมงที่มีงานจริง')
+            for labour_day in plan.get('free_labour_daily', ()):
+                line_details = []
+                for line, label in (('RAW', 'Raw'), ('COOKED', 'Cooked')):
+                    line_data = labour_day['lines'][line]
+                    labour_key = 'raw' if line == 'RAW' else 'cooked'
+                    people = context.get('labour', {}).get(f'{labour_key}_labour', 0)
+                    wage = context.get('labour', {}).get(f'{labour_key}_wage', 0)
+                    line_details.append(
+                        f"{label}: {fmt(settings['shift_hours'])} − {fmt(line_data['actual_hours'])}"
+                        f" = {fmt(line_data['free_hours'])} ชม. × {fmt(people)} คน"
+                        f" × ฿ {fmt(wage)} = ฿ {fmt(line_data['cost'])}"
+                    )
+                details.append(f"  • {labour_day['day']}: " + ' ; '.join(line_details))
             details.append(f"• รวมต้นทุน: ฿ {fmt(plan['cost'])}")
             tip = tk.Toplevel(self)
             tip.overrideredirect(True)
@@ -550,13 +577,102 @@ class PlanViewMixin:
             tip.geometry(f'+{x}+{y}')
             self._proposal_cost_tip = tip
 
+        def hide_logic_tip(_event=None):
+            tip = getattr(self, '_proposal_logic_tip', None)
+            if tip is not None and tip.winfo_exists():
+                tip.destroy()
+            self._proposal_logic_tip = None
+
+        def plan_logic(plan):
+            start = context['start']
+            end = (date.fromisoformat(start) + timedelta(
+                days=int(context['settings']['lookahead']) - 1
+            )).isoformat()
+            adjust_from = context['settings'].get('adjust_from', start)
+            common = [
+                f"ช่วงคำนวณ: {start} ถึง {end}",
+                f"เริ่มปรับแผน: {adjust_from}",
+                "ยอด RM เหลือคำนวณเฉพาะช่วงเวลาที่ผู้ใช้เลือก ไม่รวม Stock เปิดต้นงวด",
+                "ไม่แบ่ง (split) Order — ถ้าย้ายต้องย้ายทั้งออเดอร์",
+                "ใช้ RM แยกตามตลาดและขนาด ห้ามยืมข้ามกลุ่ม",
+                ("ใช้ RM สดก่อน แล้วใช้ Stock/Freeze เติมเฉพาะส่วนที่ขาด (ขีดสีฟ้า)"
+                 if plan.get('id') == 'balanced' else
+                 "ใช้เฉพาะ RM สดในช่วงที่เลือก ไม่เบิก Stock/Freeze มาเติม"),
+                "ตรวจสอบกำลังผลิตและไม่วางงานในวันหยุดโรงงาน",
+            ]
+            if plan.get('id') == 'baseline':
+                return [
+                    "แผนเดิม: ใช้ Prod.Date เดิมจาก Order ในช่วงที่เลือก",
+                    "ไม่มีการสลับหรือดึง Order อื่นเข้ามา",
+                    *common,
+                ]
+            strategy = (
+                "ลดการเก็บ RM: ล้างการวางแผนเดิมตั้งแต่วันเริ่มปรับแผน แล้วเลือก Order ทั้งงานที่ใช้ RM ได้คุ้มที่สุด"
+                if plan.get('id') == 'material' else
+                "สมดุล: จัด Order ใหม่ตั้งแต่วันเริ่มปรับแผน โดยพยายามลด RM เหลือและต้นทุนรวมให้ต่ำลง"
+            )
+            return [
+                strategy,
+                "งานก่อนวันเริ่มปรับแผนและงานที่ล็อกไว้จะคงเดิม",
+                "Order อนาคตที่นำมาพิจารณาต้องมี Load date ไม่เกินวันเริ่ม + 2 เดือน",
+                "จะเลือกเฉพาะ Order ที่ผลิตครบทั้งงานได้ โดยไม่ทำให้เกิด RM ขาดหรือเกิน Capacity",
+                *common,
+            ]
+
+        def show_logic_tip(event, plan):
+            hide_logic_tip()
+            tip = tk.Toplevel(self)
+            tip.overrideredirect(True)
+            tip.attributes('-topmost', True)
+            tk.Label(
+                tip,
+                text='\n'.join(plan_logic(plan)),
+                justify=tk.LEFT,
+                anchor=tk.W,
+                background='#18324a',
+                foreground='white',
+                font=('Segoe UI', 9),
+                padx=10,
+                pady=8,
+            ).pack()
+            tip.update_idletasks()
+            x = event.x_root + 12
+            if x + tip.winfo_reqwidth() > tip.winfo_screenwidth():
+                x = max(0, event.x_root - tip.winfo_reqwidth() - 12)
+            y = event.y_root + 14
+            if y + tip.winfo_reqheight() > tip.winfo_screenheight():
+                y = max(0, event.y_root - tip.winfo_reqheight() - 12)
+            tip.geometry(f'+{x}+{y}')
+            self._proposal_logic_tip = tip
+
+        horizon_start = date.fromisoformat(context['start'])
+        working_days = sum(
+            (horizon_start + timedelta(days=offset)).weekday() not in FACTORY_HOLIDAY_WEEKDAYS
+            for offset in range(int(context['settings']['lookahead']))
+        )
+        horizon_capacity = working_days * sum(
+            float(context['capacity'].get(line, 0) or 0) for line in ('RAW', 'COOKED')
+        )
         for i, plan in enumerate(self._proposals):
             self._proposal_cards.columnconfigure(i, weight=1, uniform='proposal')
             box = tk.Frame(self._proposal_cards, bg='white', highlightthickness=2,
                            highlightbackground='#168078' if i == index else '#d8dce2', padx=8, pady=8)
             box.grid(row=0, column=i, sticky='nsew', padx=3)
-            tk.Label(box, text=plan['title'], bg='white', anchor='w',
-                     font=('Segoe UI', 10, 'bold')).pack(fill='x', pady=2)
+            card_header = tk.Frame(box, bg='white')
+            card_header.pack(fill='x', pady=2)
+            tk.Label(card_header, text=plan['title'], bg='white', anchor='w',
+                     font=('Segoe UI', 10, 'bold')).pack(side=tk.LEFT)
+            logic_icon = tk.Label(
+                card_header,
+                text='ⓘ',
+                bg='white',
+                fg='#9ca3af',
+                font=('Segoe UI', 18, 'bold'),
+                cursor='question_arrow',
+            )
+            logic_icon.pack(side=tk.RIGHT, padx=(6, 0))
+            logic_icon.bind('<Enter>', lambda event, selected_plan=plan: show_logic_tip(event, selected_plan))
+            logic_icon.bind('<Leave>', hide_logic_tip)
             tk.Label(box, text='เหลือ '+fmt(plan['remaining'])+' kg', bg='white', anchor='w',
                      font=('Segoe UI', 19, 'bold')).pack(fill='x', pady=2)
             cost_label = tk.Label(box, text='ต้นทุน ฿ '+fmt(plan['cost']), bg='white', anchor='w',
@@ -569,6 +685,15 @@ class PlanViewMixin:
             tk.Label(
                 box,
                 text=f'ผลิต {produced_orders:,} ออเดอร์ | {fmt(produced_wontons)} ลูกเกี๊ยว',
+                bg='white', anchor='w', font=('Segoe UI', 9),
+            ).pack(fill='x', pady=2)
+            utilization = (
+                f'{produced_wontons / horizon_capacity * 100:,.1f}%'
+                if horizon_capacity > 0 else '—'
+            )
+            tk.Label(
+                box,
+                text=f'Utilization {utilization}',
                 bg='white', anchor='w', font=('Segoe UI', 9),
             ).pack(fill='x', pady=2)
             ttk.Button(box, text='กำลังดูแผนนี้' if i == index else 'ดูรายละเอียด',
@@ -631,14 +756,19 @@ class PlanViewMixin:
         # rail.  Planning itself remains aggregate by market/size; this is a
         # visual explanation of when each received lot is consumed.
         first_day, last_day = timeline_days[0], timeline_days[-1]
+        frozen_lot_ids = {
+            allocation['lot_id']
+            for entry in plan['schedule']
+            for allocation in entry.get('rm_allocations', ())
+            if allocation.get('frozen') and allocation.get('kg', 0) > 1e-6
+        }
         rm_lots = []
         for lot_index, source_lot in enumerate(self._proposal_context_used.get('lots', ())):
             size = source_lot.get('size')
             amount = float(source_lot.get('kg', 0) or 0)
             arrival_day = source_lot.get('day', '')
             freeze_day = source_lot.get('freeze_day')
-            if (size not in rm_sizes or amount <= 0 or arrival_day > last_day
-                    or (freeze_day is not None and freeze_day <= first_day)):
+            if size not in rm_sizes or amount <= 0 or arrival_day > last_day:
                 continue
             rm_lots.append({
                 'id': lot_index,
@@ -662,23 +792,15 @@ class PlanViewMixin:
             if required is None or required <= 0:
                 continue
             job = jobs[entry['job']]
-            amount_to_allocate = float(required)
-            eligible_lots = sorted(
-                (
-                    lot for lot in rm_lots
-                    if lot['market'] == job.get('market')
-                    and lot['size'] == job.get('stock_size')
-                    and lot['arrival_day'] <= entry['day']
-                    and (lot['freeze_day'] is None or entry['day'] < lot['freeze_day'])
-                    and lot['remaining_kg'] > 1e-6
-                ),
-                key=lambda lot: (lot['arrival_day'], lot['id']),
-            )
+            # Use the engine's allocations, including Freeze top-ups, so the
+            # stock rail and production boxes explain the same calculation.
+            allocations = {item['lot_id']: item['kg']
+                           for item in entry.get('rm_allocations', ())}
+            eligible_lots = [lot for lot in rm_lots if lot['id'] in allocations]
             for lot in eligible_lots:
                 lot['opening_by_day'].setdefault(entry['day'], lot['remaining_kg'])
-                used = min(amount_to_allocate, lot['remaining_kg'])
+                used = allocations[lot['id']]
                 lot['remaining_kg'] -= used
-                amount_to_allocate -= used
                 lot['usage_by_day'][entry['day']] = lot['usage_by_day'].get(entry['day'], 0.0) + used
                 product = job.get('product', '').strip() or job.get('code', '').strip() or 'ไม่ระบุ Product'
                 lot['usage_by_product'][product] = lot['usage_by_product'].get(product, 0.0) + used
@@ -687,8 +809,6 @@ class PlanViewMixin:
                 if lot['remaining_kg'] <= 1e-6:
                     lot['remaining_kg'] = 0.0
                     lot['depleted_day'] = entry['day']
-                if amount_to_allocate <= 1e-6:
-                    break
         lot_groups = {}
         for lot in rm_lots:
             # Keep each receiving date separate even when an older lot is
@@ -850,6 +970,15 @@ class PlanViewMixin:
         canvas.tag_bind(shortage_legend_tag, '<Enter>', lambda event: show_timeline_tip(event, shortage_detail))
         canvas.tag_bind(shortage_legend_tag, '<Leave>', hide_timeline_tip)
         legend_x += 72
+        freeze_tag = 'timeline-freeze-legend'
+        draw_shortage_hatching(legend_x, 8, legend_x + 16, 20, 1.0, freeze_tag,
+                               colour='#249bea')
+        canvas.create_text(legend_x + 21, 14, text='Freeze', anchor='w',
+                           fill='#40566b', font=('Segoe UI', 8), tags=(freeze_tag,))
+        canvas.tag_bind(freeze_tag, '<Enter>', lambda event: show_timeline_tip(
+            event, 'ขีดสีฟ้า = ส่วนที่ใช้ Stock/Freeze เติม RM สดที่ขาด เฉพาะแผนสมดุล'))
+        canvas.tag_bind(freeze_tag, '<Leave>', hide_timeline_tip)
+        legend_x += 78
         usage_legend_tag = 'timeline-rm-usage-legend'
         sample = canvas.create_rectangle(legend_x, 8, legend_x + 16, 20, fill='#f2f6fa', outline='#1f2937', tags=(usage_legend_tag,))
         draw_shortage_hatching(legend_x, 8, legend_x + 16, 20, 1.0, usage_legend_tag,
@@ -903,14 +1032,12 @@ class PlanViewMixin:
                     12, y + 31, text=f'{thai_label} • {line_quantity:,.0f} ลูก', anchor='w',
                     fill='#6b7d8d', font=('Segoe UI', 8),
                 )
-                periods = []
-                for entry in day_entries.get(line, []):
-                    job = jobs[entry['job']]
-                    operation = job.get('code', '').strip() if line == 'RAW' else ''
-                    if operation and periods and periods[-1]['operation'] == operation:
-                        periods[-1]['entries'].append(entry)
-                    else:
-                        periods.append(dict(operation=operation, entries=[entry]))
+                # A visual bar represents one Order, not merely one SKU/code.
+                # Consecutive Orders remain directly adjacent when no setup is
+                # needed, but their borders let users identify each Order No.
+                periods = [
+                    dict(entries=[entry]) for entry in day_entries.get(line, [])
+                ]
                 for period_index, period in enumerate(periods):
                     entries = period['entries']
                     job = jobs[entries[0]['job']]
@@ -950,6 +1077,7 @@ class PlanViewMixin:
                     rm_required = sum(entry['rm_required_kg'] for entry in rm_entries)
                     rm_allocated = sum(entry['rm_allocated_kg'] for entry in rm_entries)
                     rm_shortage = sum(entry['rm_shortage_kg'] for entry in rm_entries)
+                    rm_frozen = sum(entry.get('rm_frozen_kg', 0) for entry in rm_entries)
                     rm_coverage = rm_allocated / rm_required if rm_required else 0.0
                     rm_shortage_ratio = 1.0 - rm_coverage if rm_required else 0.0
                     rm_detail = (
@@ -957,6 +1085,9 @@ class PlanViewMixin:
                         f"RM ขาด: {rm_shortage_ratio:.0%} ({fmt(rm_shortage)} kg)"
                         if rm_entries else 'RM: ตรวจสอบปริมาณไม่ได้'
                     )
+                    if rm_entries:
+                        rm_detail += (f"\nRM สด: {fmt(rm_allocated - rm_frozen)} kg"
+                                      f"\nFreeze: {fmt(rm_frozen)} kg (ใช้ Stock เติมส่วนที่ขาด)")
                     detail = (
                         f"Product: {', '.join(products)}\n"
                         f"CODE: {code}\n"
@@ -974,6 +1105,12 @@ class PlanViewMixin:
                         fill=colour, tags=(tooltip_tag,), **border_options,
                     )
                     draw_shortage_hatching(x1, y + 4, x2, y + row_height - 12, rm_shortage_ratio, tooltip_tag)
+                    if rm_required and rm_frozen > 0:
+                        covered_end = x2 - (x2 - x1) * rm_shortage_ratio
+                        frozen_start = covered_end - (x2 - x1) * rm_frozen / rm_required
+                        draw_shortage_hatching(frozen_start, y + 4, covered_end,
+                                               y + row_height - 12, 1.0, tooltip_tag,
+                                               colour='#249bea')
                     canvas.tag_bind(
                         tooltip_tag,
                         '<Enter>',
@@ -1012,9 +1149,11 @@ class PlanViewMixin:
             header_y = day_positions[display_day][0] + 2
             grouped_by_market = market_groups(group)
             group_width = arrival_group_width(group)
+            uses_freeze = any(lot['id'] in frozen_lot_ids for lot in group)
             canvas.create_rectangle(
                 rail_x - 4, header_y, rail_x + group_width + 4, header_y + 22,
-                fill='#ffffff', outline='#40566b', width=1,
+                fill='#cdeaff' if uses_freeze else '#ffffff',
+                outline='#249bea' if uses_freeze else '#40566b', width=1,
             )
             canvas.create_text(
                 rail_x + group_width / 2, header_y + 11, text=arrival_day[5:],
@@ -1045,7 +1184,7 @@ class PlanViewMixin:
                         # Finish at the next grid boundary, not part way through
                         # the final day, so every visible daily cell is equal.
                         bar_bottom = day_grid_ends[lot['depleted_day']]
-                    elif freeze_day and freeze_day <= last_day:
+                    elif freeze_day and freeze_day <= last_day and plan.get('id') != 'balanced':
                         # The lot becomes frozen at the beginning of this day, so
                         # the usable-RM bar stops exactly at that date's position.
                         bar_bottom = day_positions[max(freeze_day, first_day)][0] + 2

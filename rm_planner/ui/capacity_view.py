@@ -21,6 +21,11 @@ class CapacityViewMixin:
         self.production_start_status_var = tk.StringVar(
             value="Production start times have not been saved yet."
         )
+        self.raw_labour_var = tk.StringVar(value="0")
+        self.raw_wage_var = tk.StringVar(value="0")
+        self.cooked_labour_var = tk.StringVar(value="0")
+        self.cooked_wage_var = tk.StringVar(value="0")
+        self.labour_status_var = tk.StringVar(value="Labour settings have not been saved yet.")
 
         page = ttk.Frame(self.capacity_tab, padding=18)
         page.pack(fill=tk.BOTH, expand=True)
@@ -137,11 +142,19 @@ class CapacityViewMixin:
         self.production_start_tab = ttk.Frame(content_host)
         self._build_production_start_settings()
 
+        self.labour_tab = ttk.Frame(content_host)
+        self._build_labour_settings()
+
+        self.master_tab = ttk.Frame(content_host)
+        self._build_master_tab()
+
         self.class_define_tab = ttk.Frame(content_host)
         self._operations_sections = {
             "capacity": capacity_content,
             "chill_days": self.chill_days_tab,
             "production_start": self.production_start_tab,
+            "labour": self.labour_tab,
+            "master": self.master_tab,
             "operation_order_rule": self.operation_order_rule_tab,
             "class_define": self.class_define_tab,
         }
@@ -177,6 +190,36 @@ class CapacityViewMixin:
                 font=("Segoe UI", 10),
                 command=lambda: self._select_operations_section("production_start"),
             ),
+            "labour": tk.Button(
+                sidebar,
+                text="Labour",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("labour"),
+            ),
+            "master": tk.Button(
+                sidebar,
+                text="Master",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("master"),
+            ),
             "operation_order_rule": tk.Button(
                 sidebar,
                 text="Operation order rule",
@@ -211,6 +254,8 @@ class CapacityViewMixin:
         self.operations_capacity_button.configure(command=lambda: self._select_operations_section("capacity"))
         self._operations_section_buttons["chill_days"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["production_start"].pack(fill=tk.X, pady=(4, 0))
+        self._operations_section_buttons["labour"].pack(fill=tk.X, pady=(4, 0))
+        self._operations_section_buttons["master"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["operation_order_rule"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["class_define"].pack(fill=tk.X, pady=(4, 0))
         self._build_class_define_tab()
@@ -303,6 +348,73 @@ class CapacityViewMixin:
         ttk.Label(
             self.production_start_tab,
             textvariable=self.production_start_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(14, 0))
+
+    def _build_labour_settings(self) -> None:
+        """Build the labour and wage inputs for the two production lines."""
+
+        ttk.Label(
+            self.labour_tab,
+            text="Labour",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.labour_tab,
+            text="กำหนดจำนวนแรงงานและค่าแรงแยกตามไลน์ผลิต",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        settings_card = ttk.LabelFrame(
+            self.labour_tab,
+            text="Labour by production line",
+            padding=14,
+        )
+        settings_card.pack(fill=tk.X)
+        for column in range(2):
+            settings_card.columnconfigure(column, weight=1)
+
+        for column, (label, labour_var, wage_var) in enumerate((
+            ("Cooked wonton", self.cooked_labour_var, self.cooked_wage_var),
+            ("Raw wonton", self.raw_labour_var, self.raw_wage_var),
+        )):
+            field = ttk.Frame(settings_card)
+            field.grid(
+                row=0,
+                column=column,
+                sticky="ew",
+                padx=(0 if column == 0 else 10, 10 if column == 0 else 0),
+            )
+            field.columnconfigure(0, weight=1)
+            ttk.Label(field, text=label, font=("Segoe UI", 11, "bold")).grid(
+                row=0, column=0, sticky=tk.W
+            )
+            ttk.Label(field, text="Number of labour").grid(
+                row=1, column=0, sticky=tk.W, pady=(12, 3)
+            )
+            ttk.Entry(field, textvariable=labour_var, font=("Segoe UI", 14)).grid(
+                row=2, column=0, sticky="ew"
+            )
+            ttk.Label(field, text="คน").grid(row=3, column=0, sticky=tk.W, pady=(3, 0))
+            ttk.Label(field, text="Wage").grid(
+                row=4, column=0, sticky=tk.W, pady=(12, 3)
+            )
+            ttk.Entry(field, textvariable=wage_var, font=("Segoe UI", 14)).grid(
+                row=5, column=0, sticky="ew"
+            )
+            ttk.Label(field, text="บาท").grid(row=6, column=0, sticky=tk.W, pady=(3, 0))
+
+        actions = ttk.Frame(self.labour_tab)
+        actions.pack(fill=tk.X, pady=(18, 0))
+        ttk.Button(
+            actions,
+            text="Save labour settings",
+            command=self._save_labour_settings,
+        ).pack(anchor=tk.E)
+        ttk.Label(
+            self.labour_tab,
+            textvariable=self.labour_status_var,
             relief=tk.SUNKEN,
             anchor=tk.W,
             padding=(6, 3),
@@ -726,6 +838,41 @@ class CapacityViewMixin:
             f"Raw starts {settings.raw_hour:02d}:00."
         )
         self._plan_inputs_changed()
+
+    def _load_labour_settings(self) -> None:
+        """Load the saved labour inputs without applying them to plan costs yet."""
+
+        try:
+            settings = load_labour_settings(self.labour_file_path)
+        except ValueError as exc:
+            self.labour_status_var.set(str(exc))
+            return
+        self.raw_labour_var.set(str(settings.raw_labour))
+        self.raw_wage_var.set(self._format_optional_number(settings.raw_wage))
+        self.cooked_labour_var.set(str(settings.cooked_labour))
+        self.cooked_wage_var.set(self._format_optional_number(settings.cooked_wage))
+        if self.labour_file_path.exists():
+            self.labour_status_var.set("Loaded saved labour settings.")
+
+    def _save_labour_settings(self) -> None:
+        """Validate and persist the two labour-line settings."""
+
+        try:
+            settings = LabourSettings(
+                raw_labour=self.raw_labour_var.get().strip().replace(",", ""),
+                raw_wage=self.raw_wage_var.get().strip().replace(",", ""),
+                cooked_labour=self.cooked_labour_var.get().strip().replace(",", ""),
+                cooked_wage=self.cooked_wage_var.get().strip().replace(",", ""),
+            )
+            settings = save_labour_settings(self.labour_file_path, settings)
+        except ValueError as exc:
+            messagebox.showerror("Save labour settings", str(exc), parent=self)
+            return
+        self.raw_labour_var.set(str(settings.raw_labour))
+        self.raw_wage_var.set(self._format_optional_number(settings.raw_wage))
+        self.cooked_labour_var.set(str(settings.cooked_labour))
+        self.cooked_wage_var.set(self._format_optional_number(settings.cooked_wage))
+        self.labour_status_var.set("Saved labour settings.")
 
     def _load_capacity_settings(self) -> None:
         try:

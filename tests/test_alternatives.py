@@ -226,6 +226,33 @@ class AlternativeTests(unittest.TestCase):
         self.assertLessEqual(p['daily'][0]['hours']['COOKED'],8.000001)
         self.assertLess(sum(r['qty'] for r in p['rows'] if r['day']==c['start']),1500)
 
+    def test_free_labour_cost_uses_unoccupied_hours_by_line(self):
+        context = {
+            'start': '2026-09-16',  # Wednesday, a working day.
+            'settings': {'lookahead': 1, 'adjust_from': '2026-09-16', 'shift_hours': 8,
+                         'setup_minutes': 0, 'freeze_percent': None, 'freeze_cost': 10,
+                         'stop_cost': 100},
+            'labour': {'raw_labour': 2, 'raw_wage': 100,
+                       'cooked_labour': 3, 'cooked_wage': 200},
+            'jobs': [
+                dict(id='raw-job', order='RAW', code='RAW', sku='RAW', product='RAW', qty=100,
+                     day='2026-09-16', due='2026-09-16', cups=10, yield_rate=100,
+                     line='RAW', market='domestic', stock_size='M', size='M',
+                     locked=False, earliest='', status='unknown', ready_date='', reviewer='',
+                     max_qty=0, egg='มีไข่', soup_rank=0, class_groups={}),
+            ],
+            'lots': [dict(day='2026-09-16', market='domestic', size='M', kg=1)],
+            'capacity': {'RAW': 800, 'COOKED': 100}, 'forecasts': [], 'operation_rules': (),
+        }
+
+        plan = evaluate(context, baseline_rows(context))
+
+        # Raw is busy for one hour; cooked has no work.  (8-1)*2*100 +
+        # 8*3*200 = 6,200.
+        self.assertAlmostEqual(plan['free_labour_cost'], 6200)
+        self.assertAlmostEqual(plan['free_labour_daily'][0]['lines']['RAW']['free_hours'], 7)
+        self.assertAlmostEqual(plan['free_labour_daily'][0]['lines']['COOKED']['free_hours'], 8)
+
     def test_raw_orders_with_the_same_code_share_one_run(self):
         first = order('raw-a', group_2='Raw Wonton', group_1='Raw item A', order_cups=100)
         second = order('raw-b', group_2='Raw Wonton', group_1='Raw item B', order_cups=100)
