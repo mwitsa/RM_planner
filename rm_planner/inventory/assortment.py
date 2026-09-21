@@ -7,9 +7,6 @@ import math
 from pathlib import Path
 from typing import Any
 
-from openpyxl import load_workbook
-
-
 @dataclass(frozen=True, slots=True)
 class AssortmentTable:
     """Yield distribution from each base shrimp size to actual output sizes."""
@@ -131,6 +128,10 @@ def load_assortment(workbook_path: str | Path) -> AssortmentTable:
     Column A contains actual output-size ranges. Matrix values are stored as
     decimal percentages (for example, 0.404 means 40.4%).
     """
+
+    # Avoid paying openpyxl's import cost until the user needs the assortment
+    # workbook.  This keeps the initial application launch responsive.
+    from openpyxl import load_workbook
 
     path = Path(workbook_path).expanduser().resolve()
     if not path.is_file():

@@ -7,9 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from openpyxl import load_workbook
-
-
 STORE_VERSION = 1
 MATERIAL_COLUMN = 1
 DESCRIPTION_COLUMN = 2
@@ -31,6 +28,8 @@ class MasterComponentRecord:
 def list_sheets(workbook_path: str | Path) -> list[str]:
     """Return workbook sheet names without modifying the workbook."""
 
+    from openpyxl import load_workbook
+
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)
     try:
@@ -48,6 +47,8 @@ def extract_master_data(
     Column layout: A = Material, B = Description, C = Component name,
     D = Component MRP Controller.
     """
+
+    from openpyxl import load_workbook
 
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)

@@ -1,12 +1,21 @@
-"""StockOverviewMixin behavior."""
+"""RM stock balance screen and its cumulative-arrival presentation."""
 
 from __future__ import annotations
+
+from datetime import date
 
 from .common import *  # shared UI types and domain services
 
 
 RM_STOCK_DISPLAY_CLASSES = STOCK_SIZE_CLASSES
-RM_STOCK_CARD_CLASSES = tuple(size_class for size_class in STOCK_SIZE_CLASSES if size_class != "Unused")
+RM_STOCK_CARD_CLASSES = tuple(
+    size_class for size_class in STOCK_SIZE_CLASSES if size_class != "Unused"
+)
+RECORD_TYPE_LABELS = {
+    "actual": "Actual",
+    "existing": "Existing",
+    "prediction": "Prediction",
+}
 
 
 class StockOverviewMixin:
@@ -20,30 +29,15 @@ class StockOverviewMixin:
         ttk.Separator(self.rm_tab, orient=tk.VERTICAL).grid(row=0, column=1, sticky="ns")
 
         tk.Label(
-            sidebar,
-            text="RM",
-            background="#eef2f6",
-            foreground="#243447",
-            font=("Segoe UI", 11, "bold"),
-            anchor=tk.W,
-            padx=16,
-            pady=14,
+            sidebar, text="RM", background="#eef2f6", foreground="#243447",
+            font=("Segoe UI", 11, "bold"), anchor=tk.W, padx=16, pady=14,
         ).pack(fill=tk.X)
-
         self.rm_navigation_buttons: dict[str, tk.Button] = {}
         for key, label in RM_NAVIGATION_ITEMS:
             button = tk.Button(
-                sidebar,
-                text=label,
-                command=lambda section=key: self._show_rm_section(section),
-                relief=tk.FLAT,
-                borderwidth=0,
-                anchor=tk.W,
-                padx=18,
-                pady=10,
-                background="#eef2f6",
-                activebackground="#dce9f5",
-                font=("Segoe UI", 10),
+                sidebar, text=label, command=lambda section=key: self._show_rm_section(section),
+                relief=tk.FLAT, borderwidth=0, anchor=tk.W, padx=18, pady=10,
+                background="#eef2f6", activebackground="#dce9f5", font=("Segoe UI", 10),
             )
             button.pack(fill=tk.X)
             self.rm_navigation_buttons[key] = button
@@ -52,13 +46,11 @@ class StockOverviewMixin:
         content.grid(row=0, column=2, sticky="nsew")
         content.rowconfigure(0, weight=1)
         content.columnconfigure(0, weight=1)
-
         self.rm_timeline_tab = ttk.Frame(content, padding=14)
         self.assortment_std_tab = ttk.Frame(content, padding=14)
         self.assortment_actual_tab = ttk.Frame(content, padding=14)
-        self.rm_timeline_tab.grid(row=0, column=0, sticky="nsew")
-        self.assortment_std_tab.grid(row=0, column=0, sticky="nsew")
-        self.assortment_actual_tab.grid(row=0, column=0, sticky="nsew")
+        for frame in (self.rm_timeline_tab, self.assortment_std_tab, self.assortment_actual_tab):
+            frame.grid(row=0, column=0, sticky="nsew")
         self._build_rm_timeline_tab()
         self._build_assortment_std_tab()
         self._build_assortment_actual_tab()
@@ -83,438 +75,412 @@ class StockOverviewMixin:
             )
 
     def _build_rm_timeline_tab(self) -> None:
+        """Build a concise stock-balance view over the existing arrival logic."""
+
         self.rm_stock_as_of_var = tk.StringVar(value="—")
         self.rm_stock_total_var = tk.StringVar(value="0 kg")
-        self.rm_stock_distribution_weights = tuple(0.0 for _ in RM_STOCK_DISPLAY_CLASSES)
-        self.rm_stock_distribution_vars = {
-            size_class: tk.StringVar(value=f"{size_class} 0% | 0 kg")
-            for size_class in RM_STOCK_DISPLAY_CLASSES
+        self.rm_stock_unused_var = tk.StringVar(value="0 kg")
+        self.rm_stock_mix_weights = tuple(0.0 for _ in RM_STOCK_DISPLAY_CLASSES)
+        self.rm_stock_market_totals = {
+            market: {size: 0.0 for size in RM_STOCK_CARD_CLASSES}
+            for market in ("domestic", "export")
         }
-        self.rm_stock_size_vars = {
-            size_class: {
-                "stock": tk.StringVar(value="0 kg"),
-                "domestic": tk.StringVar(value="0 kg"),
-                "export": tk.StringVar(value="0 kg"),
-            }
-            for size_class in RM_STOCK_CARD_CLASSES
-        }
+        self.rm_stock_source_var = tk.StringVar(value="All")
+        self.rm_stock_search_var = tk.StringVar()
+        self.rm_stock_class_var = tk.StringVar(value="All")
+        self.rm_stock_from_var = tk.StringVar()
+        self.rm_stock_to_var = tk.StringVar()
         self.rm_timeline_status_var = tk.StringVar(
-            value="Cumulative stock before generated Plan consumption."
+            value="Stock shown here is before generated Plan consumption."
         )
 
-        overview = ttk.LabelFrame(
-            self.rm_timeline_tab,
-            text="Stock overview",
-            padding=12,
-        )
-        overview.pack(fill=tk.X, pady=(0, 8))
-        for column in range(2):
-            overview.columnconfigure(column, weight=1)
-        overview_fields = (
-            ("As of", self.rm_stock_as_of_var),
-            ("Total stock", self.rm_stock_total_var),
-        )
-        for column, (label, variable) in enumerate(overview_fields):
-            ttk.Label(overview, text=label).grid(
-                row=0,
-                column=column,
-                sticky=tk.W,
-                padx=(0, 20),
-            )
-            ttk.Label(
-                overview,
-                textvariable=variable,
-                style="Summary.TLabel",
-            ).grid(
-                row=1,
-                column=column,
-                sticky=tk.W,
-                padx=(0, 20),
-                pady=(3, 0),
-            )
-        ttk.Button(
-            overview,
-            text="+ Add stock",
-            command=self._open_stock_editor,
-        ).grid(row=0, column=2, rowspan=2, sticky=tk.E)
+        page = tk.Frame(self.rm_timeline_tab, background="#f7f9fc")
+        page.pack(fill=tk.BOTH, expand=True)
 
-        self.rm_stock_distribution_canvas = tk.Canvas(
-            overview,
-            height=38,
-            background="#ffffff",
-            highlightbackground="#b8b8b8",
-            highlightthickness=1,
+        header = tk.Frame(page, background="#f7f9fc", padx=2, pady=2)
+        header.pack(fill=tk.X)
+        tk.Label(
+            header, text="RM Stock Balance", background="#f7f9fc", foreground="#182b49",
+            font=("Segoe UI", 19, "bold"),
+        ).pack(side=tk.LEFT)
+        tk.Label(header, text="As of", background="#f7f9fc", foreground="#64748b",
+                 font=("Segoe UI", 10)).pack(side=tk.LEFT, padx=(16, 5))
+        tk.Label(header, textvariable=self.rm_stock_as_of_var, background="#f7f9fc",
+                 foreground="#475569", font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT)
+        ttk.Button(header, text="+ Add stock", command=self._open_stock_editor).pack(side=tk.RIGHT)
+        ttk.Button(header, text="Export", state=tk.DISABLED).pack(side=tk.RIGHT, padx=(0, 8))
+        self.rm_stock_source_combo = ttk.Combobox(
+            header, textvariable=self.rm_stock_source_var, values=("All",), state="readonly", width=15,
         )
-        self.rm_stock_distribution_canvas.grid(
-            row=2,
-            column=0,
-            columnspan=3,
-            sticky="ew",
-            pady=(12, 8),
-        )
-        self.rm_stock_distribution_canvas.bind(
-            "<Configure>",
-            self._draw_rm_stock_distribution,
-        )
+        self.rm_stock_source_combo.pack(side=tk.RIGHT, padx=(0, 8))
+        ttk.Label(header, text="Source").pack(side=tk.RIGHT, padx=(0, 5))
 
-        distribution_legend = ttk.Frame(overview)
-        distribution_legend.grid(row=3, column=0, columnspan=3, sticky="ew")
-        for column, size_class in enumerate(RM_STOCK_DISPLAY_CLASSES):
-            distribution_legend.columnconfigure(column, weight=1)
-            legend_item = ttk.Frame(distribution_legend)
-            legend_item.grid(row=0, column=column, sticky=tk.W)
-            tk.Label(
-                legend_item,
-                text="  ",
-                background=RM_STOCK_DISTRIBUTION_COLORS[size_class],
-                width=2,
-            ).pack(side=tk.LEFT, padx=(0, 6))
-            ttk.Label(
-                legend_item,
-                textvariable=self.rm_stock_distribution_vars[size_class],
-            ).pack(side=tk.LEFT)
+        notice = tk.Frame(page, background="#e5f2ff", highlightbackground="#9cc8ee", highlightthickness=1,
+                          padx=12, pady=7)
+        notice.pack(fill=tk.X, pady=(10, 10))
+        tk.Label(notice, text="●", background="#e5f2ff", foreground="#1767ad",
+                 font=("Segoe UI", 12, "bold")).pack(side=tk.LEFT)
+        tk.Label(notice, text="Stock shown here is before generated Plan consumption.",
+                 background="#e5f2ff", foreground="#175a96", font=("Segoe UI", 10, "bold")).pack(
+                     side=tk.LEFT, padx=(8, 0))
 
-        size_sections = ttk.Frame(self.rm_timeline_tab)
-        size_sections.pack(fill=tk.X, pady=(0, 8))
+        hero = tk.Frame(page, background="#f7f9fc")
+        hero.pack(fill=tk.X)
+        hero.columnconfigure(0, weight=2)
+        hero.columnconfigure(1, weight=1)
+        total_card = self._balance_card(hero)
+        total_card.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        tk.Label(total_card, text="Total RM Stock (before plan)", bg="white", fg="#27384f",
+                 font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
+        total_body = tk.Frame(total_card, background="white")
+        total_body.pack(fill=tk.X, pady=(5, 0))
+        tk.Label(total_body, textvariable=self.rm_stock_total_var, bg="white", fg="#0b5bc5",
+                 font=("Segoe UI", 27, "bold")).pack(side=tk.LEFT)
+        ttk.Separator(total_body, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=20)
+        tk.Label(total_body, text="Cumulative arrivals\nbefore plan consumption.", bg="white", fg="#718096",
+                 justify=tk.LEFT, font=("Segoe UI", 9)).pack(side=tk.LEFT)
+        unused_card = self._balance_card(hero)
+        unused_card.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+        tk.Label(unused_card, text="Unused Stock", bg="white", fg="#27384f",
+                 font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
+        unused_body = tk.Frame(unused_card, background="white")
+        unused_body.pack(fill=tk.X, pady=(8, 0))
+        tk.Label(unused_body, text="◈", background="white", foreground="#738396",
+                 font=("Segoe UI", 24)).pack(side=tk.LEFT, padx=(4, 12))
+        tk.Label(unused_body, textvariable=self.rm_stock_unused_var, background="white", foreground="#26364d",
+                 font=("Segoe UI", 22, "bold")).pack(side=tk.LEFT)
+
+        analysis = tk.Frame(page, background="#f7f9fc")
+        analysis.pack(fill=tk.X, pady=(10, 10))
+        analysis.columnconfigure(0, weight=1)
+        analysis.columnconfigure(1, weight=1)
+        mix_card = self._balance_card(analysis)
+        mix_card.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        tk.Label(mix_card, text="Stock mix (by size class)", bg="white", fg="#27384f",
+                 font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
+        self.rm_stock_mix_canvas = tk.Canvas(mix_card, height=43, background="white", highlightthickness=0)
+        self.rm_stock_mix_canvas.pack(fill=tk.X, pady=(10, 7))
+        self.rm_stock_mix_canvas.bind("<Configure>", self._draw_rm_stock_mix)
+        self.rm_stock_mix_legend = tk.Frame(mix_card, background="white")
+        self.rm_stock_mix_legend.pack(fill=tk.X)
+        self.rm_stock_mix_labels: dict[str, tk.StringVar] = {}
         for column, size_class in enumerate(RM_STOCK_CARD_CLASSES):
-            size_sections.columnconfigure(column, weight=1)
-            background, border, foreground = RM_STOCK_CARD_COLORS[size_class]
-            section = tk.Frame(
-                size_sections,
-                background=background,
-                highlightbackground=border,
-                highlightcolor=border,
-                highlightthickness=1,
-                padx=14,
-                pady=12,
-            )
-            section.grid(
-                row=0,
-                column=column,
-                sticky="nsew",
-                padx=(
-                    0 if column == 0 else 4,
-                    0 if column == len(RM_STOCK_CARD_CLASSES) - 1 else 4,
-                ),
-            )
-            card_header = tk.Frame(section, background=background)
-            card_header.pack(fill=tk.X, pady=(0, 10))
-            tk.Label(
-                card_header,
-                text=size_class,
-                background=background,
-                foreground=foreground,
-                font=("Segoe UI", 12, "bold"),
-            ).pack(side=tk.LEFT)
-            tk.Label(
-                card_header,
-                text="Total stock",
-                background=background,
-                foreground="#555555",
-            ).pack(side=tk.LEFT, padx=(14, 6))
-            tk.Label(
-                card_header,
-                textvariable=self.rm_stock_size_vars[size_class]["stock"],
-                background=background,
-                foreground=foreground,
-                font=("Segoe UI", 12, "bold"),
-            ).pack(side=tk.LEFT)
+            self.rm_stock_mix_legend.columnconfigure(column, weight=1)
+            item = tk.Frame(self.rm_stock_mix_legend, background="white")
+            item.grid(row=0, column=column, sticky="ew")
+            tk.Label(item, text="●", background="white", foreground=RM_STOCK_DISTRIBUTION_COLORS[size_class],
+                     font=("Segoe UI", 14, "bold")).pack(side=tk.LEFT)
+            variable = tk.StringVar(value=f"{size_class}\n0 kg\n0%")
+            self.rm_stock_mix_labels[size_class] = variable
+            tk.Label(item, textvariable=variable, background="white", foreground="#28384f", justify=tk.LEFT,
+                     font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(4, 0))
 
-            market_breakdown = tk.Frame(section, background=background)
-            market_breakdown.pack(fill=tk.X)
-            for market_column, market in enumerate(("domestic", "export")):
-                market_breakdown.columnconfigure(market_column, weight=1)
-                market_panel = tk.Frame(
-                    market_breakdown,
-                    background="#ffffff",
-                    highlightbackground=border,
-                    highlightcolor=border,
-                    highlightthickness=1,
-                    padx=12,
-                    pady=10,
-                )
-                market_panel.grid(
-                    row=0,
-                    column=market_column,
-                    sticky="nsew",
-                    padx=(0, 5) if market_column == 0 else (5, 0),
-                )
-                tk.Label(
-                    market_panel,
-                    text=market_display_label(market),
-                    background="#ffffff",
-                    foreground=foreground,
-                    font=("Segoe UI", 10, "bold"),
-                ).pack(anchor=tk.W, pady=(0, 8))
-                market_details = tk.Frame(market_panel, background="#ffffff")
-                market_details.pack(fill=tk.X)
-                tk.Label(
-                    market_details,
-                    text="Weight",
-                    background="#ffffff",
-                    foreground="#555555",
-                ).grid(row=0, column=0, sticky=tk.W)
-                tk.Label(
-                    market_details,
-                    textvariable=self.rm_stock_size_vars[size_class][market],
-                    background="#ffffff",
-                    foreground=foreground,
-                    font=("Segoe UI", 12, "bold"),
-                ).grid(row=1, column=0, sticky=tk.W, pady=(3, 0))
+        market_card = self._balance_card(analysis)
+        market_card.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        tk.Label(market_card, text="Market allocation (kg)", bg="white", fg="#27384f",
+                 font=("Segoe UI", 10, "bold")).pack(anchor=tk.W)
+        self.rm_stock_market_canvas = tk.Canvas(market_card, height=158, background="white", highlightthickness=0)
+        self.rm_stock_market_canvas.pack(fill=tk.X, pady=(5, 0))
+        self.rm_stock_market_canvas.bind("<Configure>", self._draw_rm_stock_market_allocation)
 
-        table_frame = ttk.LabelFrame(
-            self.rm_timeline_tab,
-            text="RM stock arrival details",
-            padding=8,
+        ledger_card = tk.Frame(page, background="white", highlightbackground="#d7e0ea", highlightthickness=1,
+                               padx=10, pady=9)
+        ledger_card.pack(fill=tk.BOTH, expand=True)
+        ledger_toolbar = tk.Frame(ledger_card, background="white")
+        ledger_toolbar.pack(fill=tk.X, pady=(0, 8))
+        tk.Label(ledger_toolbar, text="Arrival ledger", background="white", foreground="#27384f",
+                 font=("Segoe UI", 12, "bold")).pack(side=tk.LEFT, padx=(0, 16))
+        ttk.Entry(ledger_toolbar, textvariable=self.rm_stock_search_var, width=23).pack(side=tk.LEFT)
+        ttk.Label(ledger_toolbar, text="From").pack(side=tk.LEFT, padx=(12, 4))
+        ttk.Entry(ledger_toolbar, textvariable=self.rm_stock_from_var, width=12).pack(side=tk.LEFT)
+        ttk.Label(ledger_toolbar, text="To").pack(side=tk.LEFT, padx=(12, 4))
+        ttk.Entry(ledger_toolbar, textvariable=self.rm_stock_to_var, width=12).pack(side=tk.LEFT)
+        ttk.Label(ledger_toolbar, text="Class").pack(side=tk.LEFT, padx=(12, 4))
+        self.rm_stock_class_combo = ttk.Combobox(
+            ledger_toolbar, textvariable=self.rm_stock_class_var,
+            values=("All", *RM_STOCK_CARD_CLASSES), state="readonly", width=9,
         )
+        self.rm_stock_class_combo.pack(side=tk.LEFT)
+        ttk.Button(ledger_toolbar, text="Reset", command=self._reset_rm_stock_filters).pack(side=tk.RIGHT)
+
+        table_frame = tk.Frame(ledger_card, background="white")
         table_frame.pack(fill=tk.BOTH, expand=True)
-        table_frame.rowconfigure(0, weight=1)
-        table_frame.columnconfigure(0, weight=1)
-        columns = (
-            "date",
-            "sources",
-            "incoming",
-            "stock",
-            "M",
-            "S",
-            "SS",
-            "HC",
-            "BK",
-            "unused",
+        self.rm_stock_ledger_rows = ()
+        self.rm_stock_ledger_canvas = tk.Canvas(
+            table_frame, background="white", highlightthickness=0, borderwidth=0,
         )
-        self.rm_timeline_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
-        headings = {
-            "date": "Date",
-            "sources": "ชื่อฟาร์ม",
-            "incoming": "RM in (kg)",
-            "stock": "Stock (kg)",
-            "M": "M stock (kg)",
-            "S": "S stock (kg)",
-            "SS": "SS stock (kg)",
-            "HC": "HC stock (kg)",
-            "BK": "BK stock (kg)",
-            "unused": "Unused stock (kg)",
-        }
-        widths = {
-            "date": 95,
-            "sources": 220,
-            "incoming": 100,
-            "stock": 100,
-            "M": 110,
-            "S": 110,
-            "SS": 110,
-            "HC": 110,
-            "BK": 110,
-            "unused": 125,
-        }
-        numeric = set(columns) - {"date", "sources"}
-        for column in columns:
-            self.rm_timeline_tree.heading(column, text=headings[column])
-            self.rm_timeline_tree.column(
-                column,
-                width=widths[column],
-                minwidth=75,
-                anchor=tk.E if column in numeric else tk.W,
-                stretch=column == "sources",
-            )
-        vertical = ttk.Scrollbar(
-            table_frame,
-            orient=tk.VERTICAL,
-            command=self.rm_timeline_tree.yview,
-        )
-        horizontal = ttk.Scrollbar(
-            table_frame,
-            orient=tk.HORIZONTAL,
-            command=self.rm_timeline_tree.xview,
-        )
-        self.rm_timeline_tree.configure(
-            yscrollcommand=vertical.set,
-            xscrollcommand=horizontal.set,
-        )
-        self.rm_timeline_tree.grid(row=0, column=0, sticky="nsew")
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.rm_stock_ledger_canvas.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.rm_stock_ledger_canvas.xview)
+        self.rm_stock_ledger_canvas.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        self.rm_stock_ledger_canvas.grid(row=0, column=0, sticky="nsew")
         vertical.grid(row=0, column=1, sticky="ns")
         horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        self.rm_stock_ledger_canvas.bind("<Configure>", self._draw_rm_stock_ledger)
+        tk.Label(page, textvariable=self.rm_timeline_status_var, background="#f7f9fc", foreground="#64748b",
+                 anchor=tk.W, font=("Segoe UI", 9)).pack(fill=tk.X, pady=(7, 0))
 
-        self.rm_timeline_status_label = ttk.Label(
-            self.rm_timeline_tab,
-            textvariable=self.rm_timeline_status_var,
-            relief=tk.SUNKEN,
-            anchor=tk.W,
-            padding=(6, 3),
-        )
-        self.rm_timeline_status_label.pack(fill=tk.X, pady=(8, 0))
+        for variable in (self.rm_stock_search_var, self.rm_stock_from_var, self.rm_stock_to_var):
+            variable.trace_add("write", lambda *_args: self._refresh_rm_timeline())
+        self.rm_stock_class_var.trace_add("write", lambda *_args: self._refresh_rm_timeline())
+        self.rm_stock_source_var.trace_add("write", lambda *_args: self._refresh_rm_timeline())
         self._refresh_rm_timeline()
+
+    @staticmethod
+    def _balance_card(parent: tk.Misc) -> tk.Frame:
+        return tk.Frame(parent, background="white", highlightbackground="#d7e0ea", highlightthickness=1,
+                        padx=14, pady=11)
 
     def _open_stock_editor(self) -> None:
         self._new_assortment_actual_form()
         self._show_rm_section("actual")
 
-    def _set_rm_stock_distribution(
-        self,
-        *stock_weights: int | float,
-    ) -> None:
-        weights = tuple(float(weight) for weight in stock_weights)
-        if len(weights) != len(RM_STOCK_DISPLAY_CLASSES):
-            raise ValueError("RM stock distribution has an invalid number of classes.")
-        percentages = stock_distribution_percentages(*weights)
-        self.rm_stock_distribution_weights = weights
-        for size_class, weight, percentage in zip(
-            RM_STOCK_DISPLAY_CLASSES,
-            weights,
-            percentages,
-        ):
-            self.rm_stock_distribution_vars[size_class].set(
-                f"{size_class} {self._format_optional_number(percentage)}% | "
-                f"{self._format_optional_number(weight)} kg"
-            )
-        self.rm_stock_distribution_canvas.after_idle(self._draw_rm_stock_distribution)
+    def _reset_rm_stock_filters(self) -> None:
+        self.rm_stock_source_var.set("All")
+        self.rm_stock_search_var.set("")
+        self.rm_stock_class_var.set("All")
+        records = tuple(self.assortment_actual_records.values())
+        dates = sorted(record.record_date for record in records)
+        self.rm_stock_from_var.set(dates[0] if dates else "")
+        self.rm_stock_to_var.set(dates[-1] if dates else "")
 
-    def _draw_rm_stock_distribution(self, _event: tk.Event | None = None) -> None:
-        canvas = self.rm_stock_distribution_canvas
+    def _filtered_rm_stock_records(self):
+        records = tuple(self.assortment_actual_records.values())
+        source = self.rm_stock_source_var.get().strip()
+        search = self.rm_stock_search_var.get().strip().casefold()
+        selected_class = self.rm_stock_class_var.get().strip()
+        try:
+            start = date.fromisoformat(self.rm_stock_from_var.get().strip()) if self.rm_stock_from_var.get().strip() else None
+            end = date.fromisoformat(self.rm_stock_to_var.get().strip()) if self.rm_stock_to_var.get().strip() else None
+        except ValueError:
+            return (), "Date filters must use YYYY-MM-DD."
+        ranges = self._current_assortment_size_range_definitions()
+        filtered = []
+        for record in records:
+            record_day = date.fromisoformat(record.record_date)
+            if (start and record_day < start) or (end and record_day > end):
+                continue
+            if source != "All" and record.source_label != source:
+                continue
+            if search and search not in record.source_label.casefold():
+                continue
+            if selected_class != "All" and self._record_class_totals(record, ranges)[selected_class] <= 0:
+                continue
+            filtered.append(record)
+        return tuple(filtered), ""
+
+    def _record_class_totals(self, record, ranges) -> dict[str, float]:
+        totals = {size_class: 0.0 for size_class in RM_STOCK_DISPLAY_CLASSES}
+        for entry in aggregate_entries_by_size_class(record.entries, ranges):
+            totals[entry.size_class] += float(entry.weight)
+        return totals
+
+    def _draw_rm_stock_mix(self, _event: tk.Event | None = None) -> None:
+        canvas = self.rm_stock_mix_canvas
         canvas.delete("all")
-        width = max(canvas.winfo_width() - 2, 1)
-        height = max(canvas.winfo_height() - 2, 1)
-        percentages = stock_distribution_percentages(
-            *self.rm_stock_distribution_weights
-        )
-        if sum(percentages) == 0:
-            canvas.create_rectangle(1, 1, width + 1, height + 1, fill="#eeeeee", outline="")
-            canvas.create_text(
-                (width + 2) / 2,
-                (height + 2) / 2,
-                text="No stock",
-                fill="#555555",
-                font=("Segoe UI", 9, "bold"),
-            )
-            return
-
-        left = 1.0
-        size_classes = RM_STOCK_DISPLAY_CLASSES
-        for index, (size_class, percentage) in enumerate(zip(size_classes, percentages)):
-            right = (
-                width + 1.0
-                if index == len(size_classes) - 1
-                else left + (width * percentage / 100)
-            )
-            canvas.create_rectangle(
-                left,
-                1,
-                right,
-                height + 1,
-                fill=RM_STOCK_DISTRIBUTION_COLORS[size_class],
-                outline="#ffffff",
-            )
-            if right - left >= 72:
-                canvas.create_text(
-                    (left + right) / 2,
-                    (height + 2) / 2,
-                    text=(
-                        f"{size_class} "
-                        f"{self._format_optional_number(percentage)}%"
-                    ),
-                    fill="#ffffff",
-                    font=("Segoe UI", 9, "bold"),
-                )
+        width, height = max(canvas.winfo_width(), 1), max(canvas.winfo_height(), 1)
+        percentages = stock_distribution_percentages(*self.rm_stock_mix_weights)
+        left = 0.0
+        for index, (size_class, percentage) in enumerate(zip(RM_STOCK_DISPLAY_CLASSES, percentages)):
+            right = width if index == len(percentages) - 1 else left + width * percentage / 100
+            canvas.create_rectangle(left, 0, right, height, fill=RM_STOCK_DISTRIBUTION_COLORS[size_class], outline="white")
+            if percentage > 7 and right - left > 54:
+                canvas.create_text((left + right) / 2, height / 2, text=f"{percentage:.1f}%", fill="white",
+                                   font=("Segoe UI", 9, "bold"))
             left = right
 
+    def _draw_rm_stock_market_allocation(self, _event: tk.Event | None = None) -> None:
+        canvas = self.rm_stock_market_canvas
+        canvas.delete("all")
+        width = max(canvas.winfo_width(), 1)
+        headers = ("Size class", "Domestic", "Export", "Total")
+        columns = (0, int(width * .18), int(width * .54), int(width * .84), width)
+        for index, label in enumerate(headers):
+            canvas.create_rectangle(columns[index], 0, columns[index + 1], 24, fill="#edf3f8", outline="#d7e0ea")
+            canvas.create_text((columns[index] + columns[index + 1]) / 2, 12, text=label, fill="#34465b",
+                               font=("Segoe UI", 8, "bold"))
+        for row, size_class in enumerate(RM_STOCK_CARD_CLASSES, start=1):
+            top, bottom = 24 + (row - 1) * 25, 24 + row * 25
+            domestic = self.rm_stock_market_totals["domestic"][size_class]
+            export = self.rm_stock_market_totals["export"][size_class]
+            total = domestic + export
+            for index in range(4):
+                canvas.create_rectangle(columns[index], top, columns[index + 1], bottom, fill="white", outline="#e1e8ef")
+            color = RM_STOCK_DISTRIBUTION_COLORS[size_class]
+            canvas.create_text(9, (top + bottom) / 2, text=f"●  {size_class}", anchor="w", fill=color,
+                               font=("Segoe UI", 8, "bold"))
+            for value, left, right in ((domestic, columns[1], columns[2]), (export, columns[2], columns[3])):
+                bar_left, bar_right = left + 9, right - 54
+                canvas.create_rectangle(bar_left, top + 7, bar_right, bottom - 7, fill="#e8edf3", outline="")
+                if total > 0:
+                    canvas.create_rectangle(bar_left, top + 7, bar_left + (bar_right - bar_left) * value / total,
+                                            bottom - 7, fill=color, outline="")
+                canvas.create_text(right - 6, (top + bottom) / 2, text=self._format_optional_number(value),
+                                   anchor="e", fill="#334155", font=("Segoe UI", 8))
+            canvas.create_text(columns[4] - 7, (top + bottom) / 2, text=self._format_optional_number(total),
+                               anchor="e", fill="#1e293b", font=("Segoe UI", 8, "bold"))
+
+    def _draw_rm_stock_ledger(self, _event: tk.Event | None = None) -> None:
+        """Render the arrival ledger as a compact dashboard grid, including class bars."""
+        canvas = self.rm_stock_ledger_canvas
+        canvas.delete("all")
+        rows = getattr(self, "rm_stock_ledger_rows", ())
+        width = max(canvas.winfo_width(), 1120)
+        header_height, row_height = 29, 33
+        total_height = header_height + max(len(rows), 1) * row_height + 1
+        canvas.configure(scrollregion=(0, 0, width, total_height))
+
+        columns = (0, .105, .29, .39, .53, .87, 1)
+        x = tuple(round(width * position) for position in columns)
+        headings = ("Date ↓", "Farm / Source", "Record type", "Incoming (kg)",
+                    "Class allocation (kg)", "Cumulative (kg)")
+        for index, heading in enumerate(headings):
+            canvas.create_rectangle(x[index], 0, x[index + 1], header_height,
+                                    fill="#eff5fa", outline="#d9e4ee")
+            canvas.create_text(
+                (x[index] + x[index + 1]) / 2, header_height / 2, text=heading,
+                fill="#3c4e63", font=("Segoe UI", 8, "bold"),
+            )
+
+        row_fills = {
+            "actual": "#f8fcff", "existing": "#f5f7f9", "prediction": "#fffaf0",
+        }
+        type_chips = {
+            "actual": ("#2f80ed", "white"),
+            "existing": ("#d8e0e9", "#334155"),
+            "prediction": ("#fde1a2", "#8a5b00"),
+        }
+        for index, row in enumerate(rows):
+            top = header_height + index * row_height
+            bottom = top + row_height
+            fill = "#dceeff" if row["is_current"] else row_fills.get(row["record_type"], "white")
+            canvas.create_rectangle(0, top, width, bottom, fill=fill, outline="#dfe8f0")
+            for divider in x[1:-1]:
+                canvas.create_line(divider, top, divider, bottom, fill="#e4ebf1")
+            middle = (top + bottom) / 2
+            canvas.create_text(x[0] + 18, middle, text=row["date"], anchor="w", fill="#213b5a",
+                               font=("Segoe UI", 8, "bold" if row["is_current"] else "normal"))
+            canvas.create_text(x[1] + 18, middle, text=row["source"], anchor="w", fill="#23364d",
+                               font=("Segoe UI", 8))
+
+            label = RECORD_TYPE_LABELS.get(row["record_type"], row["record_type"].title())
+            chip_fill, chip_text = type_chips.get(row["record_type"], ("#e5e7eb", "#334155"))
+            chip_width = max(58, len(label) * 6 + 20)
+            chip_left = x[2] + (x[3] - x[2] - chip_width) / 2
+            canvas.create_rectangle(chip_left, top + 7, chip_left + chip_width, bottom - 7,
+                                    fill=chip_fill, outline="")
+            canvas.create_text(chip_left + chip_width / 2, middle, text=label, fill=chip_text,
+                               font=("Segoe UI", 8, "bold"))
+            canvas.create_text(x[4] - 17, middle, text=self._format_optional_number(row["incoming"]),
+                               anchor="e", fill="#223955", font=("Segoe UI", 8, "bold"))
+
+            totals = row["totals"]
+            allocation_total = sum(totals[size_class] for size_class in RM_STOCK_CARD_CLASSES)
+            bar_left, bar_right = x[4] + 16, x[5] - 22
+            if allocation_total > 0:
+                left = bar_left
+                for size_class in RM_STOCK_CARD_CLASSES:
+                    amount = totals[size_class]
+                    if amount <= 0:
+                        continue
+                    right = left + (bar_right - bar_left) * amount / allocation_total
+                    canvas.create_rectangle(left, top + 7, right, bottom - 7,
+                                            fill=RM_STOCK_DISTRIBUTION_COLORS[size_class], outline="")
+                    if right - left >= 38:
+                        canvas.create_text((left + right) / 2, middle,
+                                           text=self._format_optional_number(amount), fill="white",
+                                           font=("Segoe UI", 7, "bold"))
+                    left = right
+            else:
+                canvas.create_rectangle(bar_left, top + 7, bar_right, bottom - 7,
+                                        fill="#e6edf3", outline="")
+                canvas.create_text((bar_left + bar_right) / 2, middle, text="Unused", fill="#64748b",
+                                   font=("Segoe UI", 8))
+            canvas.create_text(x[6] - 18, middle, text=self._format_optional_number(row["cumulative"]),
+                               anchor="e", fill="#223955", font=("Segoe UI", 8, "bold"))
+
     def _refresh_rm_timeline(self, _event: tk.Event | None = None) -> None:
-        if not hasattr(self, "rm_timeline_tree"):
+        if not hasattr(self, "rm_stock_ledger_canvas"):
             return
         try:
-            records = tuple(self.assortment_actual_records.values())
+            records, filter_error = self._filtered_rm_stock_records()
+            if filter_error:
+                raise ValueError(filter_error)
             ranges = self._current_assortment_size_range_definitions()
-            rows = build_rm_timeline(
-                records,
-                ranges,
-                wonton_weight_settings=self.wonton_weight_settings,
-            )
+            rows = build_rm_timeline(records, ranges, wonton_weight_settings=self.wonton_weight_settings)
             market_rows = {
-                market: build_rm_timeline(
-                    records,
-                    ranges,
-                    market_type=market,
-                    wonton_weight_settings=self.wonton_weight_settings,
-                )
+                market: build_rm_timeline(records, ranges, market_type=market,
+                                          wonton_weight_settings=self.wonton_weight_settings)
                 for market in ("domestic", "export")
             }
         except ValueError as exc:
-            self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
+            self.rm_stock_ledger_rows = ()
+            self.rm_stock_ledger_canvas.after_idle(self._draw_rm_stock_ledger)
             self.rm_stock_as_of_var.set("Unavailable")
             self.rm_stock_total_var.set("—")
-            self._set_rm_stock_distribution(*(0 for _ in RM_STOCK_DISPLAY_CLASSES))
-            for variables in self.rm_stock_size_vars.values():
-                for variable in variables.values():
-                    variable.set("—")
+            self.rm_stock_unused_var.set("—")
             self.rm_timeline_status_var.set(str(exc))
             return
 
-        self.rm_timeline_tree.delete(*self.rm_timeline_tree.get_children())
-        for index, row in enumerate(rows):
-            self.rm_timeline_tree.insert(
-                "",
-                tk.END,
-                iid=f"rm-timeline:{index}",
-                values=(
-                    row.record_date,
-                    ", ".join(row.source_labels),
-                    self._format_optional_number(row.incoming_kg),
-                    self._format_optional_number(row.cumulative_kg),
-                    self._format_size_class_summary(row.m_stock),
-                    self._format_size_class_summary(row.s_stock),
-                    self._format_size_class_summary(row.ss_stock),
-                    self._format_size_class_summary(row.hc_stock),
-                    self._format_size_class_summary(row.bk_stock),
-                    self._format_size_class_summary(row.unused_stock),
-                ),
-            )
-        record_count = sum(len(row.source_labels) for row in rows)
+        all_sources = sorted({record.source_label for record in self.assortment_actual_records.values()}, key=str.casefold)
+        source_values = ("All", *all_sources)
+        if tuple(self.rm_stock_source_combo.cget("values")) != source_values:
+            self.rm_stock_source_combo.configure(values=source_values)
+        all_dates = sorted(record.record_date for record in self.assortment_actual_records.values())
+        if all_dates and not self.rm_stock_from_var.get():
+            self.rm_stock_from_var.set(all_dates[0])
+        if all_dates and not self.rm_stock_to_var.get():
+            self.rm_stock_to_var.set(all_dates[-1])
+
+        cumulative_by_date = {row.record_date: row.cumulative_kg for row in rows}
+        ledger_rows = []
+        for index, record in enumerate(sorted(records, key=lambda item: (item.record_date, item.record_id), reverse=True)):
+            totals = self._record_class_totals(record, ranges)
+            ledger_rows.append({
+                "date": record.record_date,
+                "source": record.source_label,
+                "record_type": record.record_type,
+                "incoming": float(record.total_weight),
+                "totals": totals,
+                "cumulative": cumulative_by_date.get(record.record_date, 0.0),
+                "is_current": bool(rows and record.record_date == rows[-1].record_date),
+            })
+        self.rm_stock_ledger_rows = tuple(ledger_rows)
         if rows:
             final = rows[-1]
             self.rm_stock_as_of_var.set(final.record_date)
-            self.rm_stock_total_var.set(
-                f"{self._format_optional_number(final.cumulative_kg)} kg"
+            self.rm_stock_total_var.set(f"{self._format_optional_number(final.cumulative_kg)} kg")
+            self.rm_stock_unused_var.set(f"{self._format_size_class_summary(final.unused_stock)} kg")
+            self.rm_stock_mix_weights = (
+                final.m_stock.total, final.s_stock.total, final.ss_stock.total,
+                final.hc_stock.total, final.bk_stock.total, final.unused_stock.total,
             )
-            self._set_rm_stock_distribution(
-                final.m_stock.total,
-                final.s_stock.total,
-                final.ss_stock.total,
-                final.hc_stock.total,
-                final.bk_stock.total,
-                final.unused_stock.total,
-            )
-            size_summaries = {
-                "M": final.m_stock,
-                "S": final.s_stock,
-                "SS": final.ss_stock,
-                "HC": final.hc_stock,
-                "BK": final.bk_stock,
-            }
-            for size_class, summary in size_summaries.items():
-                variables = self.rm_stock_size_vars[size_class]
-                variables["stock"].set(
-                    f"{self._format_optional_number(summary.total)} kg"
+            percentages = stock_distribution_percentages(*self.rm_stock_mix_weights)
+            for size_class, summary in {
+                "M": final.m_stock, "S": final.s_stock, "SS": final.ss_stock,
+                "HC": final.hc_stock, "BK": final.bk_stock,
+            }.items():
+                percentage = percentages[RM_STOCK_DISPLAY_CLASSES.index(size_class)]
+                self.rm_stock_mix_labels[size_class].set(
+                    f"{size_class}\n{self._format_size_class_summary(summary)} kg\n{percentage:.1f}%"
                 )
                 for market, filtered_rows in market_rows.items():
-                    market_total = 0.0
-                    if filtered_rows:
-                        market_final = filtered_rows[-1]
-                        market_summary = getattr(market_final, f"{size_class.lower()}_stock")
-                        market_total = market_summary.total
-                    variables[market].set(
-                        f"{self._format_optional_number(market_total)} kg"
-                    )
+                    market_summary = getattr(filtered_rows[-1], f"{size_class.lower()}_stock") if filtered_rows else SizeClassWeightSummary(0)
+                    self.rm_stock_market_totals[market][size_class] = market_summary.total
             self.rm_timeline_status_var.set(
-                f"Combined from {record_count:,} RM records across {len(rows):,} dates. "
-                "Stock is before Plan usage."
+                f"{len(records):,} RM arrival records • {len(rows):,} dates • Stock is before Plan usage."
             )
         else:
             self.rm_stock_as_of_var.set("—")
             self.rm_stock_total_var.set("0 kg")
-            self._set_rm_stock_distribution(*(0 for _ in RM_STOCK_DISPLAY_CLASSES))
-            for variables in self.rm_stock_size_vars.values():
-                variables["stock"].set("0 kg")
+            self.rm_stock_unused_var.set("0 kg")
+            self.rm_stock_mix_weights = tuple(0.0 for _ in RM_STOCK_DISPLAY_CLASSES)
+            for size_class in RM_STOCK_CARD_CLASSES:
+                self.rm_stock_mix_labels[size_class].set(f"{size_class}\n0 kg\n0%")
                 for market in ("domestic", "export"):
-                    variables[market].set("0 kg")
-            self.rm_timeline_status_var.set(
-                "No RM stock records for these filters."
-            )
+                    self.rm_stock_market_totals[market][size_class] = 0.0
+            self.rm_timeline_status_var.set("No RM stock records for these filters.")
+        self.rm_stock_mix_canvas.after_idle(self._draw_rm_stock_mix)
+        self.rm_stock_market_canvas.after_idle(self._draw_rm_stock_market_allocation)
+        self.rm_stock_ledger_canvas.after_idle(self._draw_rm_stock_ledger)

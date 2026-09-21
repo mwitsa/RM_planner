@@ -137,24 +137,44 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self._assortment_range_drag_changed = False
         self._editing_actual_record_id: str | None = None
         self._editing_existing_stock_id: str | None = None
+        # Large workbook/table data is loaded when its screen is first needed.
+        # Constructing every hidden view at launch made the initial window wait
+        # on Excel I/O and thousands of Treeview inserts.
+        self._planning_inventory_loaded = False
+        self._master_data_loaded = False
+        self._assortment_upload_loaded = False
 
         self._configure_style()
         self._build_ui()
-        self._load_default_workbook()
-        self._load_assortment_data()
         self._load_wonton_weight_settings()
-        self._load_assortment_actual_history()
-        self._load_saved_orders()
         self._load_saved_class_definitions()
         self._load_capacity_settings()
         self._load_chill_days_settings()
         self._load_production_start_settings()
         self._load_labour_settings()
-        self._load_saved_master_data()
-        self._load_saved_assortment_upload()
-        # Use the selected workbook as the active Order/Plan source.  Saved
-        # orders are loaded first only to retain manual production entries.
-        self.after(0, self._start_extraction)
+        self.notebook.bind("<<NotebookTabChanged>>", self._load_tab_data_when_needed, add="+")
+        # Allow Tk to map the window before opening an Excel workbook.  The
+        # worker updates the Order tab when its sheet list is ready.
+        self.after(100, self._start_default_workbook_load)
+
+    def _load_tab_data_when_needed(self, _event=None) -> None:
+        """Load large persisted data only when the user opens its screen."""
+
+        selected = self.notebook.select()
+        if selected in (str(self.plan_tab), str(self.rm_tab)):
+            self._ensure_planning_inventory_loaded()
+        elif selected == str(self.assortment_upload_tab) and not self._assortment_upload_loaded:
+            self._assortment_upload_loaded = True
+            self._load_saved_assortment_upload()
+
+    def _ensure_planning_inventory_loaded(self) -> None:
+        """Load RM inputs once, before the RM or Plan screens use them."""
+
+        if self._planning_inventory_loaded:
+            return
+        self._planning_inventory_loaded = True
+        self._load_assortment_data()
+        self._load_assortment_actual_history()
 
     def _configure_style(self) -> None:
         style = ttk.Style(self)

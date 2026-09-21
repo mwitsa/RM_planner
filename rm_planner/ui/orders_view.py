@@ -6,6 +6,47 @@ from .common import *  # shared UI types, domain services, and display constants
 
 
 class OrdersViewMixin:
+    def _start_default_workbook_load(self) -> None:
+        """Populate the default Order source without blocking first paint."""
+
+        candidate = PROJECT_ROOT / "Data" / "Order" / "แผน.xlsx"
+        self.file_var.set(str(candidate))
+        if not candidate.is_file():
+            self.status_var.set(f"Order workbook not found: {candidate}")
+            self._load_saved_orders()
+            return
+        self.status_var.set("Opening default Order workbook…")
+        threading.Thread(
+            target=self._default_workbook_worker,
+            args=(str(candidate),),
+            daemon=True,
+        ).start()
+
+    def _default_workbook_worker(self, workbook_path: str) -> None:
+        try:
+            sheets = list_sheets(workbook_path)
+            default_sheet = choose_default_sheet(workbook_path)
+        except Exception as exc:
+            self.after(0, self._show_default_workbook_error, exc)
+            return
+        self.after(0, self._show_default_workbook_sheets, sheets, default_sheet)
+
+    def _show_default_workbook_sheets(
+        self,
+        sheets: list[str],
+        default_sheet: str,
+    ) -> None:
+        self.sheet_combo.configure(values=sheets)
+        self.sheet_var.set(default_sheet)
+        self.status_var.set(
+            f"Loaded {len(sheets)} worksheets. Suggested: {default_sheet.strip()}"
+        )
+        self._start_extraction()
+
+    def _show_default_workbook_error(self, exc: Exception) -> None:
+        self.status_var.set("Could not read default workbook; showing saved orders.")
+        self._load_saved_orders()
+
     def _load_default_workbook(self) -> None:
         candidate = PROJECT_ROOT / "Data" / "Order" / "แผน.xlsx"
         if candidate.is_file():

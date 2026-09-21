@@ -14,9 +14,6 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
-
 PRODUCTION_DATE_COLUMN = 3  # C (แผน LOAD Date)
 PRODUCTION_PLAN_DATE_COLUMN = 2  # B (แผนผลิต Date)
 ORDER_NUMBER_COLUMN = 7  # G (No. order)
@@ -181,6 +178,11 @@ def extract_raw_data(
     "น้ำหนัก HO", is appended with (P*Q*R*V)/0.54 computed per row.
     """
 
+    # Importing openpyxl takes several seconds on a cold Python launch.  Keep
+    # Excel support lazy so the Tk window can appear before a workbook is read.
+    from openpyxl import load_workbook
+    from openpyxl.utils import get_column_letter
+
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)
     try:
@@ -247,6 +249,8 @@ def _calculate_raw_ho_weight(row: tuple[Any, ...]) -> str:
 def list_sheets(workbook_path: str | Path) -> list[str]:
     """Return workbook sheet names without modifying the workbook."""
 
+    from openpyxl import load_workbook
+
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)
     try:
@@ -257,6 +261,8 @@ def list_sheets(workbook_path: str | Path) -> list[str]:
 
 def choose_default_sheet(workbook_path: str | Path) -> str:
     """Select the sheet whose C/J/V headers most closely match an order table."""
+
+    from openpyxl import load_workbook
 
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)
@@ -291,6 +297,8 @@ def extract_orders(
     Rows with no selected values are ignored; other incomplete rows are reported
     as issues rather than silently converted to orders.
     """
+
+    from openpyxl import load_workbook
 
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)

@@ -475,6 +475,10 @@ class CapacityViewMixin:
     def _select_operations_section(self, section: str) -> None:
         """Show one Operations Settings category in the shared content area."""
 
+        if section == "master" and not getattr(self, "_master_data_loaded", False):
+            self._master_data_loaded = True
+            self._load_saved_master_data()
+
         for name, frame in self._operations_sections.items():
             if name == section:
                 frame.grid(row=0, column=0, sticky="nsew")

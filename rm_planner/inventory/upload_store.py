@@ -22,9 +22,6 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from openpyxl import load_workbook
-
-
 STORE_VERSION = 1
 DATE_LABEL = "วันที่"
 STOP_LABEL = "SUM"
@@ -50,6 +47,8 @@ def extract_assortment_shipments(
     sheet_name: str | None = None,
 ) -> tuple[str, list[str], list[AssortmentShipmentRecord]]:
     """Return (sheet_name, field_labels, shipment records)."""
+
+    from openpyxl import load_workbook
 
     path = _validated_path(workbook_path)
     workbook = load_workbook(path, read_only=True, data_only=True)
