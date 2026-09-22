@@ -4,3 +4,11 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+
+# Real production data extracted/uploaded while testing — not for git.
+Data/RM/rm_stock_data.json
+Data/RM/pd_actual_data.json
+Data/StockPackageIngredient/
+/*.xlsx
+/*.xlsb
+/*.xls

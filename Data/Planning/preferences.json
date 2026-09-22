@@ -1,7 +1,7 @@
 {
   "settings": {
     "lookahead": 7.0,
-    "adjustment": 3.0,
+    "adjust_from": "2026-09-23",
     "shift_hours": 8.0,
     "setup_minutes": 30.0,
     "stop_cost": 80000.0,

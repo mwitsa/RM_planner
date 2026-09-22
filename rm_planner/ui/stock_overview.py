@@ -5,6 +5,23 @@ from __future__ import annotations
 from datetime import date
 
 from .common import *  # shared UI types and domain services
+from rm_planner.inventory._workbook_io import choose_default_sheet as choose_default_rm_data_sheet
+from rm_planner.inventory.pd_actual_data import (
+    PD_ACTUAL_COLUMNS,
+    PD_ACTUAL_FLOAT_FIELDS,
+    extract_pd_actual_records,
+    load_pd_actual_records,
+    pivot_weight_out_by_farm_and_size,
+    save_pd_actual_records,
+)
+from rm_planner.inventory.rm_stock_data import (
+    RM_STOCK_COLUMNS,
+    extract_rm_stock_records,
+    list_sheets as list_rm_data_sheets,
+    load_rm_stock_records,
+    pivot_gross_wt_by_remark_and_action_repack,
+    save_rm_stock_records,
+)
 
 
 RM_STOCK_DISPLAY_CLASSES = STOCK_SIZE_CLASSES
@@ -49,11 +66,22 @@ class StockOverviewMixin:
         self.rm_timeline_tab = ttk.Frame(content, padding=14)
         self.assortment_std_tab = ttk.Frame(content, padding=14)
         self.assortment_actual_tab = ttk.Frame(content, padding=14)
-        for frame in (self.rm_timeline_tab, self.assortment_std_tab, self.assortment_actual_tab):
+        self.rm_data_tab = ttk.Frame(content, padding=14)
+        self.rm_pd_actual_tab = ttk.Frame(content, padding=14)
+        self.rm_pd_tab = ttk.Frame(content, padding=14)
+        self.rm_pd_actual_pivot_tab = ttk.Frame(content, padding=14)
+        for frame in (
+            self.rm_timeline_tab, self.assortment_std_tab, self.assortment_actual_tab,
+            self.rm_data_tab, self.rm_pd_actual_tab, self.rm_pd_tab, self.rm_pd_actual_pivot_tab,
+        ):
             frame.grid(row=0, column=0, sticky="nsew")
         self._build_rm_timeline_tab()
         self._build_assortment_std_tab()
         self._build_assortment_actual_tab()
+        self._build_rm_data_tab()
+        self._build_rm_pd_actual_tab()
+        self._build_rm_pd_tab()
+        self._build_rm_pd_actual_pivot_tab()
         self._show_rm_section("timeline")
 
     def _show_rm_section(self, section: str) -> None:
@@ -61,7 +89,15 @@ class StockOverviewMixin:
             "timeline": self.rm_timeline_tab,
             "predict": self.assortment_std_tab,
             "actual": self.assortment_actual_tab,
+            "data": self.rm_data_tab,
+            "pd_actual": self.rm_pd_actual_tab,
+            "pd": self.rm_pd_tab,
+            "pd_actual_pivot": self.rm_pd_actual_pivot_tab,
         }
+        if section == "pd":
+            self._refresh_rm_pd_filters()
+        if section == "pd_actual_pivot":
+            self._refresh_rm_pd_actual_pivot_filters()
         if section not in frames:
             raise ValueError(f"Unknown RM section: {section}")
         frames[section].tkraise()
@@ -235,6 +271,586 @@ class StockOverviewMixin:
     def _open_stock_editor(self) -> None:
         self._new_assortment_actual_form()
         self._show_rm_section("actual")
+
+    def _build_rm_data_tab(self) -> None:
+        self.rm_data_file_var = tk.StringVar()
+        self.rm_data_sheet_var = tk.StringVar()
+        self.rm_data_status_var = tk.StringVar(value="ยังไม่ได้เลือกไฟล์")
+
+        ttk.Label(
+            self.rm_data_tab, text="อัพโหลดข้อมูล STOCK On Hand", font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.rm_data_tab, text="นำเข้าข้อมูล RM stock จากไฟล์ Excel",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        source = ttk.LabelFrame(self.rm_data_tab, text="Source workbook", padding=12)
+        source.pack(fill=tk.X)
+        source.columnconfigure(1, weight=1)
+        ttk.Label(source, text="Excel file:").grid(row=0, column=0, sticky=tk.W, padx=(0, 8))
+        ttk.Entry(source, textvariable=self.rm_data_file_var).grid(row=0, column=1, sticky=tk.EW)
+        ttk.Button(
+            source, text="Browse…", command=self._browse_rm_data_workbook,
+        ).grid(row=0, column=2, padx=(8, 0))
+
+        ttk.Label(source, text="Worksheet:").grid(
+            row=1, column=0, sticky=tk.W, padx=(0, 8), pady=(10, 0)
+        )
+        self.rm_data_sheet_combo = ttk.Combobox(
+            source, textvariable=self.rm_data_sheet_var, state="readonly", width=35,
+        )
+        self.rm_data_sheet_combo.grid(row=1, column=1, sticky=tk.W, pady=(10, 0))
+        self.rm_data_extract_button = ttk.Button(
+            source, text="Extract data", command=self._start_rm_data_extraction, state=tk.DISABLED,
+        )
+        self.rm_data_extract_button.grid(row=1, column=2, padx=(8, 0), pady=(10, 0))
+
+        ttk.Label(
+            self.rm_data_tab,
+            textvariable=self.rm_data_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(8, 0))
+
+        self.rm_data_records: list = []
+        self.rm_data_sort_column: str | None = None
+        self.rm_data_sort_descending = False
+        table_frame = ttk.Frame(self.rm_data_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        columns = [key for key, _label in RM_STOCK_COLUMNS]
+        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+        for key, label in RM_STOCK_COLUMNS:
+            tree.heading(
+                key, text=label, command=lambda selected=key: self._sort_rm_data(selected),
+            )
+            anchor = tk.E if key in ("gross_wt", "net_wt") else tk.W
+            tree.column(key, width=100, minwidth=70, anchor=anchor, stretch=False)
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        self.rm_data_tree = tree
+
+    def _browse_rm_data_workbook(self) -> None:
+        selected = filedialog.askopenfilename(
+            title="Select RM stock workbook",
+            filetypes=[("Excel workbook", "*.xls *.xlsx *.xlsm"), ("All files", "*.*")],
+        )
+        if selected:
+            self.rm_data_file_var.set(selected)
+            self._load_rm_data_sheets()
+
+    def _load_rm_data_sheets(self) -> None:
+        try:
+            workbook_path = self.rm_data_file_var.get().strip()
+            sheets = list_rm_data_sheets(workbook_path)
+            default_sheet = choose_default_rm_data_sheet(sheets, "data")
+            self.rm_data_sheet_combo.configure(values=sheets)
+            self.rm_data_sheet_var.set(default_sheet)
+            self.rm_data_extract_button.configure(state=tk.NORMAL if sheets else tk.DISABLED)
+            self.rm_data_status_var.set(f"Loaded {len(sheets)} worksheets.")
+        except Exception as exc:
+            self.rm_data_sheet_combo.configure(values=[])
+            self.rm_data_sheet_var.set("")
+            self.rm_data_extract_button.configure(state=tk.DISABLED)
+            self.rm_data_status_var.set("Could not read workbook.")
+            messagebox.showerror("Workbook error", str(exc))
+
+    def _start_rm_data_extraction(self) -> None:
+        workbook_path = self.rm_data_file_var.get().strip()
+        sheet_name = self.rm_data_sheet_var.get()
+        if not workbook_path or not sheet_name:
+            messagebox.showwarning("Missing source", "Please select an Excel file and worksheet.")
+            return
+        try:
+            records = extract_rm_stock_records(workbook_path, sheet_name)
+        except Exception as exc:
+            self.rm_data_status_var.set("Extraction failed.")
+            messagebox.showerror("Extraction error", str(exc))
+            return
+        self.rm_data_records = records
+        self.rm_data_sort_column = None
+        self.rm_data_sort_descending = False
+        self._refresh_rm_data_table()
+        try:
+            save_rm_stock_records(
+                self.rm_stock_data_file_path, records,
+                source_file=workbook_path, source_sheet=sheet_name,
+            )
+        except ValueError as exc:
+            self.rm_data_status_var.set(f"Loaded {len(records):,} rows, but could not save: {exc}")
+            return
+        self.rm_data_status_var.set(f"Loaded and saved {len(records):,} rows from '{sheet_name}'.")
+
+    def _load_saved_rm_stock_data(self) -> None:
+        """Restore the last-extracted RM stock rows, so DATA/PD survive a restart."""
+
+        try:
+            records, source_file, source_sheet = load_rm_stock_records(self.rm_stock_data_file_path)
+        except ValueError as exc:
+            self.rm_data_status_var.set(str(exc))
+            return
+        if not records:
+            return
+        self.rm_data_records = records
+        if source_file:
+            self.rm_data_file_var.set(source_file)
+        if source_sheet:
+            self.rm_data_sheet_var.set(source_sheet)
+        self._refresh_rm_data_table()
+        self.rm_data_status_var.set(f"Loaded {len(records):,} saved rows from last extraction.")
+
+    def _sort_rm_data(self, column: str) -> None:
+        if self.rm_data_sort_column == column:
+            self.rm_data_sort_descending = not self.rm_data_sort_descending
+        else:
+            self.rm_data_sort_column = column
+            self.rm_data_sort_descending = False
+        self._refresh_rm_data_table()
+
+    def _refresh_rm_data_table(self) -> None:
+        tree = self.rm_data_tree
+        tree.delete(*tree.get_children())
+        rows = list(self.rm_data_records)
+        if self.rm_data_sort_column is not None:
+            column = self.rm_data_sort_column
+            if column in ("gross_wt", "net_wt"):
+                rows.sort(key=lambda record: getattr(record, column), reverse=self.rm_data_sort_descending)
+            else:
+                rows.sort(
+                    key=lambda record: getattr(record, column).casefold(),
+                    reverse=self.rm_data_sort_descending,
+                )
+        for index, record in enumerate(rows):
+            tree.insert(
+                "", tk.END, iid=str(index),
+                values=[getattr(record, key) for key, _label in RM_STOCK_COLUMNS],
+            )
+        for key, label in RM_STOCK_COLUMNS:
+            marker = ""
+            if key == self.rm_data_sort_column:
+                marker = " ↓" if self.rm_data_sort_descending else " ↑"
+            tree.heading(key, text=f"{label}{marker}")
+
+    def _build_rm_pd_actual_tab(self) -> None:
+        """Upload page for "อัพโหลดข้อมูล STOCK แกลง 2" (actual HO distribution/yield), same shape as DATA."""
+
+        self.rm_pd_actual_file_var = tk.StringVar()
+        self.rm_pd_actual_sheet_var = tk.StringVar()
+        self.rm_pd_actual_status_var = tk.StringVar(value="ยังไม่ได้เลือกไฟล์")
+
+        ttk.Label(
+            self.rm_pd_actual_tab, text="อัพโหลดข้อมูล STOCK แกลง 2", font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.rm_pd_actual_tab, text="นำเข้าข้อมูล PD ที่เกิดขึ้นจริงจากไฟล์ Excel",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        source = ttk.LabelFrame(self.rm_pd_actual_tab, text="Source workbook", padding=12)
+        source.pack(fill=tk.X)
+        source.columnconfigure(1, weight=1)
+        ttk.Label(source, text="Excel file:").grid(row=0, column=0, sticky=tk.W, padx=(0, 8))
+        ttk.Entry(source, textvariable=self.rm_pd_actual_file_var).grid(row=0, column=1, sticky=tk.EW)
+        ttk.Button(
+            source, text="Browse…", command=self._browse_rm_pd_actual_workbook,
+        ).grid(row=0, column=2, padx=(8, 0))
+
+        ttk.Label(source, text="Worksheet:").grid(
+            row=1, column=0, sticky=tk.W, padx=(0, 8), pady=(10, 0)
+        )
+        self.rm_pd_actual_sheet_combo = ttk.Combobox(
+            source, textvariable=self.rm_pd_actual_sheet_var, state="readonly", width=35,
+        )
+        self.rm_pd_actual_sheet_combo.grid(row=1, column=1, sticky=tk.W, pady=(10, 0))
+        self.rm_pd_actual_extract_button = ttk.Button(
+            source, text="Extract data", command=self._start_rm_pd_actual_extraction,
+            state=tk.DISABLED,
+        )
+        self.rm_pd_actual_extract_button.grid(row=1, column=2, padx=(8, 0), pady=(10, 0))
+
+        ttk.Label(
+            self.rm_pd_actual_tab,
+            textvariable=self.rm_pd_actual_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(8, 0))
+
+        self.rm_pd_actual_records: list = []
+        self.rm_pd_actual_sort_column: str | None = None
+        self.rm_pd_actual_sort_descending = False
+        table_frame = ttk.Frame(self.rm_pd_actual_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        columns = [key for key, _label in PD_ACTUAL_COLUMNS]
+        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+        for key, label in PD_ACTUAL_COLUMNS:
+            tree.heading(
+                key, text=label, command=lambda selected=key: self._sort_rm_pd_actual(selected),
+            )
+            anchor = tk.E if key in PD_ACTUAL_FLOAT_FIELDS else tk.W
+            tree.column(key, width=100, minwidth=70, anchor=anchor, stretch=False)
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        self.rm_pd_actual_tree = tree
+
+    def _browse_rm_pd_actual_workbook(self) -> None:
+        selected = filedialog.askopenfilename(
+            title="Select STOCK แกลง 2 workbook",
+            filetypes=[("Excel workbook", "*.xls *.xlsx *.xlsm *.xlsb"), ("All files", "*.*")],
+        )
+        if selected:
+            self.rm_pd_actual_file_var.set(selected)
+            self._load_rm_pd_actual_sheets()
+
+    def _load_rm_pd_actual_sheets(self) -> None:
+        try:
+            workbook_path = self.rm_pd_actual_file_var.get().strip()
+            sheets = list_rm_data_sheets(workbook_path)
+            default_sheet = choose_default_rm_data_sheet(sheets, "data")
+            self.rm_pd_actual_sheet_combo.configure(values=sheets)
+            self.rm_pd_actual_sheet_var.set(default_sheet)
+            self.rm_pd_actual_extract_button.configure(state=tk.NORMAL if sheets else tk.DISABLED)
+            self.rm_pd_actual_status_var.set(f"Loaded {len(sheets)} worksheets.")
+        except Exception as exc:
+            self.rm_pd_actual_sheet_combo.configure(values=[])
+            self.rm_pd_actual_sheet_var.set("")
+            self.rm_pd_actual_extract_button.configure(state=tk.DISABLED)
+            self.rm_pd_actual_status_var.set("Could not read workbook.")
+            messagebox.showerror("Workbook error", str(exc))
+
+    def _start_rm_pd_actual_extraction(self) -> None:
+        workbook_path = self.rm_pd_actual_file_var.get().strip()
+        sheet_name = self.rm_pd_actual_sheet_var.get()
+        if not workbook_path or not sheet_name:
+            messagebox.showwarning("Missing source", "Please select an Excel file and worksheet.")
+            return
+        try:
+            records = extract_pd_actual_records(workbook_path, sheet_name)
+        except Exception as exc:
+            self.rm_pd_actual_status_var.set("Extraction failed.")
+            messagebox.showerror("Extraction error", str(exc))
+            return
+        self.rm_pd_actual_records = records
+        self.rm_pd_actual_sort_column = None
+        self.rm_pd_actual_sort_descending = False
+        self._refresh_rm_pd_actual_table()
+        try:
+            save_pd_actual_records(
+                self.pd_actual_data_file_path, records,
+                source_file=workbook_path, source_sheet=sheet_name,
+            )
+        except ValueError as exc:
+            self.rm_pd_actual_status_var.set(
+                f"Loaded {len(records):,} rows, but could not save: {exc}"
+            )
+            return
+        self.rm_pd_actual_status_var.set(
+            f"Loaded and saved {len(records):,} rows from '{sheet_name}'."
+        )
+
+    def _load_saved_rm_pd_actual_data(self) -> None:
+        """Restore the last-extracted STOCK แกลง 2 rows, so it survives a restart."""
+
+        try:
+            records, source_file, source_sheet = load_pd_actual_records(
+                self.pd_actual_data_file_path
+            )
+        except ValueError as exc:
+            self.rm_pd_actual_status_var.set(str(exc))
+            return
+        if not records:
+            return
+        self.rm_pd_actual_records = records
+        if source_file:
+            self.rm_pd_actual_file_var.set(source_file)
+        if source_sheet:
+            self.rm_pd_actual_sheet_var.set(source_sheet)
+        self._refresh_rm_pd_actual_table()
+        self.rm_pd_actual_status_var.set(f"Loaded {len(records):,} saved rows from last extraction.")
+
+    def _sort_rm_pd_actual(self, column: str) -> None:
+        if self.rm_pd_actual_sort_column == column:
+            self.rm_pd_actual_sort_descending = not self.rm_pd_actual_sort_descending
+        else:
+            self.rm_pd_actual_sort_column = column
+            self.rm_pd_actual_sort_descending = False
+        self._refresh_rm_pd_actual_table()
+
+    def _refresh_rm_pd_actual_table(self) -> None:
+        tree = self.rm_pd_actual_tree
+        tree.delete(*tree.get_children())
+        rows = list(self.rm_pd_actual_records)
+        if self.rm_pd_actual_sort_column is not None:
+            column = self.rm_pd_actual_sort_column
+            if column in PD_ACTUAL_FLOAT_FIELDS:
+                rows.sort(
+                    key=lambda record: getattr(record, column),
+                    reverse=self.rm_pd_actual_sort_descending,
+                )
+            else:
+                rows.sort(
+                    key=lambda record: getattr(record, column).casefold(),
+                    reverse=self.rm_pd_actual_sort_descending,
+                )
+        for index, record in enumerate(rows):
+            tree.insert(
+                "", tk.END, iid=str(index),
+                values=[getattr(record, key) for key, _label in PD_ACTUAL_COLUMNS],
+            )
+        for key, label in PD_ACTUAL_COLUMNS:
+            marker = ""
+            if key == self.rm_pd_actual_sort_column:
+                marker = " ↓" if self.rm_pd_actual_sort_descending else " ↑"
+            tree.heading(key, text=f"{label}{marker}")
+
+    def _build_rm_pd_tab(self) -> None:
+        self.rm_pd_type_var = tk.StringVar()
+        self.rm_pd_status_var = tk.StringVar(
+            value="ยังไม่มีข้อมูล — ไปที่ อัพโหลดข้อมูล STOCK On Hand แล้วกด Extract data ก่อน"
+        )
+
+        ttk.Label(self.rm_pd_tab, text="PD Freeze", font=("Segoe UI", 16, "bold")).pack(anchor=tk.W)
+        ttk.Label(
+            self.rm_pd_tab, text="Sum of Gross wt แบ่งตาม Remark x Action Repack",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        filters = ttk.Frame(self.rm_pd_tab)
+        filters.pack(fill=tk.X)
+
+        plant_frame = ttk.Frame(filters)
+        plant_frame.pack(side=tk.LEFT, padx=(0, 20))
+        ttk.Label(plant_frame, text="Plant").pack(anchor=tk.W)
+        self.rm_pd_plant_listbox = tk.Listbox(
+            plant_frame, selectmode=tk.EXTENDED, height=4, exportselection=False, width=18,
+        )
+        self.rm_pd_plant_listbox.pack()
+        self.rm_pd_plant_listbox.bind("<<ListboxSelect>>", lambda _e: self._refresh_rm_pd_table())
+
+        type_frame = ttk.Frame(filters)
+        type_frame.pack(side=tk.LEFT)
+        ttk.Label(type_frame, text="Type").pack(anchor=tk.W)
+        self.rm_pd_type_combo = ttk.Combobox(
+            type_frame, textvariable=self.rm_pd_type_var, state="readonly", width=22,
+        )
+        self.rm_pd_type_combo.pack()
+        self.rm_pd_type_combo.bind("<<ComboboxSelected>>", lambda _e: self._refresh_rm_pd_table())
+
+        ttk.Label(
+            self.rm_pd_tab,
+            textvariable=self.rm_pd_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(10, 0))
+
+        table_frame = ttk.Frame(self.rm_pd_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        tree = ttk.Treeview(table_frame, show="headings")
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        self.rm_pd_tree = tree
+
+    def _refresh_rm_pd_filters(self) -> None:
+        records = self.rm_data_records
+        if not records:
+            self.rm_pd_status_var.set("ยังไม่มีข้อมูล — ไปที่ อัพโหลดข้อมูล STOCK On Hand แล้วกด Extract data ก่อน")
+            self.rm_pd_plant_listbox.delete(0, tk.END)
+            self.rm_pd_type_combo.configure(values=[])
+            self.rm_pd_type_var.set("")
+            self._refresh_rm_pd_table()
+            return
+
+        plants = sorted({record.plant for record in records if record.plant})
+        types = sorted({record.type for record in records if record.type})
+        previously_selected_plants = {
+            self.rm_pd_plant_listbox.get(index)
+            for index in self.rm_pd_plant_listbox.curselection()
+        }
+        self.rm_pd_plant_listbox.delete(0, tk.END)
+        for plant in plants:
+            self.rm_pd_plant_listbox.insert(tk.END, plant)
+        for index, plant in enumerate(plants):
+            if not previously_selected_plants or plant in previously_selected_plants:
+                self.rm_pd_plant_listbox.selection_set(index)
+
+        self.rm_pd_type_combo.configure(values=["All", *types])
+        if self.rm_pd_type_var.get() not in types:
+            self.rm_pd_type_var.set("RM For Wonton" if "RM For Wonton" in types else "All")
+        self._refresh_rm_pd_table()
+
+    def _refresh_rm_pd_table(self) -> None:
+        tree = self.rm_pd_tree
+        tree.delete(*tree.get_children())
+        records = self.rm_data_records
+        if not records:
+            tree.configure(columns=())
+            return
+
+        selected_plants = {
+            self.rm_pd_plant_listbox.get(index)
+            for index in self.rm_pd_plant_listbox.curselection()
+        }
+        type_filter = self.rm_pd_type_var.get()
+        stock_type = None if type_filter in ("", "All") else type_filter
+        pivot = pivot_gross_wt_by_remark_and_action_repack(
+            records, plants=selected_plants or None, stock_type=stock_type,
+        )
+
+        columns = ("remark", *pivot.column_keys, "grand_total")
+        tree.configure(columns=columns)
+        tree.heading("remark", text="Remark")
+        tree.column("remark", width=140, minwidth=100, anchor=tk.W, stretch=False)
+        for key in pivot.column_keys:
+            tree.heading(key, text=key)
+            tree.column(key, width=140, minwidth=90, anchor=tk.E, stretch=False)
+        tree.heading("grand_total", text="Grand Total")
+        tree.column("grand_total", width=140, minwidth=100, anchor=tk.E, stretch=False)
+
+        for row in pivot.row_keys:
+            values = (
+                [row]
+                + [
+                    self._format_optional_number(pivot.matrix[row][col])
+                    if pivot.matrix[row][col] else ""
+                    for col in pivot.column_keys
+                ]
+                + [self._format_optional_number(pivot.row_totals[row])]
+            )
+            tree.insert("", tk.END, values=values)
+        grand_row = (
+            ["Grand Total"]
+            + [self._format_optional_number(pivot.column_totals[col]) for col in pivot.column_keys]
+            + [self._format_optional_number(pivot.grand_total)]
+        )
+        tree.insert("", tk.END, values=grand_row, tags=("grand_total",))
+        tree.tag_configure("grand_total", font=("Segoe UI", 12, "bold"))
+
+        self.rm_pd_status_var.set(
+            f"{len(pivot.row_keys)} Remark × {len(pivot.column_keys)} Action Repack "
+            f"• Grand Total {self._format_optional_number(pivot.grand_total)}"
+        )
+
+    def _build_rm_pd_actual_pivot_tab(self) -> None:
+        """Pivot of STOCK แกลง 2 data: Sum of น้ำหนัก(กก.)ออก by ฟาร์ม-บ่อ → ขนาด Out."""
+
+        self.rm_pd_actual_pivot_date_var = tk.StringVar(value="All")
+        self.rm_pd_actual_pivot_status_var = tk.StringVar(
+            value="ยังไม่มีข้อมูล — ไปที่ อัพโหลดข้อมูล STOCK แกลง 2 แล้วกด Extract data ก่อน"
+        )
+
+        ttk.Label(
+            self.rm_pd_actual_pivot_tab, text="Pivot STOCK แกลง 2", font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.rm_pd_actual_pivot_tab,
+            text="Sum of น้ำหนัก(กก.)ออก แบ่งตาม ฟาร์ม-บ่อ x ขนาด Out",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        filters = ttk.Frame(self.rm_pd_actual_pivot_tab)
+        filters.pack(fill=tk.X)
+        date_frame = ttk.Frame(filters)
+        date_frame.pack(side=tk.LEFT)
+        ttk.Label(date_frame, text="วันที่ทำรายการ").pack(anchor=tk.W)
+        self.rm_pd_actual_pivot_date_combo = ttk.Combobox(
+            date_frame, textvariable=self.rm_pd_actual_pivot_date_var, state="readonly", width=22,
+        )
+        self.rm_pd_actual_pivot_date_combo.pack()
+        self.rm_pd_actual_pivot_date_combo.bind(
+            "<<ComboboxSelected>>", lambda _e: self._refresh_rm_pd_actual_pivot_table()
+        )
+
+        ttk.Label(
+            self.rm_pd_actual_pivot_tab,
+            textvariable=self.rm_pd_actual_pivot_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(10, 0))
+
+        table_frame = ttk.Frame(self.rm_pd_actual_pivot_tab)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        tree = ttk.Treeview(table_frame, columns=("total",), show="tree headings")
+        tree.heading("#0", text="ฟาร์ม-บ่อ / ขนาด Out")
+        tree.column("#0", width=320, minwidth=200, anchor=tk.W, stretch=False)
+        tree.heading("total", text="Total")
+        tree.column("total", width=140, minwidth=100, anchor=tk.E, stretch=False)
+        vertical = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=tree.yview)
+        horizontal = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        self.rm_pd_actual_pivot_tree = tree
+
+    def _refresh_rm_pd_actual_pivot_filters(self) -> None:
+        records = self.rm_pd_actual_records
+        if not records:
+            self.rm_pd_actual_pivot_status_var.set(
+                "ยังไม่มีข้อมูล — ไปที่ อัพโหลดข้อมูล STOCK แกลง 2 แล้วกด Extract data ก่อน"
+            )
+            self.rm_pd_actual_pivot_date_combo.configure(values=["All"])
+            self.rm_pd_actual_pivot_date_var.set("All")
+            self._refresh_rm_pd_actual_pivot_table()
+            return
+
+        dates = sorted({record.transaction_date for record in records if record.transaction_date})
+        self.rm_pd_actual_pivot_date_combo.configure(values=["All", *dates])
+        if self.rm_pd_actual_pivot_date_var.get() not in ("All", *dates):
+            self.rm_pd_actual_pivot_date_var.set("All")
+        self._refresh_rm_pd_actual_pivot_table()
+
+    def _refresh_rm_pd_actual_pivot_table(self) -> None:
+        tree = self.rm_pd_actual_pivot_tree
+        tree.delete(*tree.get_children())
+        records = self.rm_pd_actual_records
+        if not records:
+            return
+
+        date_filter = self.rm_pd_actual_pivot_date_var.get()
+        transaction_dates = None if date_filter in ("", "All") else {date_filter}
+        pivot = pivot_weight_out_by_farm_and_size(records, transaction_dates=transaction_dates)
+
+        for farm in pivot.farm_keys:
+            farm_id = tree.insert(
+                "", tk.END, text=farm,
+                values=(self._format_optional_number(pivot.farm_totals[farm]),),
+                open=False,
+            )
+            for size in pivot.size_keys_by_farm[farm]:
+                tree.insert(
+                    farm_id, tk.END, text=size,
+                    values=(self._format_optional_number(pivot.matrix[farm][size]),),
+                )
+        grand_id = tree.insert(
+            "", tk.END, text="Grand Total",
+            values=(self._format_optional_number(pivot.grand_total),),
+            tags=("grand_total",),
+        )
+        tree.tag_configure("grand_total", font=("Segoe UI", 12, "bold"))
+
+        self.rm_pd_actual_pivot_status_var.set(
+            f"{len(pivot.farm_keys)} ฟาร์ม-บ่อ "
+            f"• Grand Total {self._format_optional_number(pivot.grand_total)}"
+        )
 
     def _reset_rm_stock_filters(self) -> None:
         self.rm_stock_source_var.set("All")

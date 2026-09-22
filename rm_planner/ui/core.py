@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import ctypes
+import sys
+
 from .common import *  # shared UI types, domain services, and display constants
 from .master_view import MasterViewMixin
 from .shipment_view import ShipmentViewMixin
@@ -14,10 +17,32 @@ from .class_define import ClassDefineMixin
 from .capacity_view import CapacityViewMixin
 from .assortment_view import AssortmentViewMixin
 from .orders_view import OrdersViewMixin
+from .stock_package_ingredient_view import StockPackageIngredientViewMixin
 
 
-class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, StockOverviewMixin, ExistingStockMixin, StockEditorMixin, PlanViewMixin, ClassDefineMixin, CapacityViewMixin, AssortmentViewMixin, OrdersViewMixin, tk.Tk):
+def _enable_windows_dpi_awareness() -> None:
+    """Stop Windows from bitmap-stretching this window on scaled displays.
+
+    Tk is not DPI-aware by default, so Windows upscales the rendered window
+    on any display set above 100% scaling, which is what makes text and
+    edges look blurry. Marking the process DPI-aware turns that stretching
+    off; window/canvas pixel coordinates elsewhere in the app are unaffected.
+    """
+
+    if sys.platform != "win32":
+        return
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # PROCESS_SYSTEM_DPI_AWARE
+    except (AttributeError, OSError):
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except (AttributeError, OSError):
+            pass
+
+
+class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, StockOverviewMixin, ExistingStockMixin, StockEditorMixin, PlanViewMixin, ClassDefineMixin, CapacityViewMixin, AssortmentViewMixin, OrdersViewMixin, StockPackageIngredientViewMixin, tk.Tk):
     def __init__(self) -> None:
+        _enable_windows_dpi_awareness()
         super().__init__()
         self.title("Production Plan Extractor / โปรแกรมดึงข้อมูลแผนผลิต")
         self.geometry("1180x720")
@@ -93,6 +118,21 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self.labour_file_path = (
             PROJECT_ROOT / "Data" / "Operations" / "labour.json"
         )
+        self.loss_file_path = (
+            PROJECT_ROOT / "Data" / "Operations" / "loss.json"
+        )
+        self.rm_stock_data_file_path = (
+            PROJECT_ROOT / "Data" / "RM" / "rm_stock_data.json"
+        )
+        self.pd_actual_data_file_path = (
+            PROJECT_ROOT / "Data" / "RM" / "pd_actual_data.json"
+        )
+        self.stock_package_file_path = (
+            PROJECT_ROOT / "Data" / "StockPackageIngredient" / "package.json"
+        )
+        self.stock_ingredient_file_path = (
+            PROJECT_ROOT / "Data" / "StockPackageIngredient" / "ingredient.json"
+        )
         self.master_workbook_file_path = (
             PROJECT_ROOT / "Data" / "Master" / "Master PCK ING.xlsx"
         )
@@ -152,6 +192,10 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self._load_chill_days_settings()
         self._load_production_start_settings()
         self._load_labour_settings()
+        self._load_loss_settings()
+        self._load_saved_rm_stock_data()
+        self._load_saved_rm_pd_actual_data()
+        self._load_saved_stock_package_ingredient_data()
         self.notebook.bind("<<NotebookTabChanged>>", self._load_tab_data_when_needed, add="+")
         # Allow Tk to map the window before opening an Excel workbook.  The
         # worker updates the Order tab when its sheet list is ready.
@@ -178,12 +222,48 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
 
     def _configure_style(self) -> None:
         style = ttk.Style(self)
-        if "vista" in style.theme_names():
+        # "vista" renders notebook tabs natively and ignores background color
+        # overrides, so a selected-tab highlight needs "clam" instead.
+        if "clam" in style.theme_names():
+            style.theme_use("clam")
+        elif "vista" in style.theme_names():
             style.theme_use("vista")
-        style.configure("TNotebook.Tab", font=("Segoe UI", 10, "bold"), padding=(18, 8))
-        style.configure("Summary.TLabel", font=("Segoe UI", 10, "bold"))
-        style.configure("Treeview", rowheight=25, font=("Segoe UI", 9))
-        style.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"))
+
+        base_font_family = "FreesiaUPC" if "FreesiaUPC" in tkfont.families(self) else "Segoe UI"
+        base_size = 12
+        for named_font in ("TkDefaultFont", "TkTextFont", "TkHeadingFont", "TkMenuFont", "TkTooltipFont"):
+            try:
+                tkfont.nametofont(named_font).configure(family=base_font_family, size=base_size)
+            except tk.TclError:
+                pass
+
+        accent = "#2f6fed"
+        accent_bg = "#eaf3fb"
+        tab_bg = "#e4e7eb"
+        style.configure(".", font=(base_font_family, base_size))
+        style.configure("TButton", font=(base_font_family, base_size), padding=(10, 3))
+        style.configure("TLabelframe.Label", font=(base_font_family, base_size, "bold"))
+        style.configure("TNotebook", background=tab_bg, borderwidth=0, tabmargins=(6, 4, 6, 0))
+        style.configure(
+            "TNotebook.Tab",
+            font=(base_font_family, base_size + 1, "bold"),
+            padding=(16, 3),
+            background=tab_bg,
+            foreground="#333333",
+        )
+        style.map(
+            "TNotebook.Tab",
+            background=[("selected", accent_bg)],
+            foreground=[("selected", accent)],
+            # The clam theme's built-in default shrinks the selected tab's
+            # padding; pin it back to the unselected size so it doesn't
+            # visually shrink when picked.
+            padding=[("selected", (16, 3))],
+        )
+        style.configure("Summary.TLabel", font=(base_font_family, base_size, "bold"))
+        style.configure("Treeview", rowheight=30, font=(base_font_family, base_size))
+        style.configure("Treeview.Heading", font=(base_font_family, base_size, "bold"), padding=(6, 2))
+        style.configure("TScrollbar", arrowsize=20)
 
     def _build_ui(self) -> None:
         container = ttk.Frame(self, padding=10)
@@ -200,8 +280,12 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         self._build_plan_tab()
 
         self.rm_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.rm_tab, text="RM")
+        self.notebook.add(self.rm_tab, text="Stock RM")
         self._build_rm_tab()
+
+        self.stock_package_ingredient_tab = ttk.Frame(self.notebook, padding=14)
+        self.notebook.add(self.stock_package_ingredient_tab, text="Stock Package/Ingredient")
+        self._build_stock_package_ingredient_tab()
 
         self.capacity_tab = ttk.Frame(self.notebook, padding=14)
         self.notebook.add(self.capacity_tab, text="Operations Settings")
@@ -340,7 +424,7 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
                 "wt_pd_kg",
                 "ho_weight_kg",
             ) else tk.W
-            self.tree.column(column, width=widths[column], minwidth=70, anchor=anchor)
+            self.tree.column(column, width=widths[column], minwidth=70, anchor=anchor, stretch=False)
 
         # Treeview has only one native header row.  Draw an aligned group bar
         # above it so related columns remain easy to scan without changing the
@@ -378,12 +462,3 @@ class ProductionPlanApp(MasterViewMixin, ShipmentViewMixin, SummaryViewMixin, St
         horizontal.grid(row=2, column=0, sticky="ew")
         table_frame.rowconfigure(1, weight=1)
         table_frame.columnconfigure(0, weight=1)
-
-        status = ttk.Label(
-            self.order_tab,
-            textvariable=self.status_var,
-            relief=tk.SUNKEN,
-            anchor=tk.W,
-            padding=(6, 3),
-        )
-        status.pack(fill=tk.X, pady=(8, 0))

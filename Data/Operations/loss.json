@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "freeze_in_labor_cost_per_kg": 5.8,
+  "freeze_in_repair_cost_per_kg": 0.5,
+  "freeze_in_energy_cost_per_kg": 3.3,
+  "freeze_in_depreciation_cost_per_kg": 1.3,
+  "thaw_labor_cost_per_kg": 1.9,
+  "thaw_salary_cost_per_kg": 1.4,
+  "thaw_repair_cost_per_kg": 0.9,
+  "thaw_depreciation_cost_per_kg": 2.5,
+  "thaw_other_cost_per_kg": 0.7,
+  "yield_loss_percent": 3.0
+}

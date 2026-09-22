@@ -214,6 +214,29 @@ class OrdersViewMixin:
             state=tk.NORMAL if filters_active else tk.DISABLED
         )
         self._update_order_column_headings()
+        self._autosize_order_columns()
+
+    def _autosize_order_columns(self) -> None:
+        """Fit each column's width to its visible cell text, not its header."""
+
+        cell_font = tkfont.nametofont("TkDefaultFont")
+        padding = 48
+        # Measuring every row is unnecessary; a sample already captures the
+        # typical text length per column without slowing down large tables.
+        sample = self.tree.get_children()[:400]
+        for column in self.tree["columns"]:
+            max_width = 0
+            for item in sample:
+                text = self.tree.set(item, column)
+                if text:
+                    max_width = max(max_width, cell_font.measure(text))
+            width = max(max_width + padding, 80)
+            # Without stretch=False, ttk shrinks columns to fit the visible
+            # window instead of honouring the computed width, once the
+            # window is actually mapped on screen.
+            self.tree.column(column, width=width, minwidth=60, stretch=False)
+            self.order_column_widths[column] = width
+        self._refresh_order_group_header()
 
     def _set_order_sort(self, column: str, descending: bool) -> None:
         self.order_sort_column = column

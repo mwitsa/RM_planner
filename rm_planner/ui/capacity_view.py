@@ -7,6 +7,21 @@ from rm_planner.planning.alternatives import number
 from rm_planner.planning.proposal_store import save_preferences
 
 
+LOSS_FIELD_LABELS = {
+    "freeze_in_labor_cost_per_kg": "ค่าแรง",
+    "freeze_in_repair_cost_per_kg": "ค่าซ่อมแซม",
+    "freeze_in_energy_cost_per_kg": "ค่าพลังงาน",
+    "freeze_in_depreciation_cost_per_kg": "ค่าเสื่อมราคา",
+    "thaw_labor_cost_per_kg": "ค่าแรง",
+    "thaw_salary_cost_per_kg": "เงินเดือน",
+    "thaw_repair_cost_per_kg": "ค่าซ่อมแซม",
+    "thaw_depreciation_cost_per_kg": "ค่าเสื่อมราคา",
+    "thaw_other_cost_per_kg": "ค่าใช้จ่ายอื่น",
+    "yield_loss_percent": "Yield Loss",
+    "soup_base_loss_liters": "ปริมาณ",
+}
+
+
 class CapacityViewMixin:
     def _build_capacity_tab(self) -> None:
         self.work_hours_per_day_var = tk.StringVar(value="8")
@@ -28,6 +43,16 @@ class CapacityViewMixin:
         self.cooked_labour_var = tk.StringVar(value="0")
         self.cooked_wage_var = tk.StringVar(value="0")
         self.labour_status_var = tk.StringVar(value="Labour settings have not been saved yet.")
+        self.loss_field_vars = {
+            field_name: tk.StringVar(value="0")
+            for field_name in (
+                *FREEZE_IN_FIELDS, *THAW_FIELDS, "yield_loss_percent", *SOUP_BASE_FIELDS,
+            )
+        }
+        self.loss_line_item_vars = {
+            key: tk.StringVar(value="0") for key in ALL_LINE_ITEM_KEYS
+        }
+        self.loss_status_var = tk.StringVar(value="Loss settings have not been saved yet.")
 
         page = ttk.Frame(self.capacity_tab, padding=18)
         page.pack(fill=tk.BOTH, expand=True)
@@ -148,6 +173,9 @@ class CapacityViewMixin:
         self.labour_tab = ttk.Frame(content_host)
         self._build_labour_settings()
 
+        self.loss_calculation_tab = ttk.Frame(content_host)
+        self._build_loss_calculation_settings()
+
         self.master_tab = ttk.Frame(content_host)
         self._build_master_tab()
 
@@ -157,6 +185,7 @@ class CapacityViewMixin:
             "chill_days": self.chill_days_tab,
             "production_start": self.production_start_tab,
             "labour": self.labour_tab,
+            "loss_calculation": self.loss_calculation_tab,
             "master": self.master_tab,
             "operation_order_rule": self.operation_order_rule_tab,
             "class_define": self.class_define_tab,
@@ -208,6 +237,21 @@ class CapacityViewMixin:
                 font=("Segoe UI", 10),
                 command=lambda: self._select_operations_section("labour"),
             ),
+            "loss_calculation": tk.Button(
+                sidebar,
+                text="Loss Calculation",
+                anchor=tk.W,
+                relief=tk.FLAT,
+                borderwidth=0,
+                padx=12,
+                pady=10,
+                bg="#f5f7fa",
+                activebackground="#e7edf5",
+                fg="#475569",
+                activeforeground="#24567b",
+                font=("Segoe UI", 10),
+                command=lambda: self._select_operations_section("loss_calculation"),
+            ),
             "master": tk.Button(
                 sidebar,
                 text="Master",
@@ -258,6 +302,7 @@ class CapacityViewMixin:
         self._operations_section_buttons["chill_days"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["production_start"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["labour"].pack(fill=tk.X, pady=(4, 0))
+        self._operations_section_buttons["loss_calculation"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["master"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["operation_order_rule"].pack(fill=tk.X, pady=(4, 0))
         self._operations_section_buttons["class_define"].pack(fill=tk.X, pady=(4, 0))
@@ -471,6 +516,243 @@ class CapacityViewMixin:
             anchor=tk.W,
             padding=(6, 3),
         ).pack(fill=tk.X, pady=(14, 0))
+
+    def _build_loss_calculation_settings(self) -> None:
+        """Loss cost input used to compare production plans."""
+
+        ttk.Label(
+            self.loss_calculation_tab,
+            text="Loss Calculation",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(anchor=tk.W)
+        ttk.Label(
+            self.loss_calculation_tab,
+            text="กำหนดรายละเอียดต้นทุน Loss สำหรับใช้เปรียบเทียบแผนผลิต",
+        ).pack(anchor=tk.W, pady=(3, 18))
+
+        # Each Loss cost component gets its own card as it is defined; this is
+        # the first one (freezing finished/packed product, WT/PD, that is not
+        # shipped right away). It breaks down into three sub-groups, so it
+        # folds shut to keep the page manageable once open. A card's own
+        # content scrolls internally once it grows past a max height.
+        freeze_pd_card = self._build_collapsible_section(
+            self.loss_calculation_tab, "1. Freeze PD",
+        )
+        ttk.Label(
+            freeze_pd_card, text="ต้นทุนการ Freeze สินค้าสำเร็จรูป (WT/PD) ที่ไม่ได้ส่งทันที",
+        ).pack(anchor=tk.W, pady=(0, 12))
+
+        ttk.Label(freeze_pd_card, text="ต้นทุนการนำเข้า Freeze", font=("Segoe UI", 10, "bold")).pack(
+            anchor=tk.W
+        )
+        self._build_loss_field_group(freeze_pd_card, FREEZE_IN_FIELDS)
+
+        ttk.Label(freeze_pd_card, text="ต้นทุนการทอละลาย", font=("Segoe UI", 10, "bold")).pack(
+            anchor=tk.W, pady=(16, 0)
+        )
+        self._build_loss_field_group(freeze_pd_card, THAW_FIELDS)
+
+        ttk.Label(freeze_pd_card, text="ต้นทุน Yield Loss", font=("Segoe UI", 10, "bold")).pack(
+            anchor=tk.W, pady=(16, 0)
+        )
+        self._build_loss_field_group(freeze_pd_card, ("yield_loss_percent",), unit="%")
+
+        labour_line_card = self._build_collapsible_section(
+            self.loss_calculation_tab, "2. ต้นทุนแรงงานไลน์ผลิตโรงงานแกลง 3",
+        )
+        ttk.Label(labour_line_card, text="ทางตรง", font=("Segoe UI", 10, "bold")).pack(
+            anchor=tk.W
+        )
+        self._build_loss_line_item_list(
+            labour_line_card,
+            WORK_CENTERS_GLAENG_3,
+            columns=(
+                ("ค่าแรง (คน)", DIRECT_LABOR_ITEM_KEYS),
+                *(
+                    (label, DIRECT_SINGLE_RATE_ITEM_KEYS[category])
+                    for category, _z_code, label in DIRECT_SINGLE_RATE_CATEGORIES
+                ),
+            ),
+        )
+
+        ttk.Label(labour_line_card, text="ทางอ้อม", font=("Segoe UI", 10, "bold")).pack(
+            anchor=tk.W, pady=(16, 0)
+        )
+        self._build_loss_line_item_list(
+            labour_line_card,
+            WORK_CENTERS_GLAENG_3_INDIRECT,
+            columns=(
+                ("ค่าแรง (คน)", INDIRECT_LABOR_ITEM_KEYS),
+                *(
+                    (label, INDIRECT_SINGLE_RATE_ITEM_KEYS[category])
+                    for category, _z_code, label in INDIRECT_SINGLE_RATE_CATEGORIES
+                ),
+            ),
+        )
+
+        soup_base_card = self._build_collapsible_section(
+            self.loss_calculation_tab, "3. Base น้ำซุป",
+        )
+        ttk.Label(
+            soup_base_card, text="1. ปริมาณน้ำซุปที่สูญเสีย", font=("Segoe UI", 9, "bold"),
+        ).pack(anchor=tk.W)
+        self._build_loss_field_group(soup_base_card, SOUP_BASE_FIELDS, unit="ลิตร")
+
+        actions = ttk.Frame(self.loss_calculation_tab)
+        actions.pack(fill=tk.X, pady=(18, 0))
+        ttk.Button(
+            actions,
+            text="Save loss settings",
+            command=self._save_loss_settings,
+        ).pack(anchor=tk.E)
+        ttk.Label(
+            self.loss_calculation_tab,
+            textvariable=self.loss_status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(6, 3),
+        ).pack(fill=tk.X, pady=(14, 0))
+
+    def _build_collapsible_section(
+        self,
+        parent: tk.Widget,
+        title: str,
+        collapsed: bool = True,
+        max_content_height: int = 400,
+    ) -> ttk.Frame:
+        """Build a card whose header click folds/unfolds its content area.
+
+        Returns the content frame — callers pack their widgets into it
+        exactly as they would into a plain ``ttk.LabelFrame``. Starts folded
+        by default so a page with several of these stays short until opened.
+        The content area scrolls within itself once it grows past
+        `max_content_height`, instead of pushing the rest of the page down.
+        """
+
+        outer = ttk.Frame(parent, relief=tk.GROOVE, borderwidth=1)
+        outer.pack(fill=tk.X, pady=(0, 10))
+
+        header = tk.Frame(outer, bg="#f5f7fa", cursor="hand2")
+        header.pack(fill=tk.X)
+        toggle_label = tk.Label(
+            header, text="▸" if collapsed else "▾", bg="#f5f7fa", fg="#475569",
+            font=("Segoe UI", 10, "bold"),
+        )
+        toggle_label.pack(side=tk.LEFT, padx=(10, 4), pady=8)
+        tk.Label(
+            header, text=title, bg="#f5f7fa", fg="#1f2937", font=("Segoe UI", 11, "bold"),
+        ).pack(side=tk.LEFT, pady=8)
+
+        content_host = ttk.Frame(outer)
+        content_host.columnconfigure(0, weight=1)
+        content_host.rowconfigure(0, weight=1)
+        canvas = tk.Canvas(content_host, highlightthickness=0)
+        v_scrollbar = ttk.Scrollbar(content_host, orient=tk.VERTICAL, command=canvas.yview)
+        h_scrollbar = ttk.Scrollbar(content_host, orient=tk.HORIZONTAL, command=canvas.xview)
+        canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+
+        # No forced width: the content is left at its natural size so a wide
+        # table (many columns) scrolls horizontally instead of being clipped.
+        content = ttk.Frame(canvas, padding=14)
+        canvas.create_window((0, 0), window=content, anchor="nw")
+
+        def sync_scroll(_event: object = None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            required_height = content.winfo_reqheight()
+            canvas.configure(height=min(required_height, max_content_height))
+
+            if required_height > max_content_height:
+                v_scrollbar.grid(row=0, column=1, sticky="ns")
+            else:
+                v_scrollbar.grid_forget()
+
+            available_width = content_host.winfo_width()
+            if available_width > 1 and content.winfo_reqwidth() > available_width:
+                h_scrollbar.grid(row=1, column=0, sticky="ew")
+            else:
+                h_scrollbar.grid_forget()
+
+        content.bind("<Configure>", sync_scroll)
+        content_host.bind("<Configure>", sync_scroll)
+
+        def scroll_with_wheel(event: object) -> None:
+            # Shift+wheel scrolls horizontally, matching common conventions.
+            if event.state & 0x0001:
+                canvas.xview_scroll(-1 if event.delta > 0 else 1, "units")
+            else:
+                canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+
+        canvas.bind("<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", scroll_with_wheel))
+        canvas.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
+
+        if not collapsed:
+            content_host.pack(fill=tk.X)
+
+        state = {"collapsed": collapsed}
+
+        def toggle(_event: object = None) -> None:
+            state["collapsed"] = not state["collapsed"]
+            if state["collapsed"]:
+                content_host.pack_forget()
+                toggle_label.configure(text="▸")
+            else:
+                content_host.pack(fill=tk.X)
+                toggle_label.configure(text="▾")
+                sync_scroll()
+
+        for widget in (header, *header.winfo_children()):
+            widget.bind("<Button-1>", toggle)
+
+        return content
+
+    def _build_loss_field_group(
+        self, parent: tk.Widget, field_names: tuple[str, ...], unit: str = "บาท/ก.ก.",
+    ) -> None:
+        """Lay out one row of Loss cost fields side by side, each with `unit`."""
+
+        grid = ttk.Frame(parent)
+        grid.pack(fill=tk.X, pady=(6, 0))
+        for column, field_name in enumerate(field_names):
+            cell = ttk.Frame(grid, padding=(0 if column == 0 else 16, 0, 0, 0))
+            cell.grid(row=0, column=column, sticky=tk.W)
+            ttk.Label(cell, text=LOSS_FIELD_LABELS[field_name]).grid(row=0, column=0, sticky=tk.W)
+            ttk.Entry(
+                cell, textvariable=self.loss_field_vars[field_name], font=("Segoe UI", 12), width=10,
+            ).grid(row=1, column=0, sticky=tk.W, pady=(4, 0))
+            ttk.Label(cell, text=unit, foreground="#64748b").grid(
+                row=2, column=0, sticky=tk.W, pady=(2, 0)
+            )
+
+    def _build_loss_line_item_list(
+        self,
+        parent: tk.Widget,
+        work_centers: tuple[tuple[str, str], ...],
+        columns: tuple[tuple[str, tuple[str, ...]], ...],
+    ) -> None:
+        """List one row per work center, with one or more value columns.
+
+        Each entry in `columns` is (unit, item_keys); item_keys must align
+        1:1 with `work_centers` in order (one entry per work center).
+        """
+
+        rows = ttk.Frame(parent)
+        rows.pack(fill=tk.X, pady=(6, 0))
+        # One header per value column instead of repeating the unit next to
+        # every row, which would be noisy across this many work centers.
+        for col_index, (unit, _item_keys) in enumerate(columns):
+            ttk.Label(rows, text=unit, foreground="#64748b", font=("Segoe UI", 9, "bold")).grid(
+                row=0, column=1 + col_index, sticky=tk.W, padx=(14, 0), pady=(0, 3)
+            )
+        for row_index, (_code, name) in enumerate(work_centers, start=1):
+            ttk.Label(rows, text=name).grid(
+                row=row_index, column=0, sticky=tk.W, pady=2
+            )
+            for col_index, (_unit, item_keys) in enumerate(columns):
+                key = item_keys[row_index - 1]
+                ttk.Entry(
+                    rows, textvariable=self.loss_line_item_vars[key], font=("Segoe UI", 11), width=10,
+                ).grid(row=row_index, column=1 + col_index, sticky=tk.W, padx=(14, 0), pady=2)
 
     def _select_operations_section(self, section: str) -> None:
         """Show one Operations Settings category in the shared content area."""
@@ -929,6 +1211,45 @@ class CapacityViewMixin:
         self.cooked_labour_var.set(str(settings.cooked_labour))
         self.cooked_wage_var.set(self._format_optional_number(settings.cooked_wage))
         self.labour_status_var.set("Saved labour settings.")
+
+    def _load_loss_settings(self) -> None:
+        """Load the saved Loss cost without applying it to plan costs yet."""
+
+        try:
+            settings = load_loss_settings(self.loss_file_path)
+        except ValueError as exc:
+            self.loss_status_var.set(str(exc))
+            return
+        for field_name, var in self.loss_field_vars.items():
+            var.set(self._format_optional_number(getattr(settings, field_name)))
+        for key, var in self.loss_line_item_vars.items():
+            var.set(self._format_optional_number(settings.line_item_costs.get(key, 0)))
+        if self.loss_file_path.exists():
+            self.loss_status_var.set("Loaded saved loss settings.")
+
+    def _save_loss_settings(self) -> None:
+        """Validate and persist the Loss cost settings."""
+
+        try:
+            settings = LossSettings(
+                **{
+                    field_name: var.get().strip().replace(",", "")
+                    for field_name, var in self.loss_field_vars.items()
+                },
+                line_item_costs={
+                    key: var.get().strip().replace(",", "")
+                    for key, var in self.loss_line_item_vars.items()
+                },
+            )
+            settings = save_loss_settings(self.loss_file_path, settings)
+        except ValueError as exc:
+            messagebox.showerror("Save loss settings", str(exc), parent=self)
+            return
+        for field_name, var in self.loss_field_vars.items():
+            var.set(self._format_optional_number(getattr(settings, field_name)))
+        for key, var in self.loss_line_item_vars.items():
+            var.set(self._format_optional_number(settings.line_item_costs.get(key, 0)))
+        self.loss_status_var.set("Saved loss settings.")
 
     def _load_capacity_settings(self) -> None:
         try:

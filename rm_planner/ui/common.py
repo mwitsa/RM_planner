@@ -8,7 +8,7 @@ import tkinter as tk
 from collections.abc import Callable, Iterable
 from datetime import date
 from pathlib import Path
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import filedialog, font as tkfont, messagebox, simpledialog, ttk
 
 from rm_planner.inventory.assortment import AssortmentTable, load_assortment, predict_assortment
 from rm_planner.inventory.range_store import (
@@ -68,6 +68,23 @@ from rm_planner.planning.labour_store import (
     load_labour_settings,
     save_labour_settings,
 )
+from rm_planner.planning.loss_store import (
+    ALL_LINE_ITEM_KEYS,
+    DIRECT_LABOR_ITEM_KEYS,
+    DIRECT_SINGLE_RATE_CATEGORIES,
+    DIRECT_SINGLE_RATE_ITEM_KEYS,
+    FREEZE_IN_FIELDS,
+    INDIRECT_LABOR_ITEM_KEYS,
+    INDIRECT_SINGLE_RATE_CATEGORIES,
+    INDIRECT_SINGLE_RATE_ITEM_KEYS,
+    SOUP_BASE_FIELDS,
+    THAW_FIELDS,
+    WORK_CENTERS_GLAENG_3,
+    WORK_CENTERS_GLAENG_3_INDIRECT,
+    LossSettings,
+    load_loss_settings,
+    save_loss_settings,
+)
 from rm_planner.master.store import (
     MasterComponentRecord,
     extract_master_data,
@@ -106,6 +123,10 @@ from rm_planner.inventory.wonton_weight_store import (
 
 RM_NAVIGATION_ITEMS = (
     ("timeline", "Stock"),
+    ("data", "อัพโหลดข้อมูล STOCK On Hand"),
+    ("pd_actual", "อัพโหลดข้อมูล STOCK แกลง 2"),
+    ("pd", "PD Freeze"),
+    ("pd_actual_pivot", "Pivot STOCK แกลง 2"),
     ("predict", "Assortment STD"),
 )
 

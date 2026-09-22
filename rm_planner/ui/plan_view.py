@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 import calendar
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import font as tkfont, ttk, messagebox
 from uuid import uuid4
 import threading
 import json
@@ -64,23 +64,24 @@ class PlanViewMixin:
             saved_adjust_from = self.plan_start_date_var.get()
         self.adjust_from_var = tk.StringVar(value=saved_adjust_from)
         control = ttk.Frame(self.plan_tab)
-        control.pack(fill='x', pady=8)
-        ttk.Label(control, text='วันเริ่ม').pack(side='left')
-        self.plan_start_date_entry = ttk.Entry(control, textvariable=self.plan_start_date_var, width=14,
-                                                state='readonly', font=('Segoe UI', 12))
-        self.plan_start_date_entry.pack(side='left', padx=(6, 0))
-        ttk.Button(control, text='📅', width=3, command=self._open_plan_date_picker).pack(side='left', padx=(2, 6))
-        ttk.Label(control, text='มองล่วงหน้า (วัน)').pack(side='left', padx=(8, 4))
+        control.pack(fill='x', pady=3)
+        ttk.Label(control, text='วันเริ่ม', font=('Segoe UI', 9)).pack(side='left')
+        self.plan_start_date_entry = ttk.Entry(control, textvariable=self.plan_start_date_var, width=11,
+                                                state='readonly', font=('Segoe UI', 9))
+        self.plan_start_date_entry.pack(side='left', padx=(4, 0))
+        ttk.Button(control, text='📅', width=2, command=self._open_plan_date_picker).pack(side='left', padx=(2, 5))
+        ttk.Label(control, text='มองล่วงหน้า (วัน)', font=('Segoe UI', 9)).pack(side='left', padx=(6, 3))
         validate_integer = (self.register(self._is_day_integer), '%P')
         ttk.Spinbox(control, textvariable=self._proposal_vars['lookahead'], from_=1, to=31, increment=1,
-                    width=5, validate='key', validatecommand=validate_integer).pack(side='left')
-        ttk.Label(control, text='เริ่มปรับแผน').pack(side='left', padx=(8, 4))
-        ttk.Entry(control, textvariable=self.adjust_from_var, width=14, state='readonly',
-                  font=('Segoe UI', 12)).pack(side='left')
-        ttk.Button(control, text='📅', width=3,
+                    width=4, validate='key', validatecommand=validate_integer,
+                    font=('Segoe UI', 9)).pack(side='left')
+        ttk.Label(control, text='เริ่มปรับแผน', font=('Segoe UI', 9)).pack(side='left', padx=(6, 3))
+        ttk.Entry(control, textvariable=self.adjust_from_var, width=11, state='readonly',
+                  font=('Segoe UI', 9)).pack(side='left')
+        ttk.Button(control, text='📅', width=2,
                    command=lambda: self._open_plan_date_picker(
                        self.adjust_from_var, self.plan_start_date_var.get(), 'เลือกวันเริ่มปรับแผน',
-                       self._plan_horizon_end())).pack(side='left', padx=(2, 6))
+                       self._plan_horizon_end())).pack(side='left', padx=(2, 5))
         ttk.Button(control, text='ต้นทุน / สมมติฐาน', command=self._proposal_settings_dialog).pack(side='right')
         self._proposal_cards = ttk.Frame(self.plan_tab)
         self._proposal_cards.pack(fill='x', pady=8)
@@ -134,7 +135,10 @@ class PlanViewMixin:
                     'cups', 'pcs_per_cup', 'wt_per_pcs', 'order_unit', 'stock_unit',
                     'order_cups', 'total_wontons', 'wt_pd_kg', 'ho_weight_kg',
                 } else 'w'
-                tree.column(column, width=self._plan_column_widths[column], minwidth=70, anchor=anchor)
+                tree.column(
+                    column, width=self._plan_column_widths[column], minwidth=70,
+                    anchor=anchor, stretch=False,
+                )
             plan_group_header = tk.Canvas(frame, height=30, background='#f6f8fb',
                                           highlightthickness=0, borderwidth=0)
             self._proposal_plan_group_header = plan_group_header
@@ -345,6 +349,26 @@ class PlanViewMixin:
             x += group_width
         header.configure(scrollregion=(0, 0, x, 30))
 
+    def _autosize_plan_columns(self):
+        """Fit each Plan table column to its visible cell text, not its header."""
+
+        tree = self._proposal_tables['jobs']
+        cell_font = tkfont.nametofont('TkDefaultFont')
+        padding = 48
+        # Measuring every row is unnecessary; a sample already captures the
+        # typical text length per column without slowing down large tables.
+        sample = tree.get_children()[:400]
+        for column in tree['columns']:
+            max_width = 0
+            for item in sample:
+                text = tree.set(item, column)
+                if text:
+                    max_width = max(max_width, cell_font.measure(text))
+            width = max(max_width + padding, 80)
+            tree.column(column, width=width, minwidth=60, stretch=False)
+            self._plan_column_widths[column] = width
+        self._refresh_plan_group_header()
+
     def _order_for_plan_job(self, job_id):
         return self.order_records_by_id.get(job_id) or self.saved_order_records.get(job_id)
 
@@ -394,14 +418,14 @@ class PlanViewMixin:
         for child in self._proposal_cards.winfo_children():
             child.destroy()
         box = tk.Frame(self._proposal_cards, bg='white', highlightthickness=2,
-                       highlightbackground='#168078', padx=8, pady=8)
+                       highlightbackground='#168078', padx=6, pady=5)
         box.pack(fill='x')
         total = sum(float(quantity or 0) for _, _, quantity in rows)
-        tk.Label(box, text='คงแผนเดิม', bg='white', anchor='w', font=('Segoe UI', 10, 'bold')).pack(fill='x')
+        tk.Label(box, text='คงแผนเดิม', bg='white', anchor='w', font=('Segoe UI', 9, 'bold')).pack(fill='x')
         tk.Label(box, text='แผนจาก Prod.Date ใน Order • ยังไม่ตรวจ RM / Capacity / ความพร้อม',
-                 bg='white', anchor='w', font=('Segoe UI', 9)).pack(fill='x', pady=(2, 4))
+                 bg='white', anchor='w', font=('Segoe UI', 8)).pack(fill='x', pady=(1, 2))
         tk.Label(box, text=f'{len(rows):,} งาน  |  {fmt(total)} เกี๊ยว', bg='white', anchor='w',
-                 font=('Segoe UI', 16, 'bold')).pack(fill='x')
+                 font=('Segoe UI', 12, 'bold')).pack(fill='x')
         self._proposal_detail.set(
             f'แผนเดิม {self.plan_start_date_var.get()} ถึง {end.isoformat()} • '
             f'{len(rows):,} งาน • อ้างอิง Prod.Date ของ Order โดยตรง'
@@ -413,6 +437,7 @@ class PlanViewMixin:
             iid = f'baseline:{index}'
             self._proposal_row_ids[iid] = order.record_id
             tree.insert('', 'end', iid=iid, values=self._plan_table_values(planned, order.record_id))
+        self._autosize_plan_columns()
         self.plan_status_var.set(
             f'คงแผนเดิม: {len(rows):,} งาน ระหว่าง {self.plan_start_date_var.get()}–{end.isoformat()} '
             '• กำลังรอคำนวณทางเลือกอัตโนมัติ'
@@ -656,28 +681,28 @@ class PlanViewMixin:
         for i, plan in enumerate(self._proposals):
             self._proposal_cards.columnconfigure(i, weight=1, uniform='proposal')
             box = tk.Frame(self._proposal_cards, bg='white', highlightthickness=2,
-                           highlightbackground='#168078' if i == index else '#d8dce2', padx=8, pady=8)
+                           highlightbackground='#168078' if i == index else '#d8dce2', padx=6, pady=5)
             box.grid(row=0, column=i, sticky='nsew', padx=3)
             card_header = tk.Frame(box, bg='white')
-            card_header.pack(fill='x', pady=2)
+            card_header.pack(fill='x')
             tk.Label(card_header, text=plan['title'], bg='white', anchor='w',
-                     font=('Segoe UI', 10, 'bold')).pack(side=tk.LEFT)
+                     font=('Segoe UI', 9, 'bold')).pack(side=tk.LEFT)
             logic_icon = tk.Label(
                 card_header,
                 text='ⓘ',
                 bg='white',
                 fg='#9ca3af',
-                font=('Segoe UI', 18, 'bold'),
+                font=('Segoe UI', 13, 'bold'),
                 cursor='question_arrow',
             )
             logic_icon.pack(side=tk.RIGHT, padx=(6, 0))
             logic_icon.bind('<Enter>', lambda event, selected_plan=plan: show_logic_tip(event, selected_plan))
             logic_icon.bind('<Leave>', hide_logic_tip)
             tk.Label(box, text='เหลือ '+fmt(plan['remaining'])+' kg', bg='white', anchor='w',
-                     font=('Segoe UI', 19, 'bold')).pack(fill='x', pady=2)
+                     font=('Segoe UI', 13, 'bold')).pack(fill='x')
             cost_label = tk.Label(box, text='ต้นทุน ฿ '+fmt(plan['cost']), bg='white', anchor='w',
-                                  font=('Segoe UI', 10, 'bold'), cursor='question_arrow')
-            cost_label.pack(fill='x', pady=2)
+                                  font=('Segoe UI', 9, 'bold'), cursor='question_arrow')
+            cost_label.pack(fill='x')
             cost_label.bind('<Enter>', lambda event, selected_plan=plan: show_cost_tip(event, selected_plan))
             cost_label.bind('<Leave>', hide_cost_tip)
             produced_orders = len({row['job'] for row in plan['rows']})
@@ -685,8 +710,8 @@ class PlanViewMixin:
             tk.Label(
                 box,
                 text=f'ผลิต {produced_orders:,} ออเดอร์ | {fmt(produced_wontons)} ลูกเกี๊ยว',
-                bg='white', anchor='w', font=('Segoe UI', 9),
-            ).pack(fill='x', pady=2)
+                bg='white', anchor='w', font=('Segoe UI', 8),
+            ).pack(fill='x')
             utilization = (
                 f'{produced_wontons / horizon_capacity * 100:,.1f}%'
                 if horizon_capacity > 0 else '—'
@@ -694,10 +719,10 @@ class PlanViewMixin:
             tk.Label(
                 box,
                 text=f'Utilization {utilization}',
-                bg='white', anchor='w', font=('Segoe UI', 9),
-            ).pack(fill='x', pady=2)
+                bg='white', anchor='w', font=('Segoe UI', 8),
+            ).pack(fill='x')
             ttk.Button(box, text='กำลังดูแผนนี้' if i == index else 'ดูรายละเอียด',
-                       command=lambda n=i: self._select_proposal(n)).pack(fill='x', pady=(6, 0))
+                       command=lambda n=i: self._select_proposal(n)).pack(fill='x', pady=(4, 0))
         p = self._proposals[index]
         self._proposal_detail.set('')
         jobs = {j['id']: j for j in context['jobs']}
@@ -708,6 +733,7 @@ class PlanViewMixin:
             j = jobs[r['job']]
             self._proposal_row_ids[str(n)] = j['id']
             tree.insert('', 'end', iid=str(n), values=self._plan_table_values(r['day'], j['id']))
+        self._autosize_plan_columns()
         deferred = len(p.get('deferred', ()))
         schedule_count = len(p['rows'])
         suffix = f' • เลื่อนไปหลังช่วง {deferred} งาน' if deferred else ''
